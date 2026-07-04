@@ -240,3 +240,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
 ## License
 
 [MIT](LICENSE) — © 2026 axon-pl
+
+---
+
+## Support
+
+If Axon is useful to you, consider [sponsoring the project on GitHub](https://github.com/sponsors/axon-pl). It helps keep development going.
