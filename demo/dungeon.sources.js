@@ -587,9 +587,38 @@ const render_stats = (map, seed) => {
 
 
 
-let state = { level: 1, seed: 7777, rows: 22, cols: 48 };
+/** @typedef {{
+ *   level: number,
+ *   seed: number,
+ *   rows: number,
+ *   cols: number
+ * }} AppState
+ */
+
+/**
+ * @returns {AppState}
+ */
+const init = () => ({ level: 1, seed: 7777, rows: 22, cols: 48 });
 
 const next_seed = (s) => (s * 6364136 + 1442695) % 9007199254740991;
+
+/**
+ * @param {AppState} s
+ * @returns {AppState}
+ */
+const new_map = (s) => ({ level: s.level, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
+
+/**
+ * @param {AppState} s
+ * @returns {AppState}
+ */
+const go_next = (s) => ({ level: s.level + 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
+
+/**
+ * @param {AppState} s
+ * @returns {AppState}
+ */
+const go_prev = (s) => ({ level: s.level - 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
 
 const level_name = (level) => ((_m) => (_m === 1) ? "The Entrance Hall" : (_m === 2) ? "The Flooded Passage" : (_m === 3) ? "The Vault of Echoes" : (_m === 4) ? "The Sunken Catacombs" : (_m === 5) ? "The Abyssal Chamber" : (level > 5) ? "The Depths Beyond" : "Unknown Level")(level);
 
@@ -598,52 +627,27 @@ const level_description = (level) => ((_m) => (_m === 1) ? "Torch-lit corridors.
 const render_header = (level) => "<div class=\"dungeon-header\">" + "<h2 class=\"level-name\">Level " + level + " — " + level_name(level) + "</h2>" + "<p class=\"level-desc\">" + level_description(level) + "</p>" + "</div>";
 
 /**
+ * @param {AppState} s
  * @returns {*}
  */
-const do_render = () => {
-  let map = generate(state.rows, state.cols, state.level, state.seed);
-  let html = render_header(state.level) + render_stats(map, state.seed) + render_map(map) + render_legend();
+const render = (s) => {
+  let map = generate(s.rows, s.cols, s.level, s.seed);
+  let html = render_header(s.level) + render_stats(map, s.seed) + render_map(map) + render_legend();
   document.getElementById("dungeon-output").innerHTML = html;
-  return document.getElementById("btn-prev").disabled = state.level <= 1;
+  document.getElementById("btn-prev").disabled = s.level <= 1;
+  document.getElementById("btn-new").onclick = () => render(new_map(s));
+  document.getElementById("btn-next").onclick = () => render(go_next(s));
+  return document.getElementById("btn-prev").onclick = () => {
+    if (s.level > 1) {
+      return render(go_prev(s));
+    }
+};
 };
 
 /**
  * @returns {*}
  */
-const on_new_map = () => {
-  state.seed = next_seed(state.seed);
-  return do_render();
-};
-
-/**
- * @returns {*}
- */
-const on_next_level = () => {
-  state.level = state.level + 1;
-  state.seed = next_seed(state.seed);
-  return do_render();
-};
-
-/**
- * @returns {*}
- */
-const on_prev_level = () => {
-  if (state.level > 1) {
-    state.level = state.level - 1;
-    state.seed = next_seed(state.seed);
-    return do_render();
-  }
-};
-
-/**
- * @returns {*}
- */
-const mount = () => {
-  document.getElementById("btn-new").addEventListener("click", () => on_new_map());
-  document.getElementById("btn-next").addEventListener("click", () => on_next_level());
-  document.getElementById("btn-prev").addEventListener("click", () => on_prev_level());
-  return do_render();
-};
+const mount = () => render(init());
 
 mount();
 

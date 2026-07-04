@@ -1331,14 +1331,16 @@ main()</pre>
 
           <div class="roadmap-card">
             <div class="roadmap-ver">v0.8</div>
-            <div class="roadmap-title">The Async Update</div>
-            <div class="roadmap-desc"><code>@effects</code> becomes a real contract. I/O without breaking purity guarantees.</div>
+            <div class="roadmap-title">The Async &amp; Reactive Update</div>
+            <div class="roadmap-desc"><code>@effects</code> becomes a real contract. Reactive state and async I/O without breaking purity guarantees.</div>
             <ul class="roadmap-features">
               <li><code>async fn</code> declarations</li>
               <li><code>await expr</code> inside async functions</li>
               <li><code>@effects ["network"]</code> enforced at compile time</li>
+              <li><code>store Name { field: Type = default }</code> — reactive mutable state as an explicit effects boundary</li>
+              <li><code>on store.change { ... }</code> — reactive subscriptions</li>
               <li>Promise/async/await transpilation</li>
-              <li>Demo: async API client</li>
+              <li>Demo: reactive UI with <code>store</code> (replaces closure re-render pattern)</li>
             </ul>
           </div>
 

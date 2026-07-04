@@ -1,31 +1,46 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Axon v0.5.0 — dungeon/main.axn
 // Entry point for the dungeon map toolkit demo.
-// Wires together tiles, generator, and renderer; mounts to the DOM.
 //
-// Features showcased (v0.5.0):
-//   import { ... } from "./module"   — multi-file modules
-//   export fn / export type          — public API surface
-//   + all v0.4 features: tagged unions, when guards, @test, pipelines, etc.
+// State pattern: AppState is an immutable record. render(s) draws the dungeon
+// AND re-wires every button so it calls render() with a fresh state value.
+// No variable is ever mutated — state flows through the call chain as data.
+//
+// This is the idiomatic Axon pattern until v0.8 ships `store`:
+//   store AppState { level: int = 1, seed: int = 7777, ... }
+//   on AppState.change { render(AppState) }
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Floor, Wall, Door, Stairs, Chest, Water, Torch, tile_info } from "./tiles"
+import { Floor, Wall, Door, Stairs, Chest, Water, Torch } from "./tiles"
 import { generate, count_tag } from "./generator"
 import { render_map, render_legend, render_stats } from "./renderer"
 
-// ── State held in a JS object (mutable via direct property assignment) ────────
+// ── App state ─────────────────────────────────────────────────────────────────
 
-let state = {
-  level: 1,
-  seed:  7777,
-  rows:  22,
-  cols:  48
+record AppState { level: int, seed: int, rows: int, cols: int }
+
+fn init() -> AppState {
+  { level: 1, seed: 7777, rows: 22, cols: 48 }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── State transitions (pure) ──────────────────────────────────────────────────
 
 fn next_seed(s: int) -> int =
   (s * 6364136 + 1442695) % 9007199254740991
+
+fn new_map(s: AppState) -> AppState {
+  { level: s.level, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
+}
+
+fn go_next(s: AppState) -> AppState {
+  { level: s.level + 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
+}
+
+fn go_prev(s: AppState) -> AppState {
+  { level: s.level - 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
+}
+
+// ── Level text ────────────────────────────────────────────────────────────────
 
 fn level_name(level: int) -> string =
   match level {
@@ -49,53 +64,37 @@ fn level_description(level: int) -> string =
     | _ => "Press onward."
   }
 
-// ── Rendering ─────────────────────────────────────────────────────────────────
-
 fn render_header(level: int) -> string =
   "<div class=\"dungeon-header\">" +
     "<h2 class=\"level-name\">Level " + level + " — " + level_name(level) + "</h2>" +
     "<p class=\"level-desc\">" + level_description(level) + "</p>" +
   "</div>"
 
-fn do_render() {
-  let map  = generate(state.rows, state.cols, state.level, state.seed)
-  let html = render_header(state.level)
-           + render_stats(map, state.seed)
+// ── Render ────────────────────────────────────────────────────────────────────
+
+// Draws the dungeon from s and re-wires each button with a closure over the
+// *next* state value. onclick = replaces the previous handler cleanly.
+fn render(s: AppState) {
+  let map  = generate(s.rows, s.cols, s.level, s.seed)
+  let html = render_header(s.level)
+           + render_stats(map, s.seed)
            + render_map(map)
            + render_legend()
 
   document.getElementById("dungeon-output").innerHTML = html
-  document.getElementById("btn-prev").disabled = state.level <= 1
-}
+  document.getElementById("btn-prev").disabled = s.level <= 1
 
-// ── Controls ──────────────────────────────────────────────────────────────────
-
-fn on_new_map() {
-  state.seed = next_seed(state.seed)
-  do_render()
-}
-
-fn on_next_level() {
-  state.level = state.level + 1
-  state.seed  = next_seed(state.seed)
-  do_render()
-}
-
-fn on_prev_level() {
-  if state.level > 1 {
-    state.level = state.level - 1
-    state.seed  = next_seed(state.seed)
-    do_render()
+  document.getElementById("btn-new").onclick  = () => render(new_map(s))
+  document.getElementById("btn-next").onclick = () => render(go_next(s))
+  document.getElementById("btn-prev").onclick = () => {
+    if s.level > 1 { render(go_prev(s)) }
   }
 }
 
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 fn mount() {
-  document.getElementById("btn-new").addEventListener("click",  () => on_new_map())
-  document.getElementById("btn-next").addEventListener("click", () => on_next_level())
-  document.getElementById("btn-prev").addEventListener("click", () => on_prev_level())
-  do_render()
+  render(init())
 }
 
 mount()
