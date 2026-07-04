@@ -582,11 +582,13 @@
       <button class="showcase-tab" onclick="showPane('match')">Pattern Matching</button>
       <button class="showcase-tab" onclick="showPane('pipeline')">Pipelines</button>
       <button class="showcase-tab" onclick="showPane('test')">Testing</button>
+      <button class="showcase-tab" onclick="showPane('modules')" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
     <div class="showcase-pane" id="pane-pipeline"><pre id="code-pipeline"></pre></div>
     <div class="showcase-pane" id="pane-test"><pre id="code-test"></pre></div>
+    <div class="showcase-pane" id="pane-modules"><pre id="code-modules"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
@@ -631,6 +633,11 @@
         <div class="pillar-icon">🧪</div>
         <div class="pillar-title">Tests live next to code</div>
         <div class="pillar-body"><code>@test "description" { expr }</code> registers inline assertions. Run them with <code>axon --test file.axn</code>. No test framework, no config, no boilerplate.</div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">📦</div>
+        <div class="pillar-title">Multi-file modules, single output</div>
+        <div class="pillar-body"><code>import { fn } from "./module"</code> and <code>export fn</code> split projects across files. <code>axon --bundle</code> resolves imports, topo-sorts modules, and emits one clean JS file. Zero runtime overhead.</div>
       </div>
     </div>
   </section>
@@ -752,7 +759,7 @@
 
     // Lightweight Axon syntax highlighter
     function highlight(src) {
-      const KW  = ['fn','let','type','record','match','if','else','where','return','as'];
+      const KW  = ['fn','let','type','record','match','if','else','where','return','as','import','export','from'];
       const KW2 = ['when','true','false','null','void'];
       const TY  = ['int','float','string','bool','list','void'];
       const sp  = (c, t) => `<span class='${c}'>${t}</span>`;
@@ -832,6 +839,38 @@ let total =
 
 // Destructuring let — unpack records cleanly
 let { atk, bonus, isCrit, finalDmg } = damage_breakdown(str, def, 0, roll)
+`);
+
+    setCode('code-modules', `
+// tiles.axn — define and export a tagged union
+export type Tile = | Floor | Wall | Door | Stairs | Chest | Water | Torch
+
+export fn tile_glyph(tag: string) -> string =
+  match tag {
+    | "Floor"  => "·"    | "Wall"   => "█"
+    | "Door"   => "▯"    | "Stairs" => "≋"
+    | "Chest"  => "■"    | "Water"  => "≈"
+    | "Torch"  => "†"    | _        => "?"
+  }
+
+@test "stairs glyph" { tile_glyph("Stairs") == "≋" }
+
+// main.axn — import from other modules and wire it together
+import { tile_glyph }  from "./tiles"
+import { generate }    from "./generator"
+import { render_map }  from "./renderer"
+
+fn mount() {
+  let map  = generate(22, 48, 1, 7777)
+  document.getElementById("output").innerHTML = render_map(map)
+}
+
+mount()
+
+// Bundle all 4 files into one JS output:
+// axon --bundle main.axn dungeon.js
+//   ✓ Bundled tiles.axn + generator.axn + renderer.axn + main.axn
+//     4 modules → 407 lines JS
 `);
 
     setCode('code-test', `
