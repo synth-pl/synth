@@ -501,23 +501,29 @@ const fix_chest_count = (g, rooms) => {
  * @returns {*}
  */
 const fix_water_count = (g, rooms) => {
-  let positions = [];
+  let kept = [];
   for (const room of rooms) {
     let dr = room.r2 - room.r1 + 1;
     let dc = room.c2 - room.c1 + 1;
+    let found = 0;
     for (let i = 0; i < dr; i++) {
       for (let j = 0; j < dc; j++) {
         let r = room.r1 + i;
         let c = room.c1 + j;
         if (gget(g, r, c) == "Water") {
-          positions.push({ r: r, c: c });
+          if (found == 0) {
+            kept.push({ r: r, c: c });
+            found = 1;
+          } else {
+            gset(g, r, c, "Floor");
+          }
         }
       }
     }
   }
   let idx = 0;
-  for (const pos of positions) {
-    if (idx >= 6) {
+  for (const pos of kept) {
+    if (idx >= 3) {
       gset(g, pos.r, pos.c, "Floor");
     }
     idx = idx + 1;

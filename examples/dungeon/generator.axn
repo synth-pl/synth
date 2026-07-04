@@ -213,24 +213,34 @@ fn fix_chest_count(g: any, rooms: any) {
   }
 }
 
-// Cap total water tiles across all rooms to [0, 6] — removes excess by replacing
-// with Floor. No minimum; some maps are just drier than others.
+// Cap water to at most 1 tile per room, 3 tiles total.
+// Scans each room, keeps only the first water tile found, removes the rest.
+// Then removes any tiles beyond the global 3-tile cap.
 fn fix_water_count(g: any, rooms: any) {
-  let positions = []
+  let kept = []
   for room in rooms {
-    let dr = room.r2 - room.r1 + 1
-    let dc = room.c2 - room.c1 + 1
+    let dr   = room.r2 - room.r1 + 1
+    let dc   = room.c2 - room.c1 + 1
+    let mut found = 0
     for i in 0..dr {
       for j in 0..dc {
         let r = room.r1 + i
         let c = room.c1 + j
-        if gget(g, r, c) == "Water" { positions.push({ r: r, c: c }) }
+        if gget(g, r, c) == "Water" {
+          if found == 0 {
+            kept.push({ r: r, c: c })
+            found = 1
+          } else {
+            gset(g, r, c, "Floor")
+          }
+        }
       }
     }
   }
+  // Global cap: remove anything beyond the 3rd kept tile
   let mut idx = 0
-  for pos in positions {
-    if idx >= 6 { gset(g, pos.r, pos.c, "Floor") }
+  for pos in kept {
+    if idx >= 3 { gset(g, pos.r, pos.c, "Floor") }
     idx = idx + 1
   }
 }
