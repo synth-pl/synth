@@ -58,14 +58,13 @@ fn render_header(level: int) -> string =
   "</div>"
 
 fn do_render() {
-  let map    = generate(state.rows, state.cols, state.level, state.seed)
-  let html   = render_header(state.level)
-            |> _ + render_stats(map, state.seed)
-            |> _ + render_map(map)
-            |> _ + render_legend()
+  let map  = generate(state.rows, state.cols, state.level, state.seed)
+  let html = render_header(state.level)
+           + render_stats(map, state.seed)
+           + render_map(map)
+           + render_legend()
 
   document.getElementById("dungeon-output").innerHTML = html
-
   document.getElementById("btn-prev").disabled = state.level <= 1
 }
 

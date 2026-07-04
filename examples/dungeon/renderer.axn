@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DungeonMap } from "./generator"
+import { tile_glyph } from "./tiles"
 
 // CSS colour class for each tile tag
 fn tile_class(tag: string) -> string =
@@ -17,19 +18,6 @@ fn tile_class(tag: string) -> string =
     | "Water"  => "t-water"
     | "Torch"  => "t-torch"
     | _        => "t-unknown"
-  }
-
-// Glyph for each tile tag
-fn tile_glyph(tag: string) -> string =
-  match tag {
-    | "Floor"   => "·"
-    | "Wall"    => "█"
-    | "Door"    => "▯"
-    | "Stairs"  => "≋"
-    | "Chest"   => "■"
-    | "Water"   => "≈"
-    | "Torch"   => "†"
-    | _         => "?"
   }
 
 // Render a full DungeonMap to an HTML string

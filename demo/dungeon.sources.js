@@ -348,9 +348,8 @@ __axon_tests.push({ desc: "stairs present in every map", fn: () => (() => {
 // DO NOT EDIT — source: .axn
 
 
-const tile_class = (tag) => ((_m) => (_m === "Wall") ? "t-wall" : (_m === "Floor") ? "t-floor" : (_m === "Door") ? "t-door" : (_m === "Stairs") ? "t-stairs" : (_m === "Chest") ? "t-chest" : (_m === "Water") ? "t-water" : (_m === "Torch") ? "t-torch" : "t-unknown")(tag);
 
-const tile_glyph = (tag) => ((_m) => (_m === "Floor") ? "·" : (_m === "Wall") ? "█" : (_m === "Door") ? "▯" : (_m === "Stairs") ? "≋" : (_m === "Chest") ? "■" : (_m === "Water") ? "≈" : (_m === "Torch") ? "†" : "?")(tag);
+const tile_class = (tag) => ((_m) => (_m === "Wall") ? "t-wall" : (_m === "Floor") ? "t-floor" : (_m === "Door") ? "t-door" : (_m === "Stairs") ? "t-stairs" : (_m === "Chest") ? "t-chest" : (_m === "Water") ? "t-water" : (_m === "Torch") ? "t-torch" : "t-unknown")(tag);
 
 /**
  * @param {DungeonMap} map
@@ -431,7 +430,7 @@ const render_header = (level) => "<div class=\"dungeon-header\">" + "<h2 class=\
  */
 const do_render = () => {
   let map = generate(state.rows, state.cols, state.level, state.seed);
-  let html = (_ + render_legend())((_ + render_map(map))((_ + render_stats(map, state.seed))(render_header(state.level))));
+  let html = render_header(state.level) + render_stats(map, state.seed) + render_map(map) + render_legend();
   document.getElementById("dungeon-output").innerHTML = html;
   return document.getElementById("btn-prev").disabled = state.level <= 1;
 };
