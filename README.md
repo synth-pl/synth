@@ -248,15 +248,17 @@ Full language reference at **[axon-pl.github.io/axon/docs.html](https://axon-pl.
 
 ## Roadmap
 
-| Version | Theme | Key feature |
+| Version | Theme | Key features |
 |---|---|---|
 | v0.4 ✓ | Guards & Unions | `when` guards, tagged unions, `@test`, `?.` / `??`, destructuring, heredocs |
-| **v0.5** ✓ | Modules | `import` / `export`, `axon --bundle` — multi-file projects |
-| v0.6 | Safety | `Result<T>`, `?` propagation, error contracts |
-| v0.7 | Type System | Generics, `interface`, typed stdlib |
-| v0.8 | Async & Reactive | `async fn`, `await`, `store` reactive state, enforced `@effects` |
-| v0.9 | Tooling | LSP, source maps, `axon fmt`, rich errors |
-| v1.0 | Stability | Frozen spec, semver promise, `axon spec` AI extraction |
+| v0.5 ✓ | Modules | `import` / `export`, `axon --bundle` — multi-file projects |
+| **v0.5.2** ✓ | Ergonomics | `for` loops (range + forEach), `break`/`continue`, `let mut` |
+| v0.6 | Safety | `Result<T>`, `?` propagation, error contracts, `refine x: "claim"` semantic narrowing |
+| v0.7 | Type System | Generics, `interface`, typed stdlib, `let infer x` model-resolved types |
+| v0.8 | Async & Reactive | `async fn`, `await`, `store` reactive state, enforced `@effects`, `@intent` auto-validation |
+| v0.9 | Tooling | LSP, source maps, `axon fmt`, rich errors, `explain { }` semantic context blocks |
+| v1.0 | Stability | Frozen spec, semver promise, `axon spec` extracts `@intent`/`refine`/`explain` as JSON |
+| v1.1 | AI-Native | `likely` arms — probabilistic pattern matching by semantic similarity |
 
 ---
 

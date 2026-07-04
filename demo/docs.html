@@ -1343,6 +1343,7 @@ main()</pre>
               <li><code>?</code> propagation operator — early-return on <code>Err</code></li>
               <li><code>@throws</code> annotation for explicit failure contracts</li>
               <li>Pattern matching on <code>Result</code></li>
+              <li><code>refine x: "prose claim"</code> — semantic value narrowing; the model verifies the claim against surrounding code</li>
               <li>Demo: CLI tool with real I/O error handling</li>
             </ul>
           </div>
@@ -1355,6 +1356,7 @@ main()</pre>
               <li>Generic type params: <code>type List&lt;T&gt;</code>, <code>fn map&lt;T,U&gt;</code></li>
               <li><code>interface</code> declarations — structural, not nominal</li>
               <li>Type inference improvements in checker</li>
+              <li><code>let infer x = expr</code> — model-resolved type; the AI derives the type from context rather than requiring an annotation</li>
               <li>Typed stdlib rewrite</li>
               <li>Demo: typed data pipeline</li>
             </ul>
@@ -1371,6 +1373,7 @@ main()</pre>
               <li><code>store Name { field: Type = default }</code> — reactive mutable state as an explicit effects boundary</li>
               <li><code>on store.change { ... }</code> — reactive subscriptions</li>
               <li>Promise/async/await transpilation</li>
+              <li><code>@intent</code> auto-validation — prose intent generates runtime shadow assertions, verified against actual behavior at the effects boundary</li>
               <li>Demo: reactive UI with <code>store</code> (replaces closure re-render pattern)</li>
             </ul>
           </div>
@@ -1386,6 +1389,7 @@ main()</pre>
               <li><code>axon check</code> — standalone lint step</li>
               <li>VS Code: go-to-definition, hover types</li>
               <li>Rich error messages with source context</li>
+              <li><code>explain { prose }</code> blocks — structured semantic context in the AST; surfaced as IDE hover tooltips and model-queryable documentation</li>
             </ul>
           </div>
 
@@ -1397,9 +1401,21 @@ main()</pre>
               <li>Frozen language specification</li>
               <li>Semver stability — no breaking changes without major bump</li>
               <li>Comprehensive stdlib with full type signatures</li>
-              <li><code>axon spec</code> — extract <code>@intent</code> / constraints as JSON for LLM consumption</li>
+              <li><code>axon spec</code> — extract <code>@intent</code>, <code>refine</code>, and <code>explain</code> blocks as structured JSON for LLM consumption</li>
               <li>Documentation site</li>
               <li>Package registry</li>
+            </ul>
+          </div>
+
+          <div class="roadmap-card" style="border-color:#ff6aff33;background:linear-gradient(135deg,#120020,#1a0028)">
+            <div class="roadmap-ver" style="color:#cc88ff">v1.1</div>
+            <div class="roadmap-title">The AI-Native Update</div>
+            <div class="roadmap-desc">The constructs that only make sense when an AI is both author and reader. Requires a stable v1.0 spec to define their semantics.</div>
+            <ul class="roadmap-features">
+              <li><code>likely</code> match arms — pattern matching by semantic similarity rather than literal equality; arms become soft classifiers</li>
+              <li>Host-runtime embedding API — pluggable model for <code>likely</code> evaluation</li>
+              <li>Bundled lightweight embedding for offline use</li>
+              <li>Demo: intent-driven input router</li>
             </ul>
           </div>
         </div>
@@ -1421,7 +1437,7 @@ main()</pre>
     }
 
     function highlight(src) {
-      const KW   = ['fn','let','type','record','match','if','else','where','return','import','export','async','await','as'];
+      const KW   = ['fn','let','type','record','match','if','else','where','return','import','export','async','await','as','for','in','break','continue','mut','refine','infer','explain','likely'];
       const KW2  = ['when','true','false','null','undefined','void'];
       const TY   = ['int','float','string','bool','list','void','Result','Ok','Err','Maybe','Some','None'];
 
