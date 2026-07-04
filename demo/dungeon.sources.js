@@ -366,24 +366,22 @@ const carve_corridor = (g, r1, c1, r2, c2) => {
 const place_room_doors = (g, room) => {
   let dr = room.r2 - room.r1 + 1;
   let dc = room.c2 - room.c1 + 1;
-  Array.from({ length: dr }).forEach((_, i) => {
-    let r = room.r1 + i;
-    if (gget(g, r, room.c1 - 1) == "Floor") {
-      return gset(g, r, room.c1, "Door");
-    }
-    if (gget(g, r, room.c2 + 1) == "Floor") {
-      return gset(g, r, room.c2, "Door");
-    }
-});
-  return Array.from({ length: dc }).forEach((_, j) => {
-    let c = room.c1 + j;
-    if (gget(g, room.r1 - 1, c) == "Floor") {
-      return gset(g, room.r1, c, "Door");
-    }
-    if (gget(g, room.r2 + 1, c) == "Floor") {
-      return gset(g, room.r2, c, "Door");
-    }
-});
+  let ri = Array.from({ length: dr }).findIndex((_, i) => gget(g, room.r1 + i, room.c2 + 1) == "Floor");
+  if (ri >= 0) {
+    return gset(g, room.r1 + ri, room.c2, "Door");
+  }
+  let li = Array.from({ length: dr }).findIndex((_, i) => gget(g, room.r1 + i, room.c1 - 1) == "Floor");
+  if (li >= 0) {
+    return gset(g, room.r1 + li, room.c1, "Door");
+  }
+  let bi = Array.from({ length: dc }).findIndex((_, j) => gget(g, room.r2 + 1, room.c1 + j) == "Floor");
+  if (bi >= 0) {
+    return gset(g, room.r2, room.c1 + bi, "Door");
+  }
+  let ti = Array.from({ length: dc }).findIndex((_, j) => gget(g, room.r1 - 1, room.c1 + j) == "Floor");
+  if (ti >= 0) {
+    return gset(g, room.r1, room.c1 + ti, "Door");
+  }
 };
 
 /**
