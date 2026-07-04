@@ -127,7 +127,7 @@ auto-syncs to the current state and validates on Enter or button click.
 
 ---
 
-## v0.5.1
+## v0.5.0 — The Module Update
 
 ### New features
 
