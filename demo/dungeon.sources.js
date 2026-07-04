@@ -239,7 +239,7 @@ __axon_tests.push({ desc: "door label is correct", fn: () => tile_label("Door") 
  * }} DungeonMap
  */
 
-const lcg = (s) => (s * 1664525 + 1013904223) % 2147483648;
+const lcg = (s) => (s % 2147483648 * 1664525 + 1013904223) % 2147483648;
 
 /**
  * @param {number} s
@@ -248,9 +248,9 @@ const lcg = (s) => (s * 1664525 + 1013904223) % 2147483648;
  * @returns {number}
  */
 const cell_hash = (s, r, c) => {
-  let h1 = lcg(lcg(s) + r * 374761393);
-  let h2 = lcg(h1 + c * 1013904223);
-  let h3 = lcg(h2 + r * c);
+  let h1 = lcg(s + r * 48271 + c * 16807);
+  let h2 = lcg(h1 + c * 48271 + r * 16807);
+  let h3 = lcg(h2);
   return h3 / 2147483648;
 };
 

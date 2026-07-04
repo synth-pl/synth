@@ -16,14 +16,15 @@ export record DungeonMap {
 
 // ── RNG ───────────────────────────────────────────────────────────────────────
 
+// Normalize input first so s*1664525 never exceeds JS float precision (2^53)
 fn lcg(s: int) -> int =
-  (s * 1664525 + 1013904223) % 2147483648
+  ((s % 2147483648) * 1664525 + 1013904223) % 2147483648
 
-// Three-step avalanche hash — nearby seeds give very different outputs
+// 2D hash: swap prime roles for r and c in second step to break row/column correlation
 fn cell_hash(s: int, r: int, c: int) -> float {
-  let h1 = lcg(lcg(s) + r * 374761393)
-  let h2 = lcg(h1 + c * 1013904223)
-  let h3 = lcg(h2 + r * c)
+  let h1 = lcg(s + r * 48271 + c * 16807)
+  let h2 = lcg(h1 + c * 48271 + r * 16807)
+  let h3 = lcg(h2)
   h3 / 2147483648.0
 }
 
