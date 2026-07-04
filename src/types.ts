@@ -76,6 +76,8 @@ export type TopLevelDecl =
   | TestDecl          // v0.4
   | ImportDecl        // v0.5
   | ExportDecl        // v0.5
+  | TopLevelExpr      // v0.5: bare expression statement at top level (e.g. mount())
+  | TopLevelLet       // v0.5: top-level let binding (e.g. let state = {...})
 
 export interface TypeAlias {
   kind: 'TypeAlias'
@@ -118,6 +120,19 @@ export interface ImportDecl {
 export interface ExportDecl {
   kind: 'ExportDecl'
   decl: FnDecl | TypeAlias | TaggedUnionDecl | RecordDecl
+  line: number
+}
+
+export interface TopLevelExpr {
+  kind: 'TopLevelExpr'
+  expr: Expr
+  line: number
+}
+
+export interface TopLevelLet {
+  kind: 'TopLevelLet'
+  name: string | null
+  value: Expr
   line: number
 }
 

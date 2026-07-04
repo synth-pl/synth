@@ -77,6 +77,15 @@ export class Codegen {
       case 'ImportDecl':      break
       // v0.5: export is a source-level modifier; bundled output has no ES module syntax
       case 'ExportDecl':      this.emitTopLevel(decl.decl); break
+      // v0.5: bare top-level expression statement (e.g. mount())
+      case 'TopLevelExpr':    this.emitLine(`${this.emitExpr(decl.expr)};`); break
+      // v0.5: top-level let binding (e.g. let state = {...})
+      case 'TopLevelLet': {
+        const val = this.emitExpr(decl.value)
+        if (decl.name) this.emitLine(`let ${decl.name} = ${val};`)
+        else           this.emitLine(`${val};`)
+        break
+      }
     }
   }
 

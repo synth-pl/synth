@@ -417,6 +417,8 @@ const render_stats = (map, seed) => {
 
 
 
+let state = { level: 1, seed: 7777, rows: 22, cols: 48 };
+
 const next_seed = (s) => (s * 6364136 + 1442695) % 9007199254740991;
 
 const level_name = (level) => ((_m) => (_m === 1) ? "The Entrance Hall" : (_m === 2) ? "The Flooded Passage" : (_m === 3) ? "The Vault of Echoes" : (_m === 4) ? "The Sunken Catacombs" : (_m === 5) ? "The Abyssal Chamber" : (level > 5) ? "The Depths Beyond" : "Unknown Level")(level);
@@ -472,4 +474,6 @@ const mount = () => {
   document.getElementById("btn-prev").addEventListener("click", () => on_prev_level());
   return do_render();
 };
+
+mount();
 

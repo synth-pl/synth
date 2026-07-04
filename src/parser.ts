@@ -7,7 +7,7 @@ import {
   Program, TopLevelDecl,
   TypeAlias, TaggedUnionDecl, UnionVariant, TestDecl,
   RecordDecl, FieldDecl, FnDecl, ModuleDecl,
-  ImportDecl, ExportDecl,
+  ImportDecl, ExportDecl, TopLevelExpr, TopLevelLet,
   Annotation, FnParam, TypeExpr,
   Expr, BlockExpr, BlockStmt, MatchArm, MatchPattern,
   ObjectProperty, LambdaParam,
@@ -54,8 +54,30 @@ export class Parser {
     if (tok.type === 'KW_IMPORT') return this.parseImportDecl()
     // v0.5: export fn / export type / export record
     if (tok.type === 'KW_EXPORT') return this.parseExportDecl()
+    // v0.5: top-level let binding (e.g. let state = {...})
+    if (tok.type === 'KW_LET') return this.parseTopLevelLet()
+    // v0.5: bare expression statement at top level (e.g. mount())
+    if (tok.type !== 'EOF') {
+      const line = tok.line
+      const expr = this.parseExpr()
+      return { kind: 'TopLevelExpr', expr, line } as TopLevelExpr
+    }
     this.advance()
     return null
+  }
+
+  private parseTopLevelLet(): TopLevelLet {
+    const { line } = this.advance() // consume 'let'
+    let name: string | null
+    if (this.check('UNDERSCORE') || (this.check('IDENT') && this.peek().value === '_')) {
+      this.advance(); name = null
+    } else {
+      name = this.expect('IDENT').value
+    }
+    this.expect('ASSIGN')
+    const value = this.parseExpr()
+    this.tryConsume('SEMICOLON')
+    return { kind: 'TopLevelLet', name, value, line } as TopLevelLet
   }
 
   // v0.4: @test "description" { assertion_expr }
