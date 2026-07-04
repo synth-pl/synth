@@ -497,6 +497,35 @@ const fix_chest_count = (g, rooms) => {
 
 /**
  * @param {*} g
+ * @param {*} rooms
+ * @returns {*}
+ */
+const fix_water_count = (g, rooms) => {
+  let positions = [];
+  for (const room of rooms) {
+    let dr = room.r2 - room.r1 + 1;
+    let dc = room.c2 - room.c1 + 1;
+    for (let i = 0; i < dr; i++) {
+      for (let j = 0; j < dc; j++) {
+        let r = room.r1 + i;
+        let c = room.c1 + j;
+        if (gget(g, r, c) == "Water") {
+          positions.push({ r: r, c: c });
+        }
+      }
+    }
+  }
+  let idx = 0;
+  for (const pos of positions) {
+    if (idx >= 6) {
+      gset(g, pos.r, pos.c, "Floor");
+    }
+    idx = idx + 1;
+  }
+};
+
+/**
+ * @param {*} g
  * @param {number} rows
  * @param {number} cols
  * @returns {*}
@@ -549,6 +578,7 @@ const generate = (rows, cols, level, seed) => {
     scatter_room(g, room, level, lcg(seed + si * 1009), si == n - 1);
     si = si + 1;
   }
+  fix_water_count(g, rooms);
   fix_chest_count(g, rooms);
   place_door_torches(g, rows, cols);
   let grid = [];

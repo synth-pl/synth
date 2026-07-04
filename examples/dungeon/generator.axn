@@ -213,6 +213,28 @@ fn fix_chest_count(g: any, rooms: any) {
   }
 }
 
+// Cap total water tiles across all rooms to [0, 6] — removes excess by replacing
+// with Floor. No minimum; some maps are just drier than others.
+fn fix_water_count(g: any, rooms: any) {
+  let positions = []
+  for room in rooms {
+    let dr = room.r2 - room.r1 + 1
+    let dc = room.c2 - room.c1 + 1
+    for i in 0..dr {
+      for j in 0..dc {
+        let r = room.r1 + i
+        let c = room.c1 + j
+        if gget(g, r, c) == "Water" { positions.push({ r: r, c: c }) }
+      }
+    }
+  }
+  let mut idx = 0
+  for pos in positions {
+    if idx >= 6 { gset(g, pos.r, pos.c, "Floor") }
+    idx = idx + 1
+  }
+}
+
 // Place torches at every open floor diagonal of a door — like wall sconces
 // bracketing the entrance. Only fires if the diagonal cell is still Floor
 // (doors placed before scatter may have floor corners taken by chests/water).
@@ -263,7 +285,8 @@ export fn generate(rows: int, cols: int, level: int, seed: int) -> DungeonMap {
     si = si + 1
   }
 
-  // Step 5: clamp chest count to [2, 5]
+  // Step 5: clamp water to max 6 tiles, then clamp chests to [2, 5]
+  fix_water_count(g, rooms)
   fix_chest_count(g, rooms)
 
   // Step 6: torches at open floor diagonals of every door
