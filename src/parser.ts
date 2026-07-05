@@ -7,7 +7,7 @@ import {
   Program, TopLevelDecl,
   TypeAlias, TaggedUnionDecl, UnionVariant, TestDecl,
   RecordDecl, FieldDecl, FnDecl, ModuleDecl,
-  ImportDecl, ExportDecl, TopLevelExpr, TopLevelLet,
+  ImportDecl, ExportDecl, TopLevelExpr, TopLevelLet, TopLevelStmt,
   InterfaceDecl, InterfaceField,
   StoreDecl, StoreField, EnumDecl,
   Annotation, FnParam, TypeExpr,
@@ -110,6 +110,12 @@ export class Parser {
     if (tok.type === 'KW_EXPORT') return this.parseExportDecl()
     // v0.5: top-level let binding (e.g. let state = {...})
     if (tok.type === 'KW_LET') return this.parseTopLevelLet()
+    // v0.5.2: top-level for loop
+    if (tok.type === 'KW_FOR') {
+      const { line } = this.peek()
+      const stmt = this.parseForStmt()
+      return { kind: 'TopLevelStmt', stmt, line }
+    }
     // v0.6: pre-fn annotations — @throws fn foo(...) / @pure fn bar(...)
     // Collect the annotations, then expect fn/record/type/async fn to follow.
     if (tok.type === 'AT' && tok.value !== '@test') {
@@ -197,6 +203,7 @@ export class Parser {
 
   private parseTopLevelLet(): TopLevelLet {
     const { line } = this.advance() // consume 'let'
+    this.tryConsume('KW_MUT')       // v0.5.2: let mut — JS uses let for both
     let name: string | null
     if (this.check('UNDERSCORE') || (this.check('IDENT') && this.peek().value === '_')) {
       this.advance(); name = null

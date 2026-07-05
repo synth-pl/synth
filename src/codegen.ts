@@ -8,7 +8,7 @@ import {
   TypeAlias, TaggedUnionDecl, TestDecl,
   RecordDecl, FnDecl, ModuleDecl,
   ImportDecl, ExportDecl,
-  StoreDecl, EnumDecl,
+  StoreDecl, EnumDecl, TopLevelStmt,
   Annotation, FnParam, TypeExpr,
   Expr, BlockExpr, BlockStmt,
   MatchExpr, MatchArm, MatchPattern,
@@ -88,6 +88,10 @@ export class Codegen {
         else           this.emitLine(`${val};`)
         break
       }
+      // v0.5.2: top-level for loop / statement
+      case 'TopLevelStmt':
+        this.emitStmt((decl as TopLevelStmt).stmt)
+        break
       // v0.8: store — reactive mutable state as IIFE with subscribe/set API
       case 'StoreDecl':
         this.emitStore(decl as StoreDecl)

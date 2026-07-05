@@ -798,6 +798,12 @@ class Parser {
         // v0.5: top-level let binding (e.g. let state = {...})
         if (tok.type === 'KW_LET')
             return this.parseTopLevelLet();
+        // v0.5.2: top-level for loop
+        if (tok.type === 'KW_FOR') {
+            const { line } = this.peek();
+            const stmt = this.parseForStmt();
+            return { kind: 'TopLevelStmt', stmt, line };
+        }
         // v0.6: pre-fn annotations — @throws fn foo(...) / @pure fn bar(...)
         // Collect the annotations, then expect fn/record/type/async fn to follow.
         if (tok.type === 'AT' && tok.value !== '@test') {
@@ -882,6 +888,7 @@ class Parser {
     }
     parseTopLevelLet() {
         const { line } = this.advance(); // consume 'let'
+        this.tryConsume('KW_MUT'); // v0.5.2: let mut — JS uses let for both
         let name;
         if (this.check('UNDERSCORE') || (this.check('IDENT') && this.peek().value === '_')) {
             this.advance();
@@ -2169,6 +2176,10 @@ class Codegen {
                     this.emitLine(`${val};`);
                 break;
             }
+            // v0.5.2: top-level for loop / statement
+            case 'TopLevelStmt':
+                this.emitStmt(decl.stmt);
+                break;
             // v0.8: store — reactive mutable state as IIFE with subscribe/set API
             case 'StoreDecl':
                 this.emitStore(decl);

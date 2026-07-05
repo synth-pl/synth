@@ -94,6 +94,7 @@ export type TopLevelDecl =
   | InterfaceDecl     // v0.7: interface Name { field: Type; method: fn(T) -> U }
   | StoreDecl         // v0.8: store Name { field: Type = default }
   | EnumDecl          // v0.9.5: enum Color = Red | Green | Blue
+  | TopLevelStmt      // v0.5.2: top-level statement (for loop, etc.)
 
 export interface TypeAlias {
   kind: 'TypeAlias'
@@ -172,6 +173,12 @@ export interface TopLevelLet {
   kind: 'TopLevelLet'
   name: string | null
   value: Expr
+  line: number
+}
+
+export interface TopLevelStmt {
+  kind: 'TopLevelStmt'
+  stmt: BlockStmt
   line: number
 }
 
