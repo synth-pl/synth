@@ -268,6 +268,26 @@
       align-items: center;
       gap: 8px;
       padding: 8px 16px;
+      background: rgba(176,96,255,0.06);
+      border-bottom: 1px solid var(--border-card);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ── Fixed code-label pin ────────────────────────────────────────────── */
+    #code-label-pin {
+      position: fixed;
+      top: var(--header-h);
+      left: var(--nav-width);
+      right: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
       background: var(--bg-nav);
       border-bottom: 1px solid var(--border-card);
       font-size: 11px;
@@ -275,11 +295,10 @@
       color: var(--text-dim);
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      /* Stick below the fixed top header as page scrolls */
-      position: sticky;
-      top: var(--header-h);
-      z-index: 10;
-      width: 100%;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+    @media (max-width: 768px) {
+      #code-label-pin { left: 0; }
     }
 
     .code-label .dot {
@@ -676,6 +695,7 @@
     </div>
   </header>
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <div id="code-label-pin"></div>
 
   <div class="layout">
 
@@ -2133,6 +2153,36 @@ npm test               # run @test on rpg.axn + v04_features.axn
         if (sidebar.classList.contains('open')) toggleSidebar();
       });
     });
+
+    // ── Fixed code-label pin ─────────────────────────────────────────────
+    (function () {
+      const pin = document.getElementById('code-label-pin');
+      const blocks = document.querySelectorAll('.code-block');
+      const headerH = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue('--header-h')
+      ) || 60;
+
+      function update() {
+        let active = null;
+        for (const block of blocks) {
+          const rect = block.getBoundingClientRect();
+          // Block is straddling the header — its label has scrolled off-screen
+          if (rect.top < headerH && rect.bottom > headerH + 32) {
+            active = block.querySelector('.code-label');
+            break;
+          }
+        }
+        if (active) {
+          pin.innerHTML = active.innerHTML;
+          pin.style.display = 'flex';
+        } else {
+          pin.style.display = 'none';
+        }
+      }
+
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
   </script>
 </body>
 </html>
