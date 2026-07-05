@@ -240,10 +240,12 @@
       white-space: pre; /* preserve \n between line numbers */
     }
     .line-nums::-webkit-scrollbar { display: none; }
-    #editor {
+    /* Syntax-highlight layer — sits behind the transparent textarea */
+    #editor-hl {
       position: absolute;
       top: 0; left: 44px; right: 0; bottom: 0;
       padding: 14px 16px;
+      margin: 0;
       font-family: 'Courier New', monospace;
       font-size: 13px;
       line-height: 1.65;
@@ -251,12 +253,33 @@
       background: var(--bg-editor);
       border: none;
       outline: none;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow: hidden;
+      tab-size: 2;
+      pointer-events: none;
+      z-index: 0;
+      word-spacing: normal;
+      letter-spacing: normal;
+    }
+    #editor {
+      position: absolute;
+      top: 0; left: 44px; right: 0; bottom: 0;
+      padding: 14px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: transparent;
+      caret-color: var(--pink);
+      background: transparent;
+      border: none;
+      outline: none;
       resize: none;
       white-space: pre;
       overflow-wrap: normal;
       overflow: auto;
       tab-size: 2;
-      caret-color: var(--pink);
+      z-index: 1;
     }
     #editor::selection { background: rgba(176,96,255,0.35); }
 
@@ -338,6 +361,15 @@
     pre.output-code .cmt { color: #6272a4; font-style: italic; }
     pre.output-code .num { color: #bd93f9; }
     pre.output-code .punc { color: #ff79c6; opacity: 0.7; }
+    /* Editor highlight layer token colours */
+    #editor-hl .kw   { color: #ff79c6; }
+    #editor-hl .str  { color: #f1fa8c; }
+    #editor-hl .cmt  { color: #6272a4; font-style: italic; }
+    #editor-hl .num  { color: #bd93f9; }
+    #editor-hl .ann  { color: #50fa7b; }
+    #editor-hl .op   { color: #ff79c6; opacity: 0.85; }
+    #editor-hl .bool { color: #bd93f9; }
+    #editor-hl .ty   { color: #8be9fd; }
 
     .result-pane {
       padding: 16px;
@@ -436,6 +468,7 @@
     </div>
     <div class="editor-wrap">
       <div class="line-nums" id="line-nums">1</div>
+      <pre id="editor-hl" aria-hidden="true"></pre>
       <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
     </div>
     <div class="error-bar" id="error-bar"></div>
@@ -840,6 +873,7 @@ let activeTab     = 'js'
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 const editor    = document.getElementById('editor')
+const editorHl  = document.getElementById('editor-hl')
 const lineNums  = document.getElementById('line-nums')
 const errorBar  = document.getElementById('error-bar')
 const jsOutput  = document.getElementById('js-output')
@@ -847,17 +881,28 @@ const resultOut = document.getElementById('result-output')
 const statusPill = document.getElementById('status-pill')
 const lineCol   = document.getElementById('line-col')
 
+function updateEditorHl() {
+  // Trailing newline + space ensures the last empty line has proper height
+  editorHl.innerHTML = highlightAxon(editor.value) + '\n '
+}
+
 // Load hello world on start
 editor.value = EXAMPLES.hello
 updateLineNums()
+updateEditorHl()
 scheduleCompile(0)
 
 // ── Editor events ─────────────────────────────────────────────────────────────
 editor.addEventListener('input', () => {
   updateLineNums()
+  updateEditorHl()
   if (document.getElementById('auto-run').checked) scheduleCompile(600)
 })
-editor.addEventListener('scroll', syncScroll)
+editor.addEventListener('scroll', () => {
+  editorHl.scrollTop  = editor.scrollTop
+  editorHl.scrollLeft = editor.scrollLeft
+  syncScroll()
+})
 editor.addEventListener('keydown', e => {
   if (e.key === 'Tab') {
     e.preventDefault()
@@ -1004,6 +1049,7 @@ function fmtCode() {
     editor.value = formatted
     editor.scrollTop = scrollTop
     updateLineNums()
+    updateEditorHl()
     scheduleCompile(0)
   }
 }
@@ -1036,6 +1082,7 @@ function loadExample(key) {
   if (!key || !EXAMPLES[key]) return
   editor.value = EXAMPLES[key]
   updateLineNums()
+  updateEditorHl()
   scheduleCompile(0)
   document.getElementById('example-select').value = ''
 }
@@ -1044,6 +1091,24 @@ function loadExample(key) {
 function setStatus(type, text) {
   statusPill.className = `status-pill status-${type}`
   statusPill.textContent = text
+}
+
+// ── Axon source highlighter — single-pass tokeniser ──────────────────────────
+function highlightAxon(src) {
+  return escHtml(src).replace(
+    /(\/\/[^\n]*)|("""[\s\S]*?"""|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(0x[\da-fA-F_]+|0b[01_]+|\b\d[\d_]*\.?[\d_]*)|(@\w+)|(\|>|=>|->|\?\?|::|[|](?![|>]))|\b(fn|let|mut|type|record|enum|match|if|else|for|in|where|return|import|export|from|module|store|interface|async|await|and|or|not|infer)\b|\b(true|false|null|undefined)\b|\b(string|int|float|bool|void)\b/g,
+    (_, cmt, str, num, ann, op, kw, bool, ty) => {
+      if (cmt)  return `<span class="cmt">${cmt}</span>`
+      if (str)  return `<span class="str">${str}</span>`
+      if (num)  return `<span class="num">${num}</span>`
+      if (ann)  return `<span class="ann">${ann}</span>`
+      if (op)   return `<span class="op">${op}</span>`
+      if (kw)   return `<span class="kw">${kw}</span>`
+      if (bool) return `<span class="bool">${bool}</span>`
+      if (ty)   return `<span class="ty">${ty}</span>`
+      return _
+    }
+  )
 }
 
 // ── JS highlighter — single-pass so span class names are never re-matched ────

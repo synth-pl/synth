@@ -1,5 +1,40 @@
 # Axon Changelog
 
+## v0.9.6 — Compound Assignment
+
+### New language features
+
+- **Compound assignment operators** — `+=`, `-=`, `*=`, `/=`, `%=`, `??=` are now fully supported for `let mut` variables, object fields, and array elements.
+  ```axon
+  let mut score = 0
+  score += 10
+  score *= 2
+  score -= 5
+  console.log(score)  // 15
+
+  let mut tag = null
+  tag ??= "untagged"  // only assigns if null/undefined
+  ```
+  All six operators compile to their direct JavaScript equivalents with no overhead.
+
+### Keyword aliases
+
+- **`and` / `or` / `not`** — English-word aliases for `&&`, `||`, `!` are now recognised everywhere, including constraint expressions.
+  ```axon
+  type Score = int where value >= 0 and value <= 100
+  fn valid(x: int) = x > 0 and x < 1000
+  ```
+
+### Bug fixes
+
+- `record` declarations now emit a positional constructor factory so `Record(a, b)` works at runtime.
+- User code is wrapped in a block scope to prevent naming conflicts with stdlib helpers (`count`, `map`, etc.).
+- `sort_by` and `sort_by_desc` added to stdlib.
+- Fixed `Object.prototype` pollution bug where property names like `toString`, `toLocaleString`, `valueOf` were incorrectly classified as keywords.
+- `and` / `or` keyword aliases now correctly transpile to `&&` / `||` in generated JS.
+
+---
+
 ## v0.9.5 — The Ergonomics Update
 
 ### New language features
