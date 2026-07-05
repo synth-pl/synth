@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axon Dashboard — v0.9.5 Demo</title>
+  <script src="axon.compiler.js"></script>
+  <style>
+    :root {
+      --bg:         #0d0120;
+      --surface:    #150330;
+      --surface2:   #1d0540;
+      --border:     #2e0d60;
+      --border2:    #3d1270;
+      --text:       #e8d5ff;
+      --text-muted: #9060c8;
+      --text-dim:   #5a3890;
+      --accent:     #b060ff;
+      --pink:       #ff2d78;
+      --cyan:       #00e8d0;
+      --gold:       #ffd060;
+      --green:      #40ff90;
+      --red:        #ff4060;
+      --font-mono:  'Courier New', 'Lucida Console', monospace;
+      --font-sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius:     8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 20px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .logo-sub { font-size: 12px; color: var(--text-dim); margin-left: 4px; }
+    .badge { 
+      padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      background: rgba(176,96,255,0.2); color: var(--accent); border: 1px solid rgba(176,96,255,0.4);
+    }
+    header .spacer { flex: 1; }
+    .tick-btn {
+      padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+      background: rgba(176,96,255,0.15); color: var(--accent);
+      border: 1px solid rgba(176,96,255,0.4);
+      transition: all 0.15s;
+    }
+    .tick-btn:hover { background: rgba(176,96,255,0.3); }
+    .tick-btn.running { color: var(--pink); border-color: rgba(255,45,120,0.5); background: rgba(255,45,120,0.1); }
+    .back-link { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+    .back-link:hover { color: var(--text); }
+
+    /* ── Layout ────────────────────────────────────────────────────────────── */
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      padding: 16px 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    /* ── Stats row ─────────────────────────────────────────────────────────── */
+    .stats-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+    .stat-value { font-size: 28px; font-weight: 700; font-family: var(--font-mono); line-height: 1; }
+    .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .sv-green  { color: var(--green); }
+    .sv-cyan   { color: var(--cyan); }
+    .sv-gold   { color: var(--gold); }
+    .sv-pink   { color: var(--pink); }
+    .sv-accent { color: var(--accent); }
+
+    /* ── Task list ─────────────────────────────────────────────────────────── */
+    .task-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+    .task-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 13px; transition: border-color 0.2s;
+    }
+    .task-row:hover { border-color: var(--border2); }
+    .task-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 12px;
+      text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+    }
+    .tb-backlog   { background: rgba(90,56,144,0.3); color: var(--text-muted); border: 1px solid var(--border); }
+    .tb-active    { background: rgba(0,232,208,0.15); color: var(--cyan); border: 1px solid rgba(0,232,208,0.3); }
+    .tb-review    { background: rgba(255,208,96,0.15); color: var(--gold); border: 1px solid rgba(255,208,96,0.3); }
+    .tb-done      { background: rgba(64,255,144,0.1); color: var(--green); border: 1px solid rgba(64,255,144,0.25); }
+    .tb-cancelled { background: rgba(255,64,96,0.1); color: var(--red); border: 1px solid rgba(255,64,96,0.25); }
+    .task-title { flex: 1; }
+    .task-title.done { text-decoration: line-through; color: var(--text-dim); }
+    .task-points { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .pri-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pd-critical { background: var(--pink); }
+    .pd-high     { background: #ff8040; }
+    .pd-medium   { background: var(--gold); }
+    .pd-low      { background: var(--green); }
+
+    /* ── Velocity chart ────────────────────────────────────────────────────── */
+    .chart-area { height: 220px; position: relative; }
+    .chart-svg { width: 100%; height: 100%; overflow: visible; }
+
+    /* ── Event feed ─────────────────────────────────────────────────────────── */
+    .feed { 
+      max-height: 220px; overflow-y: auto; display: flex; flex-direction: column-reverse;
+      gap: 4px; font-size: 12px; font-family: var(--font-mono);
+    }
+    .feed-entry { padding: 4px 8px; border-radius: 4px; }
+    .fe-info    { color: var(--text-muted); }
+    .fe-success { color: var(--green); }
+    .fe-warn    { color: var(--gold); }
+    .fe-error   { color: var(--pink); }
+
+    /* ── Source panel ──────────────────────────────────────────────────────── */
+    .src-panel { grid-column: 1 / -1; }
+    .src-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .src-tab {
+      padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+      background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .src-tab.active { background: rgba(176,96,255,0.15); color: var(--accent); border-color: rgba(176,96,255,0.4); }
+    pre.src-code {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 16px; overflow-x: auto;
+      font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
+      max-height: 380px; overflow-y: auto;
+    }
+    /* syntax highlight */
+    .kw  { color: #c080ff; }
+    .kw2 { color: #ff7fcc; }
+    .str { color: #80ffe0; }
+    .num { color: #ffd080; }
+    .cmt { color: #7a5fa8; font-style: italic; }
+    .fn  { color: #7fdbff; }
+    .tp  { color: #80ffc0; }
+
+    /* ── Filter row ─────────────────────────────────────────────────────────── */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .filter-btn.active { background: rgba(176,96,255,0.2); color: var(--accent); border-color: rgba(176,96,255,0.5); }
+
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); grid-column: 1; }
+      .src-panel { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ Axon<span class="logo-sub">Dashboard</span></div>
+  <div class="badge">v0.9.5</div>
+  <div class="spacer"></div>
+  <button class="tick-btn" id="auto-tick-btn" onclick="toggleAutoTick()">▶ Auto-tick</button>
+  <button class="tick-btn" onclick="manualTick()">⟳ Tick</button>
+  <a class="back-link" href="landing.html">← Axon</a>
+</header>
+
+<div class="container">
+  <!-- Stats row -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Points</div>
+      <div class="stat-value sv-accent" id="stat-total">0</div>
+      <div class="stat-sub" id="stat-total-sub">across all tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Completed</div>
+      <div class="stat-value sv-green" id="stat-done">0</div>
+      <div class="stat-sub" id="stat-done-sub">tasks done</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">In Progress</div>
+      <div class="stat-value sv-cyan" id="stat-active">0</div>
+      <div class="stat-sub">active tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Velocity</div>
+      <div class="stat-value sv-gold" id="stat-velocity">0</div>
+      <div class="stat-sub">pts/tick avg</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Sprint</div>
+      <div class="stat-value sv-pink" id="stat-tick">0</div>
+      <div class="stat-sub" id="stat-tick-sub">tick</div>
+    </div>
+  </div>
+
+  <!-- Task list -->
+  <div class="card">
+    <div class="card-title">Sprint Backlog</div>
+    <div class="filter-row" id="filter-row">
+      <button class="filter-btn active" onclick="setFilter('All')">All</button>
+      <button class="filter-btn" onclick="setFilter('Backlog')">Backlog</button>
+      <button class="filter-btn" onclick="setFilter('Active')">Active</button>
+      <button class="filter-btn" onclick="setFilter('Review')">Review</button>
+      <button class="filter-btn" onclick="setFilter('Done')">Done</button>
+    </div>
+    <div class="task-list" id="task-list"></div>
+  </div>
+
+  <!-- Velocity chart -->
+  <div class="card">
+    <div class="card-title">Velocity Chart <span style="font-size:10px;color:var(--text-dim)">— points completed per tick</span></div>
+    <div class="chart-area">
+      <svg class="chart-svg" id="velocity-chart" viewBox="0 0 480 200" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="card-title" style="margin-top:14px">Event Feed</div>
+    <div class="feed" id="event-feed"></div>
+  </div>
+
+  <!-- Source panel -->
+  <div class="card src-panel">
+    <div class="card-title">Source — Axon v0.9.5</div>
+    <div class="src-tabs">
+      <button class="src-tab active" onclick="showSrc('types')">Types &amp; Enums</button>
+      <button class="src-tab" onclick="showSrc('logic')">Business Logic</button>
+      <button class="src-tab" onclick="showSrc('sim')">Simulation</button>
+    </div>
+    <pre class="src-code" id="src-display"></pre>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Axon v0.9.5 Dashboard Demo — compiled at page load via AxonCompiler
+// Shows: enum, numeric separators, multi-line lambdas, multi-error reporting
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SOURCES = {
+  types: `// ── Types & Enums (v0.9.5) ──────────────────────────────────────────
+enum TaskStatus = Backlog | Active | Review | Done | Cancelled
+
+enum Priority = Low | Medium | High | Critical
+
+record Task {
+  id:       int
+  title:    string
+  status:   TaskStatus
+  priority: Priority
+  points:   int
+}
+
+// Numeric separators (v0.9.5) ─────────────────────────────────────
+let VELOCITY_WINDOW = 8
+let MAX_POINTS      = 1_000
+let TICK_INTERVAL   = 800     // milliseconds
+let PERF_THRESHOLD  = 0xFF    // 255 — full performance`,
+
+  logic: `// ── Business Logic (multi-line lambdas, enums) ──────────────────────
+fn filter_tasks(tasks: Task[], status: TaskStatus) -> Task[] =
+  tasks |> filter(t => {
+    t.status == status
+  })
+
+fn active_tasks(tasks: Task[]) -> Task[] =
+  tasks |> filter(t => {
+    t.status == TaskStatus.Active || t.status == TaskStatus.Review
+  })
+
+fn completion_rate(tasks: Task[]) -> float {
+  let done  = tasks |> filter(t => { t.status == TaskStatus.Done })
+  let total = tasks.length
+  if total == 0 { 0 }
+  else { done.length / total * 100 }
+}
+
+fn critical_count(tasks: Task[]) -> int {
+  let critical =
+    tasks
+      |> filter(t => {
+        let urgent  = t.priority == Priority.Critical
+        let ongoing = t.status != TaskStatus.Done && t.status != TaskStatus.Cancelled
+        urgent && ongoing
+      })
+  critical.length
+}
+
+fn velocity(history: float[]) -> float {
+  let recent = history.slice(-VELOCITY_WINDOW)
+  if recent.length == 0 { 0 }
+  else {
+    let total = recent |> sum
+    total / recent.length
+  }
+}`,
+
+  sim: `// ── Simulation tick ──────────────────────────────────────────────────
+fn next_status(s: TaskStatus) -> TaskStatus =
+  match s {
+    | TaskStatus.Backlog   => TaskStatus.Active
+    | TaskStatus.Active    => TaskStatus.Review
+    | TaskStatus.Review    => TaskStatus.Done
+    | TaskStatus.Done      => TaskStatus.Done
+    | TaskStatus.Cancelled => TaskStatus.Cancelled
+  }
+
+fn tick(tasks: Task[]) -> Task[] {
+  let active = active_tasks(tasks)
+  if active.length == 0 { tasks }
+  else {
+    let pick_idx = Math.floor(Math.random() * active.length)
+    let picked   = active[pick_idx]
+    tasks |> map(t => {
+      if t.id == picked.id {
+        { ...t, status: next_status(t.status) }
+      } else {
+        t
+      }
+    })
+  }
+}`
+};
+
+// ── Compile Axon source at load time ─────────────────────────────────────────
+function compileAll() {
+  const full = Object.values(SOURCES).join('\n\n');
+  const { js, errors, warnings } = AxonCompiler.compile(full);
+  if (errors.length > 0) {
+    logEvent('error', `Compile errors: ${errors.map(e => e.message).join(' | ')}`);
+    return null;
+  }
+  if (warnings.length > 0) {
+    warnings.forEach(w => logEvent('warn', w.message));
+  }
+  return js;
+}
+
+const compiledJS = compileAll();
+let tasks = [];
+let velocityHistory = [];
+let tickCount = 0;
+let activeFilter = 'All';
+let autoTickInterval = null;
+
+if (compiledJS) {
+  const ctx = {};
+  // Bootstrap the compiled simulation
+  const fn = new Function(...Object.keys(ctx), compiledJS);
+  fn(...Object.values(ctx));
+
+  // Re-eval each tick via function to get fresh scope
+  function evalSim(code) {
+    try {
+      return (new Function('Math', 'console', code + '; return { filter_tasks, active_tasks, completion_rate, critical_count, velocity, tick, TaskStatus, Priority };'))(Math, console);
+    } catch(e) {
+      logEvent('error', 'Sim error: ' + e.message);
+      return null;
+    }
+  }
+
+  const sim = evalSim(compiledJS);
+  if (sim) {
+    initTasks(sim);
+    render(sim);
+    logEvent('success', 'Dashboard ready — Axon v0.9.5 compiled successfully');
+    logEvent('info', `Compiler version: ${AxonCompiler.version} · ${sim.TaskStatus.Active} = "${sim.TaskStatus.Active}"`);
+  }
+
+  function initTasks(sim) {
+    const T = sim.TaskStatus;
+    const P = sim.Priority;
+    tasks = [
+      { id: 1,  title: 'Design component API',     status: T.Done,      priority: P.High,     points: 5  },
+      { id: 2,  title: 'Write unit tests',          status: T.Done,      priority: P.Critical, points: 8  },
+      { id: 3,  title: 'Implement auth flow',        status: T.Active,    priority: P.Critical, points: 13 },
+      { id: 4,  title: 'Build dashboard layout',    status: T.Active,    priority: P.High,     points: 8  },
+      { id: 5,  title: 'Fix navigation bug',        status: T.Review,    priority: P.Medium,   points: 3  },
+      { id: 6,  title: 'Add dark mode toggle',      status: T.Backlog,   priority: P.Low,      points: 5  },
+      { id: 7,  title: 'Optimize bundle size',      status: T.Backlog,   priority: P.Medium,   points: 8  },
+      { id: 8,  title: 'Deploy to staging',         status: T.Backlog,   priority: P.High,     points: 5  },
+      { id: 9,  title: 'Security audit',            status: T.Backlog,   priority: P.Critical, points: 21 },
+      { id: 10, title: 'Performance profiling',     status: T.Backlog,   priority: P.Medium,   points: 13 },
+    ];
+  }
+
+  function tick(sim) {
+    const before = tasks.filter(t => t.status === sim.TaskStatus.Done).length;
+    tasks = sim.tick(tasks);
+    tickCount++;
+    const after = tasks.filter(t => t.status === sim.TaskStatus.Done).length;
+    const newlyDone = after - before;
+    const pts = newlyDone > 0 ? tasks.filter(t => t.status === sim.TaskStatus.Done).slice(-newlyDone).reduce((s,t) => s + t.points, 0) : 0;
+    velocityHistory.push(pts);
+    if (newlyDone > 0) {
+      const doneTasks = tasks.filter(t => t.status === sim.TaskStatus.Done);
+      const newest = doneTasks[doneTasks.length - 1];
+      logEvent('success', `Tick ${tickCount}: "${newest.title}" completed (+${newest.points}pts)`);
+    } else {
+      const active = tasks.filter(t => t.status === sim.TaskStatus.Active || t.status === sim.TaskStatus.Review);
+      if (active.length > 0) {
+        logEvent('info', `Tick ${tickCount}: "${active[0].title}" → ${active[0].status}`);
+      }
+    }
+    render(sim);
+  }
+
+  window.manualTick = () => tick(sim);
+
+  window.toggleAutoTick = () => {
+    const btn = document.getElementById('auto-tick-btn');
+    if (autoTickInterval) {
+      clearInterval(autoTickInterval);
+      autoTickInterval = null;
+      btn.textContent = '▶ Auto-tick';
+      btn.classList.remove('running');
+    } else {
+      autoTickInterval = setInterval(() => tick(sim), 900);
+      btn.textContent = '⏸ Pause';
+      btn.classList.add('running');
+    }
+  };
+
+  function render(sim) {
+    renderStats(sim);
+    renderTasks(sim);
+    renderChart();
+  }
+
+  function renderStats(sim) {
+    const done   = tasks.filter(t => t.status === sim.TaskStatus.Done);
+    const active = tasks.filter(t => t.status === sim.TaskStatus.Active || t.status === sim.TaskStatus.Review);
+    const total  = tasks.reduce((s, t) => s + t.points, 0);
+    const vel    = velocityHistory.length > 0
+      ? (velocityHistory.slice(-8).reduce((a,b)=>a+b,0) / Math.min(8, velocityHistory.length)).toFixed(1)
+      : '0';
+
+    document.getElementById('stat-total').textContent = total.toLocaleString();
+    document.getElementById('stat-done').textContent  = done.length;
+    document.getElementById('stat-done-sub').textContent = `${done.reduce((s,t)=>s+t.points,0)} pts done`;
+    document.getElementById('stat-active').textContent = active.length;
+    document.getElementById('stat-velocity').textContent = vel;
+    document.getElementById('stat-tick').textContent  = tickCount;
+    document.getElementById('stat-tick-sub').textContent = `${(sim.completion_rate(tasks)).toFixed(0)}% complete`;
+  }
+
+  function renderTasks(sim) {
+    const list = document.getElementById('task-list');
+    const filtered = activeFilter === 'All' ? tasks : tasks.filter(t => t.status === sim.TaskStatus[activeFilter]);
+    list.innerHTML = filtered.map(t => {
+      const statusClass = {
+        'Backlog':   'tb-backlog',
+        'Active':    'tb-active',
+        'Review':    'tb-review',
+        'Done':      'tb-done',
+        'Cancelled': 'tb-cancelled',
+      }[t.status] || 'tb-backlog';
+      const priClass = {
+        'Critical': 'pd-critical',
+        'High':     'pd-high',
+        'Medium':   'pd-medium',
+        'Low':      'pd-low',
+      }[t.priority] || 'pd-low';
+      const doneClass = t.status === sim.TaskStatus.Done ? ' done' : '';
+      return `<div class="task-row">
+        <div class="pri-dot ${priClass}"></div>
+        <span class="task-badge ${statusClass}">${t.status}</span>
+        <span class="task-title${doneClass}">${t.title}</span>
+        <span class="task-points">${t.points}pt</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderChart() {
+    const svg = document.getElementById('velocity-chart');
+    const hist = velocityHistory.slice(-20);
+    if (hist.length < 2) {
+      svg.innerHTML = '<text x="50%" y="50%" fill="#5a3890" text-anchor="middle" font-size="12" font-family="Courier New">Run some ticks to see velocity data</text>';
+      return;
+    }
+    const W = 480, H = 200, pad = 30;
+    const maxV = Math.max(...hist, 1);
+    const step = (W - pad * 2) / (hist.length - 1);
+
+    const pts = hist.map((v, i) => {
+      const x = pad + i * step;
+      const y = H - pad - (v / maxV) * (H - pad * 2);
+      return `${x},${y}`;
+    });
+
+    const area = `M ${pad},${H - pad} L ${pts.join(' L ')} L ${pad + (hist.length - 1) * step},${H - pad} Z`;
+    const line = `M ${pts.join(' L ')}`;
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#b060ff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#b060ff" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <path d="${area}" fill="url(#vg)"/>
+      <path d="${line}" fill="none" stroke="#b060ff" stroke-width="2" stroke-linejoin="round"/>
+      ${pts.map((p, i) => {
+        const [x, y] = p.split(',');
+        const isLast = i === pts.length - 1;
+        return `<circle cx="${x}" cy="${y}" r="${isLast ? 4 : 2.5}" fill="${isLast ? '#ff2d78' : '#b060ff'}"/>`;
+      }).join('')}
+      <text x="${pad}" y="${H - 8}" fill="#5a3890" font-size="10" font-family="Courier New">0</text>
+      <text x="${pad}" y="${pad - 4}" fill="#5a3890" font-size="10" font-family="Courier New">${maxV}</text>
+    `;
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+
+window.setFilter = (f) => {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === f);
+  });
+  const sim = getSim();
+  if (sim) renderTasks(sim);
+};
+
+function getSim() {
+  try {
+    return (new Function('Math', 'console', compiledJS + '; return { filter_tasks, active_tasks, completion_rate, critical_count, velocity, tick, TaskStatus, Priority };'))(Math, console);
+  } catch(e) { return null; }
+}
+
+const feed = document.getElementById('event-feed');
+function logEvent(type, msg) {
+  const el = document.createElement('div');
+  el.className = `feed-entry fe-${type}`;
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  el.textContent = `[${time}] ${msg}`;
+  feed.prepend(el);
+  while (feed.children.length > 40) feed.removeChild(feed.lastChild);
+}
+
+// ── Source display ────────────────────────────────────────────────────────────
+
+function showSrc(tab) {
+  document.querySelectorAll('.src-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['types','logic','sim'][i] === tab);
+  });
+  document.getElementById('src-display').innerHTML = highlight(SOURCES[tab]);
+}
+
+function highlight(src) {
+  return src
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(\/\/[^\n]*)/g, '<span class="cmt">$1</span>')
+    .replace(/\b(enum|fn|record|let|match|if|else|return|store|on|for|in|import|export|type|async|await)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(int|float|string|bool|list|any)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b([A-Z][A-Za-z0-9_]*)/g, '<span class="tp">$1</span>')
+    .replace(/\b(\d[\d_]*(?:\.\d[\d_]*)?|0x[\da-fA-F_]+|0b[01_]+)\b/g, '<span class="num">$1</span>')
+    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
+}
+
+showSrc('types');
+</script>
+</body>
+</html>
