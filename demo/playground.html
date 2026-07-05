@@ -5,7 +5,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="favicon.png" type="image/png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Axon Playground — v0.9.0</title>
+  <title>Axon Playground — v0.9.5</title>
   <style>
     /* ── Synthwave palette ─────────────────────────────────────────────────── */
     :root {
@@ -349,7 +349,7 @@
 <header class="page-header">
   <div class="header-logo">⬡</div>
   <div class="header-title">Axon Playground</div>
-  <div class="header-badge">v0.9.0</div>
+  <div class="header-badge">v0.9.5</div>
   <div class="header-sep"></div>
   <label class="header-example-label" for="example-select">Examples:</label>
   <select class="header-examples" id="example-select" onchange="loadExample(this.value)">
@@ -364,6 +364,9 @@
     <option value="async">Async / Await (v0.8)</option>
     <option value="errors">Error Handling (v0.6)</option>
     <option value="loops">For Loops (v0.5.2)</option>
+    <option value="enums">Enums (v0.9.5)</option>
+    <option value="numbers">Numeric Literals (v0.9.5)</option>
+    <option value="multilambda">Multi-line Lambdas (v0.9.5)</option>
   </select>
   <a class="header-nav" href="landing.html">← Axon</a>
 </header>
@@ -645,7 +648,109 @@ let mut upper_words = []
 for w in words {
   upper_words = upper_words.concat([w.toUpperCase()])
 }
-console.log(upper_words.join(" "))`
+console.log(upper_words.join(" "))`,
+
+  enums: `// Enums (v0.9.5) — frozen string-keyed objects
+enum Priority = Low | Medium | High | Critical
+
+enum TaskStatus = Backlog | InProgress | Done | Cancelled
+
+record Task {
+  id:       int
+  title:    string
+  status:   TaskStatus
+  priority: Priority
+}
+
+fn badge(t: Task) -> string {
+  let s = match t.status {
+    | TaskStatus.Backlog    => "[ ]"
+    | TaskStatus.InProgress => "[~]"
+    | TaskStatus.Done       => "[✓]"
+    | TaskStatus.Cancelled  => "[✗]"
+  }
+  let p = match t.priority {
+    | Priority.Critical => "🔴"
+    | Priority.High     => "🟠"
+    | Priority.Medium   => "🟡"
+    | Priority.Low      => "🟢"
+  }
+  p + " " + s + " " + t.title
+}
+
+let tasks = [
+  Task(1, "Design API",    TaskStatus.Done,       Priority.High),
+  Task(2, "Write tests",   TaskStatus.InProgress, Priority.Critical),
+  Task(3, "Update docs",   TaskStatus.Backlog,    Priority.Low),
+  Task(4, "Deploy",        TaskStatus.Backlog,    Priority.Medium),
+]
+
+for t in tasks {
+  console.log(badge(t))
+}`,
+
+  numbers: `// Numeric literals (v0.9.5) — separators, hex, binary
+// Underscore separators for readability
+let population  = 8_000_000_000
+let bandwidth   = 1_000_000   // 1 Mbps in bits
+let latency_ns  = 45_000      // nanoseconds
+
+// Hex literals — colors, masks, flags
+let red         = 0xFF0000
+let green       = 0x00FF00
+let blue        = 0x0000FF
+let alpha_mask  = 0xFF_00_00_00
+
+// Binary literals — bitflags
+let READ        = 0b0001
+let WRITE       = 0b0010
+let EXEC        = 0b0100
+let FULL_PERMS  = 0b0111
+
+// Floating point with separators
+let golden      = 1.618_033_988
+let light_speed = 299_792_458.0
+
+console.log("Population: " + population.toLocaleString())
+console.log("Red channel: #" + red.toString(16))
+console.log("Perms: " + FULL_PERMS.toString(2))
+console.log("Golden ratio: " + golden.toFixed(6))
+console.log("Light speed: " + light_speed.toLocaleString() + " m/s")`,
+
+  multilambda: `// Multi-line lambdas (v0.9.5) — block bodies in arrow functions
+record User {
+  name:   string
+  score:  int
+  badges: int
+}
+
+let users = [
+  User("Alice",   94, 7),
+  User("Bob",     61, 2),
+  User("Charlie", 88, 5),
+  User("Diana",   73, 4),
+  User("Eve",     99, 12),
+]
+
+// Multi-line lambda with local bindings
+let ranked =
+  users
+    |> filter(u => {
+      let qualified = u.score >= 70
+      let active    = u.badges >= 3
+      qualified && active
+    })
+    |> map(u => {
+      let tier = if u.score >= 90 { "Gold" } else { "Silver" }
+      let label = tier + " — " + u.name
+      { name: u.name, tier: tier, label: label, score: u.score }
+    })
+    |> sort_by(.score)
+
+console.log("=== Ranked Users ===")
+for r in ranked {
+  console.log(r.score + "  " + r.label)
+}`
 }
 
 // ── State ────────────────────────────────────────────────────────────────────

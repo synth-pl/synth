@@ -1,5 +1,66 @@
 # Axon Changelog
 
+## v0.9.5 — The Ergonomics Update
+
+### New language features
+
+- **`enum` type** — concise value-set declarations that compile to frozen, string-keyed objects.
+  ```axon
+  enum Status = Active | Paused | Done
+  enum Priority = Low | Medium | High | Critical
+
+  // Generated JS:
+  // const Status = Object.freeze({ Active: 'Active', Paused: 'Paused', Done: 'Done' });
+  ```
+  Enum variants can be pattern-matched with the `Enum.Variant` syntax:
+  ```axon
+  fn describe(s: Status) = match s {
+    | Status.Active => "running"
+    | Status.Paused => "paused"
+    | Status.Done   => "finished"
+  }
+  ```
+
+- **Numeric separators** — `_` may appear anywhere inside a decimal, hex, or binary literal for readability. Separators are stripped at compile time; the output value is unaffected.
+  ```axon
+  let population  = 8_000_000_000
+  let red_channel = 0xFF_00_00
+  let flags       = 0b1010_1010
+  let pi          = 3.141_592_653
+  ```
+
+- **Hex and binary literals** — `0x…` and `0b…` prefix literals are now fully supported in the lexer and preserve their notation in generated JS output.
+
+- **Multi-line lambdas** — lambda bodies may be a block expression `{ … }` with multiple statements. The last expression is implicitly returned.
+  ```axon
+  let active =
+    items
+      |> filter(item => {
+        let ok = item.status == Status.Active
+        ok && item.priority != Priority.Low
+      })
+      |> map(item => {
+        let label = "[" + item.status + "] " + item.title
+        label
+      })
+  ```
+  *(Block-body lambdas already compiled in v0.9.0; `parseLambdaBody` handled `{ … }` since v0.5. This entry formally documents the feature.)*
+
+### Improved error reporting
+
+- **Multi-error reporting** — the parser now collects all errors with panic-mode recovery instead of stopping at the first error. `parse()` returns `{ ast, errors }`. The browser bundle's `AxonCompiler.compile()` API is updated accordingly.
+  ```js
+  const { js, errors, warnings } = AxonCompiler.compile(source)
+  // errors — array of { message, line, col, kind } — may contain multiple items
+  ```
+
+### Tooling
+
+- All v0.9 CLI commands (`--check`, `--fmt`, `--watch`) are included and stable.
+- `axon.compiler.js` browser bundle updated to v0.9.5; version string is `"0.9.5"`.
+
+---
+
 ## v0.9.0 — The Developer Experience Update
 
 ### New tooling

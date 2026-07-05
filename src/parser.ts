@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Axon v0.8.0 — Recursive-descent parser
+// Axon v0.9.5 — Recursive-descent parser
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -9,7 +9,7 @@ import {
   RecordDecl, FieldDecl, FnDecl, ModuleDecl,
   ImportDecl, ExportDecl, TopLevelExpr, TopLevelLet,
   InterfaceDecl, InterfaceField,
-  StoreDecl, StoreField,
+  StoreDecl, StoreField, EnumDecl,
   Annotation, FnParam, TypeExpr,
   Expr, BlockExpr, BlockStmt, MatchArm, MatchPattern,
   ObjectProperty, LambdaParam,
@@ -29,24 +29,52 @@ export class Parser {
   // v0.4: set true while parsing a `when` guard so bare `ident =>` is not
   // mistaken for a lambda (=> is the match arm separator immediately after the guard)
   private inMatchGuard = false
+  // v0.9.5: collected errors for multi-error reporting
+  private errors: ParseError[] = []
 
   constructor(private tokens: Token[]) {}
 
   // ── Entry point ─────────────────────────────────────────────────────────────
 
-  parse(): Program {
+  // v0.9.5: returns { ast, errors } — collects all errors with panic-mode recovery
+  parse(): { ast: Program; errors: ParseError[] } {
     const body: TopLevelDecl[] = []
     while (!this.isEOF()) {
-      const decl = this.parseTopLevel()
-      if (decl) body.push(decl)
+      try {
+        const decl = this.parseTopLevel()
+        if (decl) body.push(decl)
+      } catch (e) {
+        if (e instanceof ParseError) {
+          this.errors.push(e)
+          this.syncToNextTopLevel()
+        } else {
+          throw e
+        }
+      }
     }
-    return { kind: 'Program', body }
+    return { ast: { kind: 'Program', body }, errors: this.errors }
+  }
+
+  // Advance past tokens until a safe top-level keyword is found
+  private syncToNextTopLevel(): void {
+    const syncPoints = new Set<string>([
+      'KW_FN', 'KW_TYPE', 'KW_RECORD', 'KW_MODULE', 'KW_IMPORT', 'KW_EXPORT',
+      'KW_LET', 'KW_INTERFACE', 'KW_ASYNC', 'KW_ENUM', 'EOF',
+    ])
+    while (!this.isEOF()) {
+      const tok = this.peek()
+      if (syncPoints.has(tok.type)) break
+      // "store Name {" and "on Name." are contextual top-level keywords
+      if (tok.type === 'IDENT' && (tok.value === 'store' || tok.value === 'on')) break
+      this.advance()
+    }
   }
 
   // ── Top-level declarations ───────────────────────────────────────────────────
 
   private parseTopLevel(): TopLevelDecl | null {
     const tok = this.peek()
+    if (tok.type === 'KW_ENUM')      return this.parseEnumDecl()
     if (tok.type === 'KW_TYPE')      return this.parseTypeAliasOrUnion()
     if (tok.type === 'KW_RECORD')    return this.parseRecord()
     if (tok.type === 'KW_FN')        return this.parseFnDecl()
@@ -219,6 +247,22 @@ export class Parser {
   }
 
   // v0.4: detect tagged union syntax — type T = | Variant { fields } | ...
+  // v0.9.5: enum Color = Red | Green | Blue
+  private parseEnumDecl(): EnumDecl {
+    const { line } = this.expect('KW_ENUM')
+    const name = this.expect('IDENT').value
+    this.expect('ASSIGN')
+    const variants: string[] = []
+    // Leading pipe is optional: enum Foo = A | B  or  enum Foo = | A | B
+    if (this.check('PIPE')) this.advance()
+    variants.push(this.expect('IDENT').value)
+    while (this.check('PIPE')) {
+      this.advance()
+      variants.push(this.expect('IDENT').value)
+    }
+    return { kind: 'EnumDecl', name, variants, line }
+  }
+
   private parseTypeAliasOrUnion(): TypeAlias | TaggedUnionDecl {
     const { line } = this.expect('KW_TYPE')
     const name = this.expect('IDENT').value
@@ -1071,7 +1115,8 @@ export class Parser {
 
     if (tok.type === 'NUMBER') {
       this.advance()
-      return { kind: 'NumberLit', value: parseFloat(tok.value) }
+      // v0.9.5: preserve raw source for hex/binary output; Number() handles 0x, 0b, decimals
+      return { kind: 'NumberLit', value: Number(tok.value), raw: tok.value }
     }
 
     if (tok.type === 'STRING') {
@@ -1191,6 +1236,15 @@ export class Parser {
     if (tok.type === 'KW_FALSE') { this.advance(); return { kind: 'LiteralPat', value: false } }
     if (tok.type === 'NUMBER') { this.advance(); return { kind: 'LiteralPat', value: parseFloat(tok.value) } }
     if (tok.type === 'STRING') { this.advance(); return { kind: 'LiteralPat', value: tok.value } }
+
+    // v0.9.5: Enum.Variant pattern — IDENT DOT IDENT (e.g. Direction.North)
+    if (tok.type === 'IDENT' && this.tokens[this.pos + 1]?.type === 'DOT' &&
+        this.tokens[this.pos + 2]?.type === 'IDENT') {
+      const enumName = this.advance().value
+      this.advance() // consume '.'
+      const variant = this.expect('IDENT').value
+      return { kind: 'EnumPat', enumName, variant }
+    }
 
     // v0.4: identifier followed by { bindings } → tagged union pattern
     if (tok.type === 'IDENT') {

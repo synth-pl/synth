@@ -1,6 +1,6 @@
 {
   "name": "axon-lang",
-  "version": "0.9.0",
+  "version": "0.9.5",
   "description": "Axon — AI-native programming language that transpiles to JavaScript",
   "main": "dist/cli.js",
   "bin": {
@@ -42,7 +42,7 @@
     "build-combat": "node dist/cli.js examples/combat.axn demo/combat.axon.js && node tools/embed_combat.js",
     "build-rpg": "node dist/cli.js examples/rpg.axn demo/rpg.axon.js && node tools/embed_rpg.js",
     "build-rpg-standalone": "node dist/cli.js examples/rpg.axn demo/rpg.axon.js && node tools/embed_rpg.js && node tools/build_standalone_rpg.js",
-    "test": "node dist/cli.js --test examples/rpg.axn && node dist/cli.js --test examples/v04_features.axn"
+    "test": "node dist/cli.js --test examples/rpg.axn && node dist/cli.js --test examples/v04_features.axn && node dist/cli.js --test examples/v095_features.axn"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

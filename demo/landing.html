@@ -647,7 +647,7 @@
 
   <!-- ── Hero ────────────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="hero-eyebrow">✦ AI-native · v0.9.0</div>
+    <div class="hero-eyebrow">✦ AI-native · v0.9.5</div>
     <h1 class="hero-title">
       <span class="grad">A programming language<br>built for AI.</span>
     </h1>
@@ -680,6 +680,7 @@
       <button class="showcase-tab" onclick="showPane('typesys')" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
       <button class="showcase-tab" onclick="showPane('async')" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
       <button class="showcase-tab" onclick="showPane('tooling')" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
+      <button class="showcase-tab" onclick="showPane('ergonomics')" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
@@ -690,13 +691,14 @@
     <div class="showcase-pane" id="pane-typesys"><pre id="code-typesys"></pre></div>
     <div class="showcase-pane" id="pane-async"><pre id="code-async"></pre></div>
     <div class="showcase-pane" id="pane-tooling"><pre id="code-tooling"></pre></div>
+    <div class="showcase-pane" id="pane-ergonomics" style="display:none"><pre id="code-ergonomics"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
   <div class="stats-bar">
     <div class="stat"><div class="stat-num">0→JS</div><div class="stat-label">No runtime</div></div>
     <div class="stat"><div class="stat-num">8</div><div class="stat-label">Annotations</div></div>
-    <div class="stat"><div class="stat-num">134</div><div class="stat-label">Passing tests</div></div>
+    <div class="stat"><div class="stat-num">81</div><div class="stat-label">Passing tests</div></div>
     <div class="stat"><div class="stat-num">8</div><div class="stat-label">Demos</div></div>
   </div>
 
@@ -836,10 +838,15 @@
         <div class="roadmap-ver">v0.8</div>
         <div class="roadmap-theme">Async &amp; Reactive</div>
       </div>
+      <div class="roadmap-stop">
+        <div class="roadmap-dot rd-done">✓</div>
+        <div class="roadmap-ver">v0.9</div>
+        <div class="roadmap-theme">Tooling</div>
+      </div>
       <div class="roadmap-stop rs-now">
         <div class="roadmap-dot rd-now">★</div>
-        <div class="roadmap-ver" style="color:var(--accent)">v0.9</div>
-        <div class="roadmap-theme">Tooling</div>
+        <div class="roadmap-ver" style="color:var(--accent)">v0.9.5</div>
+        <div class="roadmap-theme">Ergonomics</div>
       </div>
       <div class="roadmap-stop">
         <div class="roadmap-dot rd-later">0</div>
@@ -1147,12 +1154,56 @@ fn run_demo() {
   }
 
   // result.js         — transpiled JavaScript string
-  // result.errors     — [{ message, line, col, kind }]
+  // result.errors     — [{ message, line, col, kind }]   multi-error (v0.9.5)
   // result.warnings   — [{ severity, message, line, col }]
-  // AxonCompiler.version   — "0.9.0"
+  // AxonCompiler.version   — "0.9.5"
 }
 
 run_demo()
+`);
+
+    setCode('code-ergonomics', `
+// ── Enums (v0.9.5) ───────────────────────────────────────────────────────────
+enum Priority = Low | Medium | High | Critical
+enum Status   = Backlog | Active | Done
+
+record Task {
+  id:       int
+  title:    string
+  status:   Status
+  priority: Priority
+}
+
+fn badge(t: Task) -> string {
+  let icon = match t.status {
+    | Status.Backlog => "○"
+    | Status.Active  => "◎"
+    | Status.Done    => "●"
+  }
+  "[{icon}] {t.title}"
+}
+
+// ── Numeric separators (v0.9.5) ───────────────────────────────────────────────
+let budget    = 1_000_000
+let threshold = 0xFF_FF
+let flags     = 0b1010_1010
+
+// ── Multi-line lambdas (v0.9.5) ───────────────────────────────────────────────
+let tasks = [
+  Task(1, "Write tests",  Status.Active,  Priority.Critical),
+  Task(2, "Ship feature", Status.Backlog, Priority.High),
+  Task(3, "Fix bug",      Status.Done,    Priority.Medium),
+]
+
+let active =
+  tasks
+    |> filter(t => {
+      let urgent = t.priority == Priority.High || t.priority == Priority.Critical
+      t.status != Status.Done && urgent
+    })
+    |> map(badge)
+
+for b in active { console.log(b) }
 `);
   </script>
 </body>

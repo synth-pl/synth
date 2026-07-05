@@ -5,7 +5,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="favicon.png" type="image/png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Axon Language Reference — v0.9.0</title>
+  <title>Axon Language Reference — v0.9.5</title>
   <style>
     /* ── Synthwave dark palette ─────────────────────────────────────────── */
     :root {
@@ -698,7 +698,7 @@
     <span class="top-header-title">Axon</span>
     <span class="top-header-sub">Language Reference</span>
     <div class="header-badges">
-      <span class="hbadge hbadge-ver">v0.9.0</span>
+      <span class="hbadge hbadge-ver">v0.9.5</span>
       <span class="hbadge hbadge-ai">AI-native</span>
     </div>
   </header>
@@ -752,6 +752,8 @@
         <div class="nav-group-label">Runtime</div>
         <a class="nav-link" href="#stdlib">Standard Library</a>
         <a class="nav-link" href="#cli">CLI</a>
+        <a class="nav-link" href="#enums" style="color:var(--accent)"><code>enum</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.9.5</span></a>
+        <a class="nav-link" href="#numeric-literals" style="color:var(--accent)">Numeric Literals <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.9.5</span></a>
         <a class="nav-link" href="#cli-v09" style="color:var(--pink)"><code>--check</code> / <code>--fmt</code> / <code>--watch</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.9</span></a>
         <a class="nav-link" href="#browser-api" style="color:var(--pink)">Browser Compiler API <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.9</span></a>
       </div>
@@ -949,6 +951,33 @@
       </section>
 
       <!-- ── Tagged Unions ─────────────────────────────────────────────────── -->
+      <!-- ── Enums (v0.9.5) ──────────────────────────────────────────────────── -->
+      <section class="doc-section" id="enums">
+        <div class="section-eyebrow">Language Reference · v0.9.5</div>
+        <h2 class="section-title">Enums</h2>
+        <div class="section-rule"></div>
+
+        <p>An <code>enum</code> declares a closed set of named string values. It compiles to a frozen, immutable object — safe to use as a constant, in pattern matching, and across module boundaries.</p>
+
+        <div class="code-block">
+          <div class="code-label"><span class="dot"></span>axon</div>
+          <pre id="enum-def-code"></pre>
+        </div>
+
+        <h3 class="subsection-title">Enum pattern matching</h3>
+        <p>Use the <code>Enum.Variant</code> syntax inside a <code>match</code> expression.</p>
+        <div class="code-block">
+          <div class="code-label"><span class="dot"></span>axon</div>
+          <pre id="enum-match-code"></pre>
+        </div>
+
+        <h3 class="subsection-title">Generated output</h3>
+        <div class="code-block">
+          <div class="code-label"><span class="dot"></span>js (generated)</div>
+          <pre id="enum-js-code"></pre>
+        </div>
+      </section>
+
       <section class="doc-section" id="tagged-unions">
         <div class="section-eyebrow">Language Reference</div>
         <h2 class="section-title">Tagged Unions</h2>
@@ -1366,6 +1395,30 @@
         </table></div>
       </section>
 
+      <!-- ── Numeric Literals v0.9.5 ─────────────────────────────────────────── -->
+      <section class="doc-section" id="numeric-literals">
+        <div class="section-eyebrow">Language Reference · v0.9.5</div>
+        <h2 class="section-title">Numeric Literals</h2>
+        <div class="section-rule"></div>
+
+        <p>Axon v0.9.5 extends numeric literals with underscore separators, hexadecimal <code>0x…</code>, and binary <code>0b…</code> prefixes. Separators are stripped at compile time; the notation is preserved in generated JS output.</p>
+
+        <div class="code-block">
+          <div class="code-label"><span class="dot"></span>axon</div>
+          <pre id="numeric-lit-code"></pre>
+        </div>
+
+        <table class="ref-table">
+          <thead><tr><th>Form</th><th>Example</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>decimal</code></td><td><code>1_000_000</code></td><td>Underscore separators for readability; stripped at compile time</td></tr>
+            <tr><td><code>0x…</code></td><td><code>0xFF_00_00</code></td><td>Hexadecimal literal; notation preserved in output</td></tr>
+            <tr><td><code>0b…</code></td><td><code>0b1010_1010</code></td><td>Binary literal; notation preserved in output</td></tr>
+            <tr><td><code>float</code></td><td><code>3.141_592</code></td><td>Underscores allowed before or after the decimal point</td></tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- ── CLI v0.9 ─────────────────────────────────────────────────────────── -->
       <section class="doc-section" id="cli-v09">
         <div class="section-eyebrow">Runtime · v0.9</div>
@@ -1766,13 +1819,29 @@ main()</pre>
 
         <div class="version-card vc-current">
           <div class="version-header">
-            <span class="version-tag">v0.9.0</span>
-            <span class="version-name">The Developer Experience Update</span>
+            <span class="version-tag">v0.9.5</span>
+            <span class="version-name">The Ergonomics Update</span>
             <span class="version-status vs-current">Current</span>
           </div>
           <ul class="version-features">
+            <li><strong><code>enum</code> type</strong> — <code>enum Color = Red | Green | Blue</code>; compiles to <code>Object.freeze({ Red: 'Red', … })</code>; supports <code>Enum.Variant</code> pattern matching in <code>match</code></li>
+            <li><strong>Numeric separators</strong> — <code>1_000_000</code>, <code>0xFF_FF</code>, <code>0b1010_1010</code>; underscore stripped at compile time</li>
+            <li><strong>Hex &amp; binary literals</strong> — <code>0xFF</code> and <code>0b1010</code> fully supported; notation preserved in generated JS</li>
+            <li><strong>Multi-line lambdas</strong> — <code>item =&gt; { let x = f(item)\n x * 2 }</code>; block body with implicit last-expression return</li>
+            <li><strong>Multi-error reporting</strong> — parser collects all errors with panic-mode recovery; <code>parse()</code> returns <code>{ ast, errors }</code></li>
+            <li><strong><code>AxonCompiler.compile()</code> updated</strong> — browser bundle uses multi-error parser; <code>errors</code> may contain multiple items; version string is <code>"0.9.5"</code></li>
+          </ul>
+        </div>
+
+        <div class="version-card vc-stable">
+          <div class="version-header">
+            <span class="version-tag">v0.9.0</span>
+            <span class="version-name">The Developer Experience Update</span>
+            <span class="version-status vs-stable">Stable</span>
+          </div>
+          <ul class="version-features">
             <li><strong><code>axon --check &lt;file&gt;</code></strong> — static analysis only; reports checker warnings and parse errors without emitting JS</li>
-            <li><strong><code>axon --fmt &lt;file&gt; [--write]</code></strong> — canonical formatter; normalizes indentation, operator spacing, brace padding, and trailing whitespace</li>
+            <li><strong><code>axon --fmt &lt;file&gt;</code></strong> — canonical formatter; normalizes indentation, operator spacing, brace padding, and trailing whitespace</li>
             <li><strong><code>axon --watch &lt;file&gt; [output.js]</code></strong> — file watcher; recompiles automatically on every save</li>
             <li><strong><code>axon.compiler.js</code></strong> — browser-compatible IIFE bundle; full Axon compiler running client-side via <code>AxonCompiler.compile(src)</code></li>
             <li><strong>Structured error objects</strong> — <code>compile()</code> returns <code>{ js, errors, warnings }</code> with <code>{ message, line, col, kind }</code> per error</li>
@@ -2048,7 +2117,7 @@ main()</pre>
   </div>
 
   <footer class="page-footer">
-    Axon v0.9.0 · Designed by AI for AI · Transpiles to JavaScript · <code>@intent</code> · <code>@pure</code> · <code>|&gt;</code>
+    Axon v0.9.5 · Designed by AI for AI · Transpiles to JavaScript · <code>@intent</code> · <code>@pure</code> · <code>|&gt;</code>
   </footer>
 
   <script>
@@ -2292,6 +2361,78 @@ fn take_damage :: (hero: Hero, dmg: int) -> Hero = {
   let newHp = clamp(hero.hp - dmg, 0, 100)
   { ...hero, hp: newHp, alive: newHp > 0 }
 }
+`);
+
+    setCode('enum-def-code', `
+// v0.9.5: enum declares a closed set of named string values
+enum Status   = Backlog | Active | Done | Cancelled
+enum Priority = Low | Medium | High | Critical
+
+// Enums can be used anywhere a string value is expected
+record Task {
+  id:       int
+  title:    string
+  status:   Status
+  priority: Priority
+}
+
+let task = Task(1, "Ship it!", Status.Active, Priority.Critical)
+console.log(task.status)    // → "Active"
+console.log(task.priority)  // → "Critical"
+`);
+
+    setCode('enum-match-code', `
+fn describe(s: Status) -> string =
+  match s {
+    | Status.Backlog    => "not started"
+    | Status.Active     => "in progress"
+    | Status.Done       => "completed"
+    | Status.Cancelled  => "cancelled"
+  }
+
+fn badge(p: Priority) -> string =
+  match p {
+    | Priority.Critical => "🔴 CRITICAL"
+    | Priority.High     => "🟠 High"
+    | Priority.Medium   => "🟡 Medium"
+    | Priority.Low      => "🟢 Low"
+  }
+
+console.log(describe(Status.Active))     // → "in progress"
+console.log(badge(Priority.Critical))    // → "🔴 CRITICAL"
+`);
+
+    setCode('enum-js-code', `
+// Generated by Axon v0.9.5 transpiler
+/** @enum {string} Status */
+const Status = Object.freeze({ Backlog: 'Backlog', Active: 'Active', Done: 'Done', Cancelled: 'Cancelled' });
+
+/** @enum {string} Priority */
+const Priority = Object.freeze({ Low: 'Low', Medium: 'Medium', High: 'High', Critical: 'Critical' });
+`);
+
+    setCode('numeric-lit-code', `
+// Underscore separators — decimal
+let world_pop  = 8_000_000_000
+let bandwidth  = 1_000_000   // 1 Mbps
+let chunk_size = 64_000
+
+// Hexadecimal
+let red    = 0xFF0000
+let mask   = 0xFF_FF_FF_FF
+let color  = 0xCAFE_BABE
+
+// Binary
+let flags  = 0b1010_1010
+let perms  = 0b0111        // rwx
+
+// Floating point
+let pi     = 3.141_592_653
+let e      = 2.718_281_828
+
+console.log(world_pop.toLocaleString())   // → "8,000,000,000"
+console.log(red.toString(16))             // → "ff0000"
+console.log(flags.toString(2))            // → "10101010"
 `);
 
     setCode('union-def-code', `

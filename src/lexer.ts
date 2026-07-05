@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Axon v0.8.0 — Lexer
+// Axon v0.9.5 — Lexer
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Token, TokenType } from './types.js'
@@ -35,6 +35,7 @@ const KEYWORDS: Record<string, TokenType> = {
   infer:      'KW_INFER',      // v0.7:   let infer x = expr — model-resolved type
   async:      'KW_ASYNC',      // v0.8:   async fn — asynchronous function declaration
   await:      'KW_AWAIT',      // v0.8:   await expr — inside async functions
+  enum:       'KW_ENUM',       // v0.9.5: enum Color = Red | Green | Blue
 }
 
 export class Lexer {
@@ -246,19 +247,47 @@ export class Lexer {
 
   private readNumber(): void {
     const startCol = this.col
-    let num = ''
+    let raw = ''
+
+    // v0.9.5: hex (0x...) and binary (0b...) literals
+    if (this.src[this.pos] === '0') {
+      const next = this.src[this.pos + 1]
+      if (next === 'x' || next === 'X') {
+        raw += this.src[this.pos]; this.advance()
+        raw += this.src[this.pos]; this.advance()
+        while (this.pos < this.src.length) {
+          const ch = this.src[this.pos]
+          if (/[0-9a-fA-F_]/.test(ch)) { raw += ch; this.advance() }
+          else break
+        }
+        this.tokens.push({ type: 'NUMBER', value: raw.replace(/_/g, ''), line: this.line, col: startCol })
+        return
+      }
+      if (next === 'b' || next === 'B') {
+        raw += this.src[this.pos]; this.advance()
+        raw += this.src[this.pos]; this.advance()
+        while (this.pos < this.src.length) {
+          const ch = this.src[this.pos]
+          if (/[01_]/.test(ch)) { raw += ch; this.advance() }
+          else break
+        }
+        this.tokens.push({ type: 'NUMBER', value: raw.replace(/_/g, ''), line: this.line, col: startCol })
+        return
+      }
+    }
+
+    // Decimal with optional _ separators
     while (this.pos < this.src.length) {
       const ch = this.src[this.pos]
-      if (this.isDigit(ch)) {
-        num += ch; this.advance()
+      if (this.isDigit(ch) || ch === '_') {
+        raw += ch; this.advance()
       } else if (ch === '.' && this.isDigit(this.src[this.pos + 1] ?? '')) {
-        // Only consume '.' if followed by a digit — prevents eating '..' in ranges
-        num += ch; this.advance()
+        raw += ch; this.advance()
       } else {
         break
       }
     }
-    this.tokens.push({ type: 'NUMBER', value: num, line: this.line, col: startCol })
+    this.tokens.push({ type: 'NUMBER', value: raw.replace(/_/g, ''), line: this.line, col: startCol })
   }
 
   private readIdent(): void {

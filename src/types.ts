@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Axon v0.9.0 — Token and AST type definitions
+// Axon v0.9.5 — Token and AST type definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TokenType =
@@ -24,6 +24,7 @@ export type TokenType =
   | 'KW_INFER'          // v0.7:   let infer x = expr — model-resolved type
   | 'KW_ASYNC'          // v0.8:   async fn / async lambda
   | 'KW_AWAIT'          // v0.8:   await expr inside async functions
+  | 'KW_ENUM'           // v0.9.5: enum Color = Red | Green | Blue
   // Literals
   | 'NUMBER' | 'STRING' | 'REGEX' | 'TEMPLATE'
   // Identifier
@@ -92,6 +93,7 @@ export type TopLevelDecl =
   | TopLevelLet       // v0.5: top-level let binding (e.g. let state = {...})
   | InterfaceDecl     // v0.7: interface Name { field: Type; method: fn(T) -> U }
   | StoreDecl         // v0.8: store Name { field: Type = default }
+  | EnumDecl          // v0.9.5: enum Color = Red | Green | Blue
 
 export interface TypeAlias {
   kind: 'TypeAlias'
@@ -114,6 +116,14 @@ export interface InterfaceDecl {
 export interface InterfaceField {
   name: string
   type: TypeExpr
+}
+
+// v0.9.5: enum — enum Color = Red | Green | Blue
+export interface EnumDecl {
+  kind: 'EnumDecl'
+  name: string
+  variants: string[]
+  line: number
 }
 
 // v0.4: Tagged union — type Shape = | Circle { r: float } | Rect { w: float, h: float } | Point
@@ -299,7 +309,7 @@ export type Expr =
   | ResultPropagateExpr  // v0.6: expr? — propagate Err, unwrap Ok
   | AwaitExpr            // v0.8: await expr — inside async functions
 
-export interface NumberLit  { kind: 'NumberLit';  value: number }
+export interface NumberLit  { kind: 'NumberLit';  value: number; raw?: string }
 export interface StringLit  { kind: 'StringLit';  value: string; raw: string }
 export interface TemplateLit { kind: 'TemplateLit'; raw: string }
 export interface BoolLit    { kind: 'BoolLit';   value: boolean }
@@ -447,3 +457,4 @@ export type MatchPattern =
   | { kind: 'ComparePat'; op: string; value: number | string }
   | { kind: 'IdentPat'; name: string }
   | { kind: 'TagPat'; name: string; bindings: string[] }   // v0.4: tagged union pattern
+  | { kind: 'EnumPat'; enumName: string; variant: string } // v0.9.5: enum member pattern Color.Red

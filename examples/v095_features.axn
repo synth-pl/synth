@@ -1,0 +1,80 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Axon v0.9.5 — Feature showcase
+// Demonstrates: enum, numeric separators, multi-line lambdas, multi-error recovery
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum Direction = North | South | East | West
+
+enum TaskStatus = Todo | InProgress | Done | Cancelled
+
+// ── Records using enum fields ─────────────────────────────────────────────────
+
+record Task {
+  id:     int
+  title:  string
+  status: TaskStatus
+}
+
+// ── Numeric separators ────────────────────────────────────────────────────────
+
+let maxItems     = 1_000_000
+let chunkSize    = 64_000
+let mask         = 0xFF_FF_FF
+let flags        = 0b0000_1111
+let goldenRatio  = 1.618_033_988
+
+// ── Multi-line lambdas ────────────────────────────────────────────────────────
+
+fn processItems(items) =
+  items
+  |> filter(item => {
+    item.status == TaskStatus.InProgress
+  })
+  |> map(item => {
+    let prefix = "[" + item.status + "] "
+    prefix + item.title
+  })
+
+// ── Enum in match ─────────────────────────────────────────────────────────────
+
+fn describeDirection(d) =
+  match d {
+    | Direction.North => "heading north"
+    | Direction.South => "heading south"
+    | Direction.East  => "heading east"
+    | Direction.West  => "heading west"
+  }
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+@test "enum values are strings" {
+  TaskStatus.Todo == "Todo"
+}
+
+@test "enum values are frozen" {
+  typeof TaskStatus.Done == "string"
+}
+
+@test "numeric separators parse correctly" {
+  maxItems == 1000000 && chunkSize == 64000
+}
+
+@test "hex and binary literals" {
+  mask == 16777215 && flags == 15
+}
+
+@test "multi-line lambda filters correctly" {
+  let tasks = [
+    { id: 1, title: "Build", status: TaskStatus.InProgress },
+    { id: 2, title: "Deploy", status: TaskStatus.Todo },
+    { id: 3, title: "Test", status: TaskStatus.InProgress },
+  ]
+  let result = processItems(tasks)
+  result.length == 2
+}
+
+@test "direction descriptions" {
+  describeDirection(Direction.North) == "heading north"
+}
