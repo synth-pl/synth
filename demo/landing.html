@@ -583,19 +583,21 @@
       <button class="showcase-tab" onclick="showPane('pipeline')">Pipelines</button>
       <button class="showcase-tab" onclick="showPane('test')">Testing</button>
       <button class="showcase-tab" onclick="showPane('modules')" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
+      <button class="showcase-tab" onclick="showPane('safety')" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
     <div class="showcase-pane" id="pane-pipeline"><pre id="code-pipeline"></pre></div>
     <div class="showcase-pane" id="pane-test"><pre id="code-test"></pre></div>
     <div class="showcase-pane" id="pane-modules"><pre id="code-modules"></pre></div>
+    <div class="showcase-pane" id="pane-safety"><pre id="code-safety"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
   <div class="stats-bar">
     <div class="stat"><div class="stat-num">0→JS</div><div class="stat-label">No runtime</div></div>
     <div class="stat"><div class="stat-num">7</div><div class="stat-label">Annotations</div></div>
-    <div class="stat"><div class="stat-num">49</div><div class="stat-label">Passing tests</div></div>
+    <div class="stat"><div class="stat-num">85</div><div class="stat-label">Passing tests</div></div>
     <div class="stat"><div class="stat-num">4</div><div class="stat-label">Demos</div></div>
   </div>
 
@@ -891,6 +893,45 @@ mount()
 //   ✓ rect 4x3 = 12
 //   ✓ heal clamps at 100
 //   5 passed, 0 failed, 5 total
+`);
+
+    setCode('code-safety', `
+// @throws marks a function that returns Result
+@throws
+fn parse_level(s: string) -> any {
+  let n = parseInt(s)
+  if isNaN(n) { err("Level must be a number — got: \\"" + s + "\\"") }
+  if n < 1    { err("Level must be at least 1 — got: " + n) }
+  if n > 10   { err("Level must be 10 or less — got: " + n) }
+  refine n: "a dungeon level in [1, 10]"
+  ok(n)
+}
+
+// ? propagates Err upward — unwraps Ok and continues
+@throws
+fn parse_config(input: string) -> any {
+  let parts = input.trim().split(":")
+  if parts.length < 2 { err("Format is level:seed — e.g. 3:42") }
+  let level = parse_level(parts[0].trim())?
+  let seed  = parse_seed(parts[1].trim())?
+  ok({ level: level, seed: seed })
+}
+
+// match on Result — precise errors at the call site
+fn load(input: string) {
+  if is_ok(parse_config(input)) {
+    render(parse_config(input).value)
+  } else {
+    show_error(parse_config(input).message)
+  }
+}
+
+// axon --test config.axn
+//   ✓ valid code parses correctly
+//   ✓ non-numeric level returns Err
+//   ✓ level 0 returns Err
+//   ✓ negative seed is normalised
+//   9 passed, 0 failed, 9 total
 `);
   </script>
 </body>
