@@ -339,6 +339,19 @@
 
     footer a { color: var(--pink); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .page-header { padding: 14px 16px; gap: 8px; flex-wrap: wrap; }
+      .page-title { font-size: 1.15rem; }
+      .page-body { padding: 14px 12px; gap: 12px; }
+      .controls { gap: 8px; }
+      .btn { padding: 7px 14px; font-size: 0.82rem; }
+      /* Map output scrolls horizontally rather than overflowing page */
+      #dungeon-output { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 14px; }
+      .map-rows { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .module-strip { gap: 6px; padding: 8px 10px; }
+      .source-info { padding: 12px 14px; }
+    }
   </style>
 </head>
 <body>

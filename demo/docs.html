@@ -581,8 +581,10 @@
 
     /* ── Responsive ──────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
+      /* Hamburger */
       .mobile-nav-btn { display: flex; }
 
+      /* Sidebar drawer */
       .sidebar {
         transform: translateX(-100%);
         transition: transform 0.25s ease;
@@ -590,36 +592,65 @@
       }
       .sidebar.open { transform: translateX(0); }
 
+      /* Main content — min-width:0 critical to prevent flex child from
+         expanding to fit wide pre elements */
       .main, .page-footer { margin-left: 0; }
-      .main { padding: 28px 16px 60px; }
+      .main { padding: 28px 16px 60px; min-width: 0; }
 
+      /* Header */
       .top-header { padding: 0 12px; gap: 8px; }
       .top-header-sub { display: none; }
       .top-header-glyph { font-size: 18px; }
       .top-header-title { font-size: 16px; }
       .header-badges { margin-left: auto; }
 
-      /* Code blocks & tables scroll horizontally */
-      .main pre, .main table { overflow-x: auto; display: block; }
-      .main table { white-space: nowrap; }
+      /* Section headings */
+      .doc-section h2 { font-size: 20px; }
+      .doc-section h3 { font-size: 15px; }
+      .doc-section { margin-bottom: 44px; }
 
-      /* Roadmap grid stacks on mobile */
-      .roadmap-grid { grid-template-columns: 1fr !important; }
+      /* Code blocks: block becomes scroll container so pre can expand
+         naturally inside without pushing the page wider */
+      .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .code-block pre {
+        overflow-x: visible;
+        min-width: max-content;
+        font-size: 11.5px;
+        padding: 14px 16px;
+        line-height: 1.6;
+      }
 
-      /* Version history cards */
-      .version-card { padding: 16px; }
+      /* Tables */
+      .doc-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .doc-table { min-width: 480px; }
+      .doc-table td:first-child { white-space: normal; }
 
       /* Callouts */
-      .callout { padding: 14px 16px; }
+      .callout { padding: 12px 14px; font-size: 13px; }
 
-      /* Section padding */
-      .doc-section { margin-bottom: 44px; }
+      /* Version cards */
+      .version-card { padding: 14px 16px; }
+      .version-header { flex-wrap: wrap; gap: 8px; }
+      .version-tag { font-size: 17px; }
+      .version-status { margin-left: 0; }
+      .version-features li { font-size: 13px; }
+
+      /* Roadmap */
+      .roadmap-grid { grid-template-columns: 1fr !important; }
+      .roadmap-card { padding: 14px 16px; }
+
+      /* Design-goal pills */
+      .pill { font-size: 11px; padding: 3px 10px; }
+
+      /* Page footer */
+      .page-footer { padding: 16px; text-align: center; }
     }
 
     @media (max-width: 420px) {
       .main { padding: 20px 12px 48px; }
       .hbadge { display: none; }
       .top-header-title { font-size: 15px; }
+      .code-block pre { font-size: 11px; }
     }
   </style>
 </head>
@@ -752,7 +783,7 @@
         <h2 class="section-title">Design Goals</h2>
         <div class="section-rule"></div>
 
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Goal</th><th>What it means in practice</th></tr></thead>
           <tbody>
             <tr><td>Unambiguous grammar</td><td>Every construct has exactly one parse. No statement/expression duality. No semicolon insertion edge cases.</td></tr>
@@ -763,7 +794,7 @@
             <tr><td>Exhaustive by default</td><td>Pattern matches warn when not exhaustive. Tagged unions are fully covered or the checker complains.</td></tr>
             <tr><td>AI-first output</td><td>Generated JS embeds JSDoc with all Axon metadata — intent, constraints, effects — so downstream tools can reason about it.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <!-- ── Functions ─────────────────────────────────────────────────────── -->
@@ -818,7 +849,7 @@
         <p>Axon's primitive types map directly to JavaScript. Type aliases add names; <code>where</code> clauses add runtime-enforced predicates.</p>
 
         <h3 class="subsection">Primitive types</h3>
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Axon type</th><th>JS equivalent</th><th>Notes</th></tr></thead>
           <tbody>
             <tr><td>int</td><td>number (integer)</td><td>No distinct integer runtime; validated by constraint if needed</td></tr>
@@ -828,7 +859,7 @@
             <tr><td>void</td><td>undefined</td><td>Return type for side-effecting functions</td></tr>
             <tr><td>list&lt;T&gt;</td><td>Array</td><td>–</td></tr>
           </tbody>
-        </table>
+        </table></div>
 
         <h3 class="subsection">Type aliases</h3>
         <div class="code-block">
@@ -925,7 +956,7 @@
         </div>
 
         <h3 class="subsection">Pattern types</h3>
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Pattern syntax</th><th>Matches</th></tr></thead>
           <tbody>
             <tr><td>_</td><td>Anything (wildcard, no binding)</td></tr>
@@ -937,7 +968,7 @@
             <tr><td>Circle { r }</td><td>Tagged union variant, destructures payload field <code>r</code></td></tr>
             <tr><td>n when expr</td><td>Binding pattern with guard expression</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <!-- ── Pipelines ─────────────────────────────────────────────────────── -->
@@ -1016,7 +1047,7 @@
           <pre id="optional-code"></pre>
         </div>
 
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Operator</th><th>Meaning</th></tr></thead>
           <tbody>
             <tr><td>a?.b</td><td>Access <code>b</code> on <code>a</code>; returns <code>undefined</code> if <code>a</code> is null/undefined</td></tr>
@@ -1024,7 +1055,7 @@
             <tr><td>f?.()</td><td>Call <code>f</code> if it is not null/undefined</td></tr>
             <tr><td>a ?? b</td><td>Return <code>a</code> unless it is null/undefined, then return <code>b</code></td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <!-- ── Control Flow ──────────────────────────────────────────────────── -->
@@ -1165,7 +1196,7 @@
 
         <p>The Axon stdlib is a small set of higher-order functions prepended to every generated file. All functions are pure.</p>
 
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td>map(xs, f)</td><td>list → fn → list</td><td>Transform each element</td></tr>
@@ -1188,7 +1219,7 @@
             <tr><td>__axon_tests</td><td>list</td><td>Registered @test declarations</td></tr>
             <tr><td>__runAxonTests()</td><td>() → void</td><td>Execute all tests, print summary</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <!-- ── CLI ───────────────────────────────────────────────────────────── -->
@@ -1202,14 +1233,14 @@
           <pre id="cli-code"></pre>
         </div>
 
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Command</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td>node dist/cli.js input.axn output.js</td><td>Transpile Axon source to JavaScript</td></tr>
             <tr><td>node dist/cli.js --test input.axn</td><td>Run all <code>@test</code> declarations and print pass/fail summary. Exits with code 1 on failure.</td></tr>
             <tr><td>node dist/cli.js --bundle entry.axn out.js</td><td><strong>v0.5</strong> Bundle a multi-file project starting from an entry file. Resolves all imports recursively.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <!-- ── Modules ──────────────────────────────────────────────────────────── -->
@@ -1250,7 +1281,7 @@ fn main() {
 main()</pre>
         </div>
 
-        <table class="doc-table">
+        <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Syntax</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><code>import { a, b } from "./path"</code></td><td>Bring named symbols into scope. Path is relative to the importing file. <code>.axn</code> extension is optional.</td></tr>
@@ -1258,7 +1289,7 @@ main()</pre>
             <tr><td><code>export type T = ...</code></td><td>Export a type alias or tagged union.</td></tr>
             <tr><td><code>export record R { ... }</code></td><td>Export a record type declaration.</td></tr>
           </tbody>
-        </table>
+        </table></div>
 
         <p style="margin-top:14px;color:var(--text-dim);font-size:0.9rem">The <strong style="color:var(--text)">bundler</strong> resolves imports depth-first, topo-sorts modules so dependencies come before dependents, and emits a single JS file with the stdlib included once at the top. All bundled code shares a single flat scope — no runtime module system overhead.</p>
       </section>
