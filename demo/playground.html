@@ -318,6 +318,7 @@
       flex: 1;
       overflow: auto;
       min-height: 0;
+      min-width: 0;
     }
     .output-content.hidden { display: none; }
     pre.output-code {
@@ -327,8 +328,8 @@
       line-height: 1.65;
       color: var(--text);
       white-space: pre;
+      overflow-x: auto; /* belt-and-suspenders for wide lines */
       background: var(--bg-output);
-      min-height: 100%;
     }
     pre.output-code .kw  { color: #ff79c6; }
     pre.output-code .cn  { color: #50fa7b; }
@@ -343,7 +344,6 @@
       font-size: 13px;
       line-height: 1.65;
       background: var(--bg-output);
-      min-height: 100%;
     }
     .result-line {
       display: flex;
