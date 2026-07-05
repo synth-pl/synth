@@ -297,7 +297,7 @@ export class Lexer {
     const startCol = this.col
     const startLine = this.line
     const name = this.readIdentRaw()
-    const kwType = KEYWORDS[name]
+    const kwType = Object.prototype.hasOwnProperty.call(KEYWORDS, name) ? KEYWORDS[name] : undefined
     if (kwType) {
       this.tokens.push({ type: kwType, value: name, line: startLine, col: startCol })
     } else {
