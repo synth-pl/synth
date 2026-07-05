@@ -793,6 +793,10 @@ export class Codegen {
     if (expr.kind === 'BinaryExpr' && this.precedence(expr.op) < this.precedence(parentOp)) {
       return `(${s})`
     }
+    // Ternary has lower precedence than all binary operators — always wrap to preserve semantics
+    if (expr.kind === 'TernaryExpr') {
+      return `(${s})`
+    }
     return s
   }
 
