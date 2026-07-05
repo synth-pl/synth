@@ -231,7 +231,14 @@
       gap: 4px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
+      -webkit-mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+      mask-image: linear-gradient(to right, #000 80%, transparent 100%);
     }
+    .showcase-tabs::-webkit-scrollbar { display: none; }
 
     .showcase-tab {
       background: transparent;
@@ -245,6 +252,8 @@
       cursor: pointer;
       transition: all 0.12s;
       font-family: 'Courier New', monospace;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .showcase-tab.active {
       background: var(--bg-card);
@@ -671,16 +680,16 @@
   <!-- ── Code showcase ────────────────────────────────────────────────────── -->
   <section class="showcase">
     <div class="showcase-tabs">
-      <button class="showcase-tab active" onclick="showPane('types')">Types</button>
-      <button class="showcase-tab" onclick="showPane('match')">Pattern Matching</button>
-      <button class="showcase-tab" onclick="showPane('pipeline')">Pipelines</button>
-      <button class="showcase-tab" onclick="showPane('test')">Testing</button>
-      <button class="showcase-tab" onclick="showPane('modules')" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
-      <button class="showcase-tab" onclick="showPane('safety')" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
-      <button class="showcase-tab" onclick="showPane('typesys')" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
-      <button class="showcase-tab" onclick="showPane('async')" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
-      <button class="showcase-tab" onclick="showPane('tooling')" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
-      <button class="showcase-tab" onclick="showPane('ergonomics')" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
+      <button class="showcase-tab active" onclick="showPane('types', this)">Types</button>
+      <button class="showcase-tab" onclick="showPane('match', this)">Pattern Matching</button>
+      <button class="showcase-tab" onclick="showPane('pipeline', this)">Pipelines</button>
+      <button class="showcase-tab" onclick="showPane('test', this)">Testing</button>
+      <button class="showcase-tab" onclick="showPane('modules', this)" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
+      <button class="showcase-tab" onclick="showPane('safety', this)" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
+      <button class="showcase-tab" onclick="showPane('typesys', this)" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
+      <button class="showcase-tab" onclick="showPane('async', this)" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
+      <button class="showcase-tab" onclick="showPane('tooling', this)" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
+      <button class="showcase-tab" onclick="showPane('ergonomics', this)" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
@@ -691,7 +700,7 @@
     <div class="showcase-pane" id="pane-typesys"><pre id="code-typesys"></pre></div>
     <div class="showcase-pane" id="pane-async"><pre id="code-async"></pre></div>
     <div class="showcase-pane" id="pane-tooling"><pre id="code-tooling"></pre></div>
-    <div class="showcase-pane" id="pane-ergonomics" style="display:none"><pre id="code-ergonomics"></pre></div>
+    <div class="showcase-pane" id="pane-ergonomics"><pre id="code-ergonomics"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
@@ -875,11 +884,11 @@
   </footer>
 
   <script>
-    function showPane(id) {
+    function showPane(id, btn) {
       document.querySelectorAll('.showcase-pane').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
       document.getElementById('pane-' + id).classList.add('active');
-      event.target.classList.add('active');
+      btn.classList.add('active');
     }
 
     function copyInstall() {
