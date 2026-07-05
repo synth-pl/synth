@@ -929,24 +929,34 @@
       setTimeout(() => btn.textContent = 'copy', 2000);
     }
 
-    // Lightweight Axon syntax highlighter
+    // Single-pass Axon syntax highlighter — each character matched at most once,
+    // so generated span tags are never fed back into subsequent patterns.
     function highlight(src) {
-      const KW  = ['fn','let','type','record','match','if','else','where','return','as','import','export','from'];
-      const KW2 = ['when','true','false','null','void'];
-      const TY  = ['int','float','string','bool','list','void'];
-      const sp  = (c, t) => `<span class='${c}'>${t}</span>`;
-      return src
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/("""[\s\S]*?""")/g, m => sp('str',m))
-        .replace(/("(?:[^"\\]|\\.)*")/g, m => sp('str',m))
-        .replace(/(\/\/[^\n]*)/g, m => sp('cmt',m))
-        .replace(/(@(?:pure|total|intent|effects|memo|exhaustive|test)\b)/g, m => sp('ann',m))
-        .replace(/(\|&gt;|=&gt;|-&gt;|\?\?|\?\.|::|[|](?![|]))/g, m => sp('op',m))
-        .replace(new RegExp(`(<[^>]+>)|(\\b(?:${KW.join('|')})\\b)`,'g'), (m,t,k)=>t?t:sp('kw',k))
-        .replace(new RegExp(`(<[^>]+>)|(\\b(?:${KW2.join('|')})\\b)`,'g'), (m,t,k)=>t?t:sp('bool',k))
-        .replace(new RegExp(`(<[^>]+>)|(\\b(?:${TY.join('|')})\\b)`,'g'), (m,t,k)=>t?t:sp('ty',k))
-        .replace(/(<[^>]+>)|(\b\d+\.?\d*\b)/g, (m,t,n)=>t?t:sp('num',n))
-        .replace(/(<span class='kw'>fn<\/span>\s+)([a-zA-Z_]\w*)/g, (_,k,n)=>k+sp('fn',n));
+      const sp = (c, t) => `<span class='${c}'>${t}</span>`;
+
+      const escaped = src
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      const result = escaped.replace(
+        /("""[\s\S]*?""")|("(?:[^"\\]|\\.)*")|(\/\/[^\n]*)|(@(?:pure|total|intent|effects|memo|exhaustive|test)\b)|(\|&gt;|=&gt;|-&gt;|\?\?|\?\.|::|\|(?!\|))|(0x[\da-fA-F_]+|0b[01_]+|\d+\.?\d*)|(\b(?:fn|let|type|record|match|if|else|where|return|as|import|export|from)\b)|(\b(?:when|true|false|null|void)\b)|(\b(?:int|float|string|bool|list|void)\b)/g,
+        (_, tstr, str, cmt, ann, op, num, kw, kw2, ty) => {
+          if (tstr) return sp('str',  tstr);
+          if (str)  return sp('str',  str);
+          if (cmt)  return sp('cmt',  cmt);
+          if (ann)  return sp('ann',  ann);
+          if (op)   return sp('op',   op);
+          if (num)  return sp('num',  num);
+          if (kw)   return sp('kw',   kw);
+          if (kw2)  return sp('bool', kw2);
+          if (ty)   return sp('ty',   ty);
+          return _;
+        }
+      );
+
+      // Second pass: mark function names — safe because we're matching a unique
+      // already-generated span boundary, not re-scanning raw source tokens.
+      return result.replace(/(<span class='kw'>fn<\/span>\s+)([a-zA-Z_]\w*)/g,
+        (_, k, n) => k + sp('fn', n));
     }
 
     function setCode(id, src) {
