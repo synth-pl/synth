@@ -226,17 +226,30 @@
       padding: 0 32px 80px;
     }
 
+    /* Clipping wrapper — gives overflow-x: auto a hard boundary to work against */
+    .showcase-tabs-wrap {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+    /* Fade hint at right edge */
+    .showcase-tabs-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 64px;
+      background: linear-gradient(to right, transparent, var(--bg));
+      pointer-events: none;
+    }
+
     .showcase-tabs {
       display: flex;
       gap: 4px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 0;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       flex-wrap: nowrap;
-      -webkit-mask-image: linear-gradient(to right, #000 80%, transparent 100%);
-      mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+      padding-bottom: 1px; /* keeps active-tab bottom border visible */
     }
     .showcase-tabs::-webkit-scrollbar { display: none; }
 
@@ -567,28 +580,11 @@
       /* Showcase */
       .showcase {
         padding: 0 16px 48px;
-        overflow-x: clip;
       }
-      /* Tab strip — single scrollable row, fades right to hint overflow */
-      .showcase-tabs {
-        display: flex;
-        flex-wrap: nowrap;
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        gap: 2px;
-        padding-bottom: 0;
-        border-bottom: 1px solid var(--border);
-        -webkit-mask-image: linear-gradient(to right, #000 75%, transparent 100%);
-        mask-image: linear-gradient(to right, #000 75%, transparent 100%);
-      }
-      .showcase-tabs::-webkit-scrollbar { display: none; }
+      /* Mobile: tighter tabs */
       .showcase-tab {
         padding: 7px 11px;
         font-size: 11px;
-        flex-shrink: 0;
-        white-space: nowrap;
         letter-spacing: 0.1px;
         border-radius: 5px 5px 0 0;
       }
@@ -679,17 +675,19 @@
 
   <!-- ── Code showcase ────────────────────────────────────────────────────── -->
   <section class="showcase">
-    <div class="showcase-tabs">
-      <button class="showcase-tab active" onclick="showPane('types', this)">Types</button>
-      <button class="showcase-tab" onclick="showPane('match', this)">Pattern Matching</button>
-      <button class="showcase-tab" onclick="showPane('pipeline', this)">Pipelines</button>
-      <button class="showcase-tab" onclick="showPane('test', this)">Testing</button>
-      <button class="showcase-tab" onclick="showPane('modules', this)" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
-      <button class="showcase-tab" onclick="showPane('safety', this)" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
-      <button class="showcase-tab" onclick="showPane('typesys', this)" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
-      <button class="showcase-tab" onclick="showPane('async', this)" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
-      <button class="showcase-tab" onclick="showPane('tooling', this)" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
-      <button class="showcase-tab" onclick="showPane('ergonomics', this)" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
+    <div class="showcase-tabs-wrap">
+      <div class="showcase-tabs">
+        <button class="showcase-tab active" onclick="showPane('types', this)">Types</button>
+        <button class="showcase-tab" onclick="showPane('match', this)">Pattern Matching</button>
+        <button class="showcase-tab" onclick="showPane('pipeline', this)">Pipelines</button>
+        <button class="showcase-tab" onclick="showPane('test', this)">Testing</button>
+        <button class="showcase-tab" onclick="showPane('modules', this)" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
+        <button class="showcase-tab" onclick="showPane('safety', this)" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
+        <button class="showcase-tab" onclick="showPane('typesys', this)" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
+        <button class="showcase-tab" onclick="showPane('async', this)" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
+        <button class="showcase-tab" onclick="showPane('tooling', this)" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
+        <button class="showcase-tab" onclick="showPane('ergonomics', this)" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
+      </div>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
