@@ -679,6 +679,7 @@
       <button class="showcase-tab" onclick="showPane('safety')" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
       <button class="showcase-tab" onclick="showPane('typesys')" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
       <button class="showcase-tab" onclick="showPane('async')" style="color:var(--gold)">Async <span style="font-size:0.65rem;opacity:0.8">v0.8</span></button>
+      <button class="showcase-tab" onclick="showPane('tooling')" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
@@ -688,6 +689,7 @@
     <div class="showcase-pane" id="pane-safety"><pre id="code-safety"></pre></div>
     <div class="showcase-pane" id="pane-typesys"><pre id="code-typesys"></pre></div>
     <div class="showcase-pane" id="pane-async"><pre id="code-async"></pre></div>
+    <div class="showcase-pane" id="pane-tooling"><pre id="code-tooling"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
@@ -695,7 +697,7 @@
     <div class="stat"><div class="stat-num">0→JS</div><div class="stat-label">No runtime</div></div>
     <div class="stat"><div class="stat-num">7</div><div class="stat-label">Annotations</div></div>
     <div class="stat"><div class="stat-num">113</div><div class="stat-label">Passing tests</div></div>
-    <div class="stat"><div class="stat-num">5</div><div class="stat-label">Demos</div></div>
+    <div class="stat"><div class="stat-num">6</div><div class="stat-label">Demos</div></div>
   </div>
 
   <!-- ── Pillars ───────────────────────────────────────────────────────────── -->
@@ -1123,6 +1125,41 @@ async fn tick() {
 on Kingdom.change { render() }
 // Desugars to: Kingdom.subscribe(() => { render() })
 // render() is called immediately on subscribe, then after every Kingdom.set()
+`);
+
+    setCode('code-tooling', `
+// ── axon --check  (v0.9) ──────────────────────────────────────────────────────
+// Static analysis only — no JS emitted, no output file written.
+// Reports @pure violations, @exhaustive gaps, bad @effects declarations.
+//
+//   $ axon --check src/game.axn
+//   ✓  game.axn — no issues
+
+// ── axon --fmt  (v0.9) ────────────────────────────────────────────────────────
+// Canonical formatter. Normalises indentation, operator spacing, brace padding.
+// --write rewrites in-place; without it, formatted source goes to stdout.
+//
+//   $ axon --fmt src/game.axn --write
+//   ✓  game.axn — formatted
+
+// ── axon --watch  (v0.9) ──────────────────────────────────────────────────────
+// Recompiles on every file save. Ctrl+C to stop.
+//
+//   $ axon --watch src/game.axn dist/game.js
+//   [14:02:11]  ✓  game.axn → game.js
+//   Watching game.axn for changes… (Ctrl+C to stop)
+
+// ── Browser compiler bundle  (v0.9) ──────────────────────────────────────────
+// Full Axon compiler running client-side — no server, no build step.
+// Load axon.compiler.js in any web page:
+
+let source = "fn add(x: int, y: int) = x + y"
+let result = AxonCompiler.compile(source)
+// result.js       → transpiled JavaScript string
+// result.errors   → []   each: { message, line, col, kind }
+// result.warnings → []   each: { severity, message, line, col }
+
+// Powers the Axon Playground — try it live at playground.html
 `);
   </script>
 </body>
