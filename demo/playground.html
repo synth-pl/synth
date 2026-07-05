@@ -162,16 +162,41 @@
     /* ── Split pane ──────────────────────────────────────────────────────────── */
     .split-pane {
       flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: row;
       min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── Drag divider ────────────────────────────────────────────────────────── */
+    .split-divider {
+      flex-shrink: 0;
+      width: 5px;
+      background: var(--border);
+      cursor: col-resize;
+      transition: background 0.15s;
+      position: relative;
+      z-index: 10;
+    }
+    .split-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1px; height: 32px;
+      background: rgba(176,96,255,0.5);
+      border-radius: 2px;
+    }
+    .split-divider:hover, .split-divider.dragging {
+      background: rgba(176,96,255,0.4);
     }
 
     /* ── Editor pane ─────────────────────────────────────────────────────────── */
     .editor-pane {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid var(--border);
+      min-width: 0;
       min-height: 0;
     }
     .pane-label {
@@ -207,9 +232,13 @@
       background: var(--bg-editor);
       border-right: 1px solid var(--border);
       user-select: none;
-      overflow: hidden;
+      /* scrollable so JS scrollTop sync works; bars hidden visually */
+      overflow-y: scroll;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       pointer-events: none;
     }
+    .line-nums::-webkit-scrollbar { display: none; }
     #editor {
       position: absolute;
       top: 0; left: 44px; right: 0; bottom: 0;
@@ -258,8 +287,10 @@
 
     /* ── Output pane ─────────────────────────────────────────────────────────── */
     .output-pane {
+      flex: 1;
       display: flex;
       flex-direction: column;
+      min-width: 0;
       min-height: 0;
     }
     .output-tabs {
@@ -329,18 +360,30 @@
 
     /* ── Responsive ──────────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .split-pane { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-      .editor-pane { border-right: none; border-bottom: 1px solid var(--border); }
+      .split-pane { flex-direction: column; }
+      .split-divider {
+        width: 100%; height: 5px;
+        cursor: row-resize;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .split-divider::after {
+        width: 32px; height: 1px;
+      }
+      .editor-pane { border-right: none; }
       .header-example-label { display: none; }
       .header-examples { max-width: 140px; }
     }
     @media (max-width: 480px) {
-      .page-header { padding: 0 12px; gap: 8px; }
-      .header-title { font-size: 15px; }
+      .page-header { padding: 0 12px; gap: 6px; }
+      .header-title { font-size: 14px; }
       .header-badge { display: none; }
-      .toolbar { padding: 6px 12px; gap: 6px; }
-      .btn { padding: 5px 12px; }
+      .header-nav { padding: 4px 8px; font-size: 11px; }
+      .header-examples { max-width: 110px; font-size: 11px; }
+      .toolbar { padding: 5px 10px; gap: 5px; }
+      .btn { padding: 5px 10px; font-size: 11px; }
       .auto-label { display: none; }
+      .toolbar-sep { display: none; }
     }
   </style>
 </head>
@@ -395,6 +438,9 @@
     </div>
     <div class="error-bar" id="error-bar"></div>
   </div>
+
+  <!-- ── Drag divider ─────────────────────────────────────────────────────── -->
+  <div class="split-divider" id="split-divider"></div>
 
   <!-- ── Output ────────────────────────────────────────────────────────────── -->
   <div class="output-pane">
@@ -987,6 +1033,74 @@ function formatValue(v) {
   if (v && typeof v === 'object') return JSON.stringify(v)
   return String(v)
 }
+
+// ── Drag-to-resize split divider ─────────────────────────────────────────────
+;(function () {
+  const divider    = document.getElementById('split-divider')
+  const splitPane  = document.querySelector('.split-pane')
+  const editorPane = document.querySelector('.editor-pane')
+  const outputPane = document.querySelector('.output-pane')
+  let dragging = false
+
+  divider.addEventListener('mousedown', e => {
+    e.preventDefault()
+    dragging = true
+    divider.classList.add('dragging')
+    document.body.style.cursor = window.innerWidth <= 768 ? 'row-resize' : 'col-resize'
+    document.body.style.userSelect = 'none'
+  })
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return
+    const rect  = splitPane.getBoundingClientRect()
+    const isMobile = window.innerWidth <= 768
+
+    if (isMobile) {
+      const pct = Math.max(20, Math.min(80,
+        (e.clientY - rect.top) / rect.height * 100))
+      editorPane.style.flex = `0 0 ${pct}%`
+      outputPane.style.flex = '1 1 0'
+    } else {
+      const pct = Math.max(20, Math.min(80,
+        (e.clientX - rect.left) / rect.width * 100))
+      editorPane.style.flex = `0 0 ${pct}%`
+      outputPane.style.flex = '1 1 0'
+    }
+  })
+
+  const stopDrag = () => {
+    if (!dragging) return
+    dragging = false
+    divider.classList.remove('dragging')
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+  document.addEventListener('mouseup',    stopDrag)
+  document.addEventListener('mouseleave', stopDrag)
+
+  // Touch support for mobile
+  divider.addEventListener('touchstart', e => {
+    e.preventDefault()
+    dragging = true
+    divider.classList.add('dragging')
+  }, { passive: false })
+
+  divider.addEventListener('touchmove', e => {
+    if (!dragging) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    const rect  = splitPane.getBoundingClientRect()
+    const pct   = Math.max(20, Math.min(80,
+      (touch.clientY - rect.top) / rect.height * 100))
+    editorPane.style.flex = `0 0 ${pct}%`
+    outputPane.style.flex = '1 1 0'
+  }, { passive: false })
+
+  divider.addEventListener('touchend', () => {
+    dragging = false
+    divider.classList.remove('dragging')
+  })
+})()
 </script>
 
 </body>
