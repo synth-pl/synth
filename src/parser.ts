@@ -8,6 +8,7 @@ import {
   TypeAlias, TaggedUnionDecl, UnionVariant, TestDecl,
   RecordDecl, FieldDecl, FnDecl, ModuleDecl,
   ImportDecl, ExportDecl, TopLevelExpr, TopLevelLet,
+  InterfaceDecl, InterfaceField,
   Annotation, FnParam, TypeExpr,
   Expr, BlockExpr, BlockStmt, MatchArm, MatchPattern,
   ObjectProperty, LambdaParam,
@@ -44,10 +45,11 @@ export class Parser {
 
   private parseTopLevel(): TopLevelDecl | null {
     const tok = this.peek()
-    if (tok.type === 'KW_TYPE')   return this.parseTypeAliasOrUnion()
-    if (tok.type === 'KW_RECORD') return this.parseRecord()
-    if (tok.type === 'KW_FN')     return this.parseFnDecl()
-    if (tok.type === 'KW_MODULE') return this.parseModule()
+    if (tok.type === 'KW_TYPE')      return this.parseTypeAliasOrUnion()
+    if (tok.type === 'KW_RECORD')    return this.parseRecord()
+    if (tok.type === 'KW_FN')        return this.parseFnDecl()
+    if (tok.type === 'KW_MODULE')    return this.parseModule()
+    if (tok.type === 'KW_INTERFACE') return this.parseInterfaceDecl()  // v0.7
     // v0.4: top-level @test "description" { expr }
     if (tok.type === 'AT' && tok.value === '@test') return this.parseTestDecl()
     // v0.5: import { ... } from "..."
@@ -140,6 +142,7 @@ export class Parser {
   private parseTypeAliasOrUnion(): TypeAlias | TaggedUnionDecl {
     const { line } = this.expect('KW_TYPE')
     const name = this.expect('IDENT').value
+    const typeParams = this.parseTypeParams()   // v0.7: optional <T, U>
     this.expect('ASSIGN')
 
     // Tagged union: type T = | V1 | V2 { field: type } ...
@@ -153,7 +156,7 @@ export class Parser {
       this.advance()
       constraint = this.parseConstraint()
     }
-    return { kind: 'TypeAlias', name, type, constraint, line }
+    return { kind: 'TypeAlias', name, typeParams, type, constraint, line }
   }
 
   private parseTaggedUnionBody(name: string, line: number): TaggedUnionDecl {
@@ -269,6 +272,7 @@ export class Parser {
   private parseRecord(): RecordDecl {
     const { line } = this.expect('KW_RECORD')
     const name = this.expect('IDENT').value
+    const typeParams = this.parseTypeParams()   // v0.7: optional <T, U>
     this.expect('LBRACE')
     const fields: FieldDecl[] = []
     while (!this.check('RBRACE') && !this.isEOF()) {
@@ -279,12 +283,45 @@ export class Parser {
       this.tryConsume('COMMA')
     }
     this.expect('RBRACE')
-    return { kind: 'RecordDecl', name, fields, line }
+    return { kind: 'RecordDecl', name, typeParams, fields, line }
+  }
+
+  // v0.7: interface Name<T> { field: Type; method: fn(T) -> U }
+  private parseInterfaceDecl(): InterfaceDecl {
+    const { line } = this.expect('KW_INTERFACE')
+    const name = this.expect('IDENT').value
+    const typeParams = this.parseTypeParams()
+    this.expect('LBRACE')
+    const fields: InterfaceField[] = []
+    while (!this.check('RBRACE') && !this.isEOF()) {
+      const fieldName = this.expect('IDENT').value
+      this.expect('COLON')
+      const type = this.parseTypeExpr()
+      fields.push({ name: fieldName, type })
+      this.tryConsume('SEMICOLON')
+      this.tryConsume('COMMA')
+    }
+    this.expect('RBRACE')
+    return { kind: 'InterfaceDecl', name, typeParams, fields, line }
+  }
+
+  // v0.7: parse optional <T, U, V> type parameter list after a name
+  private parseTypeParams(): string[] {
+    if (!this.check('LT')) return []
+    this.advance()  // consume <
+    const params: string[] = []
+    while (!this.check('GT') && !this.isEOF()) {
+      params.push(this.expect('IDENT').value)
+      this.tryConsume('COMMA')
+    }
+    this.expect('GT')
+    return params
   }
 
   private parseFnDecl(): FnDecl {
     const { line } = this.expect('KW_FN')
     const name = this.expect('IDENT').value
+    const typeParams = this.parseTypeParams()   // v0.7: optional <T, U>
 
     // Short-form: fn name(params) = expr
     if (this.check('LPAREN') && !this.isDoubleColonAhead()) {
@@ -320,7 +357,7 @@ export class Parser {
         this.expect('RBRACE')
         isShort = false
       }
-      return { kind: 'FnDecl', name, params, returnType, annotations: [], body, shortForm: isShort, line }
+      return { kind: 'FnDecl', name, typeParams, params, returnType, annotations: [], body, shortForm: isShort, line }
     }
 
     // Full form: fn name :: (params) -> ReturnType { body }
@@ -344,7 +381,7 @@ export class Parser {
     const body = this.parseBlockBody()
     this.expect('RBRACE')
 
-    return { kind: 'FnDecl', name, params, returnType, annotations, body, line }
+    return { kind: 'FnDecl', name, typeParams, params, returnType, annotations, body, line }
   }
 
   private isDoubleColonAhead(): boolean {
@@ -407,6 +444,24 @@ export class Parser {
       }
       this.expect('RBRACE')
       return { name: '__object__', typeArgs: fields.map(f => ({ name: f.name, typeArgs: [f.type] })) }
+    }
+
+    // v0.7: fn(T, U) -> V function type expression
+    if (this.check('KW_FN')) {
+      this.advance()  // consume fn
+      this.expect('LPAREN')
+      const fnParams: TypeExpr[] = []
+      while (!this.check('RPAREN') && !this.isEOF()) {
+        fnParams.push(this.parseTypeExpr())
+        this.tryConsume('COMMA')
+      }
+      this.expect('RPAREN')
+      let fnReturn: TypeExpr = { name: 'any' }
+      if (this.check('THIN_ARROW')) {
+        this.advance()
+        fnReturn = this.parseTypeExpr()
+      }
+      return { name: 'fn', fnParams, fnReturn }
     }
 
     if (this.check('IDENT') && this.peek().value === 'void') {
@@ -518,6 +573,10 @@ export class Parser {
         const mutable = this.check('KW_MUT')
         if (mutable) this.advance()
 
+        // v0.7: let infer name = expr — model-resolved type annotation
+        const infer = this.check('KW_INFER')
+        if (infer) this.advance()
+
         // v0.4: object destructuring — let { a, b, c } = expr
         //       or with rename  — let { x: myX, y: myY } = expr
         if (this.check('LBRACE')) {
@@ -572,7 +631,7 @@ export class Parser {
         }
         this.expect('ASSIGN')
         const value = this.tryPropagation(this.parseExpr())  // v0.6: let x = expr?
-        stmts.push({ kind: 'LetStmt', name, value, mutable })
+        stmts.push({ kind: 'LetStmt', name, value, mutable, infer })
         this.tryConsume('SEMICOLON')
         continue
       }

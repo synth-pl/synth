@@ -1,5 +1,56 @@
 # Axon Changelog
 
+## v0.7.0 — The Type System Update
+
+### New language features
+
+- **Generic type parameters** on `fn`, `record`, and `type` declarations
+  ```axon
+  record Pair<A, B> { first: A; second: B }
+  fn map<T, U>(items: T[], f: fn(T) -> U) -> U[] = items.map(f)
+  type Maybe<T> = | Some { value: T } | None
+  ```
+
+- **`interface` declarations** — structural type contracts (type-level only, erased to JSDoc)
+  ```axon
+  interface Tradeable {
+    name:     string
+    price:    int
+    describe: fn() -> string
+  }
+  ```
+
+- **`fn(T) -> U` type expressions** — first-class function types in signatures and interfaces
+  ```axon
+  fn apply<T, U>(value: T, f: fn(T) -> U) -> U = f(value)
+  ```
+
+- **`let infer`** — model-resolved type annotation; signals to AI tooling that the type should be inferred from context rather than explicitly declared
+  ```axon
+  fn compute(names: string[]) -> int[] {
+    let infer scores = map(names, s => s.length)
+    scores
+  }
+  ```
+
+### Demo: The Bazaar
+
+New fully interactive RPG item shop demo (`demo/bazaar.html`) showcasing all v0.7 features:
+- 20 typed items across 5 categories and 5 rarity tiers
+- Generic `keep_if<T>`, `transform<T,U>`, `order_by<T>`, `total<T>` helpers
+- `interface Tradeable` and `interface Filterable<T>` structural contracts
+- `let infer` throughout the filter/sort pipeline in `apply_filters`
+- Immutable `AppState` record with full filter, sort, search, and cart UI
+
+### Compiler changes
+
+- **Lexer**: new keywords `interface`, `infer`
+- **Parser**: `<T, U>` type param lists on `fn`/`record`/`type`; `interface` top-level declarations; `fn(T) -> U` function type expressions; `let infer` bindings
+- **Codegen**: generics are erased to JS (runtime-transparent); `interface` emits as JSDoc `@interface` comment; `let infer` compiles identically to `let`
+- **Checker**: `InterfaceDecl` walked during analysis; registered in top-level pass
+
+---
+
 ## v0.6.0 — The Safety Update
 
 ### New language features

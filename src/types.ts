@@ -20,6 +20,8 @@ export type TokenType =
   | 'KW_CONTINUE'       // v0.5.2: continue statement
   | 'KW_MUT'            // v0.5.2: mutable binding
   | 'KW_REFINE'         // v0.6:   refine x: "semantic claim"
+  | 'KW_INTERFACE'      // v0.7:   interface Name { field: Type }
+  | 'KW_INFER'          // v0.7:   let infer x = expr — model-resolved type
   // Literals
   | 'NUMBER' | 'STRING' | 'REGEX' | 'TEMPLATE'
   // Identifier
@@ -86,13 +88,29 @@ export type TopLevelDecl =
   | ExportDecl        // v0.5
   | TopLevelExpr      // v0.5: bare expression statement at top level (e.g. mount())
   | TopLevelLet       // v0.5: top-level let binding (e.g. let state = {...})
+  | InterfaceDecl     // v0.7: interface Name { field: Type; method: fn(T) -> U }
 
 export interface TypeAlias {
   kind: 'TypeAlias'
   name: string
+  typeParams?: string[]   // v0.7: generic type params e.g. type Pair<A, B>
   type: TypeExpr
   constraint?: Constraint
   line: number
+}
+
+// v0.7: interface Name { field: Type; method: fn(T) -> U }
+export interface InterfaceDecl {
+  kind: 'InterfaceDecl'
+  name: string
+  typeParams?: string[]
+  fields: InterfaceField[]
+  line: number
+}
+
+export interface InterfaceField {
+  name: string
+  type: TypeExpr
 }
 
 // v0.4: Tagged union — type Shape = | Circle { r: float } | Rect { w: float, h: float } | Point
@@ -167,6 +185,7 @@ export interface CustomConstraint   { kind: 'CustomConstraint'; expr: Expr }
 export interface RecordDecl {
   kind: 'RecordDecl'
   name: string
+  typeParams?: string[]   // v0.7: generic type params e.g. record Pair<A, B>
   fields: FieldDecl[]
   line: number
 }
@@ -179,6 +198,7 @@ export interface FieldDecl {
 export interface FnDecl {
   kind: 'FnDecl'
   name: string
+  typeParams?: string[]   // v0.7: generic type params e.g. fn map<T, U>
   params: FnParam[]
   returnType: TypeExpr
   annotations: Annotation[]
@@ -222,10 +242,12 @@ export interface FnParam {
 
 export interface TypeExpr {
   name: string
-  typeArgs?: TypeExpr[]
+  typeArgs?: TypeExpr[]   // e.g. List<T> → typeArgs: [T]
   isArray?: boolean
   isOptional?: boolean
   union?: TypeExpr[]
+  fnParams?: TypeExpr[]   // v0.7: fn(T, U) -> V — parameter types
+  fnReturn?: TypeExpr     // v0.7: fn(T) -> V — return type
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,7 +386,7 @@ export interface BlockExpr {
 }
 
 export type BlockStmt =
-  | { kind: 'LetStmt'; name: string | null; value: Expr; mutable?: boolean }
+  | { kind: 'LetStmt'; name: string | null; value: Expr; mutable?: boolean; infer?: boolean }
   | { kind: 'DestructureStmt'; style: 'object' | 'array'; names: string[]; value: Expr }  // v0.4
   | { kind: 'ReturnStmt'; value: Expr }
   | { kind: 'ExprStmt'; value: Expr }

@@ -65,6 +65,7 @@ export class Checker {
     // v0.5: walk into exported declarations
     if (decl.kind === 'ExportDecl')       this.checkTopLevel(decl.decl)
     // v0.5: import declarations are validated by the CLI bundler, no checks here
+    // v0.7: interface declarations are type-level only; no runtime checks needed
   }
 
   private checkFn(fn: FnDecl): void {

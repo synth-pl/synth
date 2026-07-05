@@ -1,0 +1,130 @@
+// ──────────────────────────────────────────────────────────────
+// Axon v0.7 — Type System Update: feature tests
+// Generic types, interfaces, fn(T)->U type expr, let infer
+// ──────────────────────────────────────────────────────────────
+
+// ── Generic record ────────────────────────────────────────────
+
+record Pair<A, B> {
+  first:  A
+  second: B
+}
+
+fn make_pair<A, B>(a: A, b: B) -> Pair<A, B> = { first: a, second: b }
+
+@test "generic record can hold any types" {
+  make_pair(42, "hello").first == 42
+}
+
+@test "generic pair second field" {
+  make_pair("x", true).second == true
+}
+
+// ── Generic type alias ────────────────────────────────────────
+
+type Maybe<T> = | Some { value: T } | None
+
+fn unwrap_or_zero(m: Maybe<int>) -> int =
+  match m {
+    | Some { value } => value
+    | None           => 0
+  }
+
+@test "Maybe Some unwraps correctly" {
+  unwrap_or_zero(Some(99)) == 99
+}
+
+@test "Maybe None returns default" {
+  unwrap_or_zero(None) == 0
+}
+
+// ── Interface declarations ────────────────────────────────────
+
+interface Describable {
+  name: string
+  describe: fn() -> string
+}
+
+interface Priceable {
+  price: int
+  discount: fn(int) -> int
+}
+
+// ── Generic filter / map / sort helpers ──────────────────────
+
+fn keep<T>(items: T[], pred: fn(T) -> bool) -> T[] =
+  items.filter(pred)
+
+fn map_items<T, U>(items: T[], transform: fn(T) -> U) -> U[] =
+  items.map(transform)
+
+fn sort_by<T>(items: T[], key: fn(T) -> any) -> T[] =
+  items.slice().sort((a, b) => {
+    let ka = key(a)
+    let kb = key(b)
+    if ka < kb { -1 } else if ka > kb { 1 } else { 0 }
+  })
+
+@test "keep filters matching elements" {
+  keep([1, 2, 3, 4, 5], x => x > 2).length == 3
+}
+
+@test "keep filters strings by predicate" {
+  keep(["apple", "banana", "apricot"], s => s.startsWith("a")).length == 2
+}
+
+@test "map_items transforms each element" {
+  map_items([1, 2, 3], x => x * 10)[1] == 20
+}
+
+@test "sort_by orders ascending" {
+  sort_by([3, 1, 2], x => x)[0] == 1
+}
+
+// ── fn(T) -> U type expressions ──────────────────────────────
+
+fn apply<T, U>(value: T, f: fn(T) -> U) -> U = f(value)
+
+@test "apply uses fn type param" {
+  apply(5, x => x * 2) == 10
+}
+
+@test "apply with string transform" {
+  apply("hello", s => s.length) == 5
+}
+
+// ── let infer — model-resolved type annotation ────────────────
+
+fn compute_scores(names: string[]) -> int[] {
+  let infer scores = map_items(names, s => s.length)
+  return scores
+}
+
+@test "let infer compiles and runs correctly" {
+  compute_scores(["ab", "cde", "f"])[0] == 2
+}
+
+@test "let infer result has correct length" {
+  compute_scores(["x", "yy", "zzz"]).length == 3
+}
+
+// ── Combined generic usage ────────────────────────────────────
+
+fn total_value<T>(items: T[], get_val: fn(T) -> int) -> int {
+  let mut sum = 0
+  for item in items {
+    sum = sum + get_val(item)
+  }
+  sum
+}
+
+@test "total_value sums correctly" {
+  total_value(
+    [{ name: "sword", value: 100 }, { name: "shield", value: 75 }],
+    item => item.value
+  ) == 175
+}
+
+@test "total_value empty list is zero" {
+  total_value([], item => item.value) == 0
+}

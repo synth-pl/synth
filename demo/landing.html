@@ -554,7 +554,7 @@
 
   <!-- ── Hero ────────────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="hero-eyebrow">✦ AI-native · v0.6.0</div>
+    <div class="hero-eyebrow">✦ AI-native · v0.7.0</div>
     <h1 class="hero-title">
       <span class="grad">A programming language<br>built for AI.</span>
     </h1>
@@ -584,6 +584,7 @@
       <button class="showcase-tab" onclick="showPane('test')">Testing</button>
       <button class="showcase-tab" onclick="showPane('modules')" style="color:var(--pink)">Modules <span style="font-size:0.65rem;opacity:0.8">v0.5</span></button>
       <button class="showcase-tab" onclick="showPane('safety')" style="color:var(--cyan)">Safety <span style="font-size:0.65rem;opacity:0.8">v0.6</span></button>
+      <button class="showcase-tab" onclick="showPane('typesys')" style="color:var(--green)">Generics <span style="font-size:0.65rem;opacity:0.8">v0.7</span></button>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
     <div class="showcase-pane" id="pane-match"><pre id="code-match"></pre></div>
@@ -591,14 +592,15 @@
     <div class="showcase-pane" id="pane-test"><pre id="code-test"></pre></div>
     <div class="showcase-pane" id="pane-modules"><pre id="code-modules"></pre></div>
     <div class="showcase-pane" id="pane-safety"><pre id="code-safety"></pre></div>
+    <div class="showcase-pane" id="pane-typesys"><pre id="code-typesys"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
   <div class="stats-bar">
     <div class="stat"><div class="stat-num">0→JS</div><div class="stat-label">No runtime</div></div>
     <div class="stat"><div class="stat-num">7</div><div class="stat-label">Annotations</div></div>
-    <div class="stat"><div class="stat-num">85</div><div class="stat-label">Passing tests</div></div>
-    <div class="stat"><div class="stat-num">4</div><div class="stat-label">Demos</div></div>
+    <div class="stat"><div class="stat-num">113</div><div class="stat-label">Passing tests</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">Demos</div></div>
   </div>
 
   <!-- ── Pillars ───────────────────────────────────────────────────────────── -->
@@ -649,6 +651,12 @@
     <div class="section-label">Demos</div>
     <h2 class="section-title">See it in action.</h2>
     <div class="demo-grid">
+      <a class="demo-card" href="bazaar.html" style="border-color:var(--accent)">
+        <div class="demo-card-icon">🏪</div>
+        <div class="demo-card-title">The Bazaar <span style="font-size:0.7rem;opacity:0.6;font-weight:400">New</span></div>
+        <div class="demo-card-desc">RPG item shop with generics, interfaces, and <code>let infer</code>. Filter, sort, and cart — all typed.</div>
+        <div class="demo-card-meta"><span>v0.7</span> generics · interfaces · let infer</div>
+      </a>
       <a class="demo-card" href="dungeon.html">
         <div class="demo-card-icon">🗺️</div>
         <div class="demo-card-title">Dungeon Toolkit</div>
@@ -704,18 +712,18 @@
         <div class="roadmap-ver">v0.5</div>
         <div class="roadmap-theme">Modules</div>
       </div>
-      <div class="roadmap-stop rs-now">
-        <div class="roadmap-dot rd-now">★</div>
-        <div class="roadmap-ver" style="color:var(--pink)">v0.6</div>
+      <div class="roadmap-stop">
+        <div class="roadmap-dot rd-done">✓</div>
+        <div class="roadmap-ver">v0.6</div>
         <div class="roadmap-theme">Safety</div>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-next">7</div>
-        <div class="roadmap-ver">v0.7</div>
+      <div class="roadmap-stop rs-now">
+        <div class="roadmap-dot rd-now">★</div>
+        <div class="roadmap-ver" style="color:var(--accent)">v0.7</div>
         <div class="roadmap-theme">Type System</div>
       </div>
       <div class="roadmap-stop">
-        <div class="roadmap-dot rd-later">8</div>
+        <div class="roadmap-dot rd-next">8</div>
         <div class="roadmap-ver">v0.8</div>
         <div class="roadmap-theme">Async &amp; Reactive</div>
       </div>
@@ -932,6 +940,50 @@ fn load(input: string) {
 //   ✓ level 0 returns Err
 //   ✓ negative seed is normalised
 //   9 passed, 0 failed, 9 total
+`);
+
+    setCode('code-typesys', `
+// interface — structural type contract
+interface Tradeable {
+  name:     string
+  price:    int
+  describe: fn() -> string
+}
+
+// Generic record with type params
+record Pair<A, B> { first: A; second: B }
+
+// Generic helper — fn(T)->U function type
+fn transform<T, U>(
+  items: T[],
+  f: fn(T) -> U
+) -> U[] =
+  items.map(f)
+
+fn order_by<T>(
+  items: T[],
+  key: fn(T) -> any
+) -> T[] =
+  items.slice().sort((a, b) => {
+    let ka = key(a)
+    let kb = key(b)
+    if ka < kb { -1 } else if ka > kb { 1 } else { 0 }
+  })
+
+// let infer — model resolves the type
+fn apply_filters(state: AppState) -> Item[] {
+  let infer a      = by_category(state.all_items, state.filter_cat)
+  let infer b      = by_rarity(a, state.filter_rar)
+  let infer sorted = order_by(b, i => i.price)
+  sorted
+}
+
+// axon --test items.axn
+//   ✓ keep_if filters by predicate
+//   ✓ transform applies function
+//   ✓ order_by sorts ascending
+//   ✓ cart_total sums item prices
+//   14 passed, 0 failed, 14 total
 `);
   </script>
 </body>

@@ -1,0 +1,218 @@
+// ──────────────────────────────────────────────────────────────
+// The Bazaar — Item type system (v0.7 type system demo)
+// Demonstrates: interfaces, generic records, fn(T)->U types,
+//               generic filter/sort/map, let infer
+// ──────────────────────────────────────────────────────────────
+
+// ── Interfaces ────────────────────────────────────────────────
+
+interface Tradeable {
+  name:  string
+  price: int
+  rarity: string
+  describe: fn() -> string
+}
+
+interface Filterable<T> {
+  matches: fn(T) -> bool
+}
+
+// ── Item category type ────────────────────────────────────────
+
+type Category = | Weapon | Armor | Potion | Relic | Scroll
+
+// ── Core item record ──────────────────────────────────────────
+
+record Item {
+  name:     string
+  category: Category
+  rarity:   string
+  price:    int
+  power:    int
+  lore:     string
+}
+
+// ── Generic collection helpers ────────────────────────────────
+
+fn keep_if<T>(items: T[], pred: fn(T) -> bool) -> T[] =
+  items.filter(pred)
+
+fn transform<T, U>(items: T[], f: fn(T) -> U) -> U[] =
+  items.map(f)
+
+fn order_by<T>(items: T[], key: fn(T) -> any) -> T[] =
+  items.slice().sort((a, b) => {
+    let ka = key(a)
+    let kb = key(b)
+    if ka < kb { -1 } else if ka > kb { 1 } else { 0 }
+  })
+
+fn order_by_desc<T>(items: T[], key: fn(T) -> any) -> T[] =
+  items.slice().sort((a, b) => {
+    let ka = key(a)
+    let kb = key(b)
+    if ka > kb { -1 } else if ka < kb { 1 } else { 0 }
+  })
+
+fn total<T>(items: T[], value_of: fn(T) -> int) -> int {
+  let mut acc = 0
+  for item in items {
+    acc = acc + value_of(item)
+  }
+  acc
+}
+
+// ── Rarity helpers ────────────────────────────────────────────
+
+fn rarity_rank(r: string) -> int =
+  match r {
+    | "Common"    => 1
+    | "Uncommon"  => 2
+    | "Rare"      => 3
+    | "Epic"      => 4
+    | "Legendary" => 5
+    | _           => 0
+  }
+
+fn rarity_color(r: string) -> string =
+  match r {
+    | "Common"    => "#aaaaaa"
+    | "Uncommon"  => "#1eff00"
+    | "Rare"      => "#0070dd"
+    | "Epic"      => "#a335ee"
+    | "Legendary" => "#ff8000"
+    | _           => "#ffffff"
+  }
+
+// ── Category helpers ──────────────────────────────────────────
+
+fn category_icon(c: Category) -> string =
+  match c {
+    | Weapon  => "⚔️"
+    | Armor   => "🛡️"
+    | Potion  => "⚗️"
+    | Relic   => "💎"
+    | Scroll  => "📜"
+  }
+
+fn category_name(c: Category) -> string =
+  match c {
+    | Weapon  => "Weapon"
+    | Armor   => "Armor"
+    | Potion  => "Potion"
+    | Relic   => "Relic"
+    | Scroll  => "Scroll"
+  }
+
+// ── Item filters ──────────────────────────────────────────────
+
+fn by_category(items: Item[], cat: string) -> Item[] {
+  if cat == "All" {
+    items
+  } else {
+    items.filter(item => category_name(item.category) == cat)
+  }
+}
+
+fn by_rarity(items: Item[], rar: string) -> Item[] {
+  if rar == "All" {
+    items
+  } else {
+    items.filter(item => item.rarity == rar)
+  }
+}
+
+fn by_max_price(items: Item[], max: int) -> Item[] {
+  if max <= 0 {
+    items
+  } else {
+    items.filter(item => item.price <= max)
+  }
+}
+
+fn search_items(items: Item[], query: string) -> Item[] {
+  if query == "" {
+    items
+  } else {
+    let q = query.toLowerCase()
+    items.filter(item =>
+      item.name.toLowerCase().includes(q) ||
+      item.lore.toLowerCase().includes(q)
+    )
+  }
+}
+
+// ── Item describe ─────────────────────────────────────────────
+
+fn describe_item(item: Item) -> string =
+  category_icon(item.category) + " " + item.name +
+  " [" + item.rarity + "] — " + item.price + "g"
+
+// ── Cart total ────────────────────────────────────────────────
+
+fn cart_total(items: Item[]) -> int =
+  total(items, item => item.price)
+
+// ── Tests ─────────────────────────────────────────────────────
+
+@test "rarity_rank orders correctly" {
+  rarity_rank("Legendary") > rarity_rank("Common")
+}
+
+@test "rarity_rank unknown returns 0" {
+  rarity_rank("Mythic") == 0
+}
+
+@test "category_icon returns emoji" {
+  category_icon(Weapon) == "⚔️"
+}
+
+@test "category_name returns string" {
+  category_name(Potion) == "Potion"
+}
+
+@test "keep_if filters by predicate" {
+  keep_if([1, 2, 3, 4], x => x > 2).length == 2
+}
+
+@test "transform applies function" {
+  transform([1, 2, 3], x => x * 2)[2] == 6
+}
+
+@test "order_by sorts ascending" {
+  order_by([3, 1, 2], x => x)[0] == 1
+}
+
+@test "order_by_desc sorts descending" {
+  order_by_desc([3, 1, 2], x => x)[0] == 3
+}
+
+@test "total sums values" {
+  total([1, 2, 3], x => x) == 6
+}
+
+@test "let infer on item transform" {
+  let infer names = transform([{ name: "Sword" }, { name: "Bow" }], i => i.name)
+  names[0] == "Sword"
+}
+
+@test "by_category All returns all" {
+  by_category([{ name: "x", category: Weapon, rarity: "Common", price: 10, power: 5, lore: "" }], "All").length == 1
+}
+
+@test "search_items finds by name" {
+  let items = [{ name: "Iron Sword", category: Weapon, rarity: "Common", price: 40, power: 12, lore: "reliable" }]
+  search_items(items, "sword").length == 1
+}
+
+@test "search_items empty query returns all" {
+  let items = [{ name: "Iron Sword", category: Weapon, rarity: "Common", price: 40, power: 12, lore: "" }]
+  search_items(items, "").length == 1
+}
+
+@test "cart_total sums item prices" {
+  cart_total([
+    { name: "A", category: Weapon, rarity: "Common", price: 100, power: 10, lore: "" },
+    { name: "B", category: Potion, rarity: "Common", price: 50,  power: 5,  lore: "" }
+  ]) == 150
+}

@@ -1,0 +1,168 @@
+// ──────────────────────────────────────────────────────────────
+// The Bazaar — Main entry point
+// Renders the item shop UI; handles filter, sort, cart
+// ──────────────────────────────────────────────────────────────
+
+import { Item, Category, keep_if, transform, order_by, order_by_desc, by_category, by_rarity, by_max_price, search_items, describe_item, cart_total, rarity_color, rarity_rank, category_icon, category_name } from "./items"
+import { get_catalog } from "./catalog"
+
+// ── App State ─────────────────────────────────────────────────
+
+record AppState {
+  all_items:   Item[]
+  cart:        Item[]
+  filter_cat:  string
+  filter_rar:  string
+  sort_key:    string
+  search:      string
+}
+
+fn make_state() -> AppState = {
+  all_items:  get_catalog(),
+  cart:       [],
+  filter_cat: "All",
+  filter_rar: "All",
+  sort_key:   "price_asc",
+  search:     ""
+}
+
+// ── Derived view helpers ──────────────────────────────────────
+
+fn apply_filters(state: AppState) -> Item[] {
+  let infer items    = state.all_items
+  let infer a        = by_category(items, state.filter_cat)
+  let infer b        = by_rarity(a, state.filter_rar)
+  let infer c        = search_items(b, state.search)
+  let infer sorted   = apply_sort(c, state.sort_key)
+  sorted
+}
+
+fn apply_sort(items: Item[], sort: string) -> Item[] =
+  match sort {
+    | "price_asc"   => order_by(items, i => i.price)
+    | "price_desc"  => order_by_desc(items, i => i.price)
+    | "power_desc"  => order_by_desc(items, i => i.power)
+    | "rarity_desc" => order_by_desc(items, i => rarity_rank(i.rarity))
+    | "name_asc"    => order_by(items, i => i.name)
+    | _             => items
+  }
+
+fn is_in_cart(state: AppState, item: Item) -> bool =
+  state.cart.some(c => c.name == item.name)
+
+// ── DOM helpers ───────────────────────────────────────────────
+
+fn el(id: string) -> any = document.getElementById(id)
+
+fn set_count(id: string, n: int) -> void =
+  el(id).textContent = n + ""
+
+// ── Render ────────────────────────────────────────────────────
+
+fn render(state: AppState) -> void {
+  let infer visible = apply_filters(state)
+  render_grid(state, visible)
+  render_cart(state)
+  render_stats(state, visible)
+}
+
+fn render_stats(state: AppState, visible: Item[]) -> void {
+  el("result-count").textContent  = visible.length + " items"
+  el("cart-total").textContent    = cart_total(state.cart) + "g"
+  el("cart-count").textContent    = state.cart.length + ""
+}
+
+fn render_grid(state: AppState, items: Item[]) -> void {
+  if items.length == 0 {
+    el("item-grid").innerHTML = "<div class=\"empty-state\">No items match your search.</div>"
+  } else {
+    let infer cards = transform(items, item => item_card_html(state, item))
+    el("item-grid").innerHTML = cards.join("")
+  }
+}
+
+fn item_card_html(state: AppState, item: Item) -> string {
+  let color    = rarity_color(item.rarity)
+  let icon     = category_icon(item.category)
+  let in_cart  = is_in_cart(state, item)
+  let btn_cls  = in_cart ? "btn-in-cart" : "btn-buy"
+  let btn_txt  = in_cart ? "✓ In Cart" : "Add to Cart"
+  let badge    = "<span class=\"rarity-badge\" style=\"color:" + color + ";border-color:" + color + "\">" + item.rarity + "</span>"
+  "<div class=\"item-card\">" +
+    "<div class=\"item-header\">" +
+      "<span class=\"item-icon\">" + icon + "</span>" +
+      "<div class=\"item-title\">" +
+        "<div class=\"item-name\">" + item.name + "</div>" +
+        badge +
+      "</div>" +
+    "</div>" +
+    "<div class=\"item-lore\">" + item.lore + "</div>" +
+    "<div class=\"item-footer\">" +
+      "<div class=\"item-stats\">" +
+        "<span class=\"stat-price\">💰 " + item.price + "g</span>" +
+        "<span class=\"stat-power\">⚡ " + item.power + "</span>" +
+      "</div>" +
+      "<button class=\"" + btn_cls + "\" onclick=\"bazaarBuy('" + item.name + "')\">" + btn_txt + "</button>" +
+    "</div>" +
+  "</div>"
+}
+
+fn render_cart(state: AppState) -> void {
+  if state.cart.length == 0 {
+    el("cart-items").innerHTML = "<div class=\"cart-empty\">Your cart is empty.</div>"
+  } else {
+    let infer rows = transform(state.cart, item =>
+      "<div class=\"cart-row\">" +
+        "<span class=\"cart-item-name\">" + category_icon(item.category) + " " + item.name + "</span>" +
+        "<span class=\"cart-item-price\">" + item.price + "g</span>" +
+        "<button class=\"cart-remove\" onclick=\"bazaarRemove('" + item.name + "')\">✕</button>" +
+      "</div>"
+    )
+    el("cart-items").innerHTML = rows.join("")
+  }
+}
+
+// ── Event handlers ────────────────────────────────────────────
+
+let state = make_state()
+
+fn buy_item(name: string) -> void {
+  let infer item_arr = state.all_items.filter(i => i.name == name)
+  if item_arr.length > 0 {
+    let item = item_arr[0]
+    if is_in_cart(state, item) {
+      state = { all_items: state.all_items, cart: state.cart.filter(c => c.name != name), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+    } else {
+      state = { all_items: state.all_items, cart: state.cart.concat([item]), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+    }
+    render(state)
+  }
+}
+
+fn remove_item(name: string) -> void {
+  state = { all_items: state.all_items, cart: state.cart.filter(c => c.name != name), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+  render(state)
+}
+
+fn on_filter_change() -> void {
+  let cat = el("filter-cat").value
+  let rar = el("filter-rar").value
+  let srt = el("sort-select").value
+  let q   = el("search-box").value
+  state = { all_items: state.all_items, cart: state.cart, filter_cat: cat, filter_rar: rar, sort_key: srt, search: q }
+  render(state)
+}
+
+fn clear_cart() -> void {
+  state = { all_items: state.all_items, cart: [], filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+  render(state)
+}
+
+// ── Mount ─────────────────────────────────────────────────────
+
+window.bazaarBuy    = buy_item
+window.bazaarRemove = remove_item
+window.onFilterChange = on_filter_change
+window.clearCart    = clear_cart
+
+render(state)
