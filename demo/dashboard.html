@@ -571,14 +571,25 @@ function showSrc(tab) {
 }
 
 function highlight(src) {
-  return src
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/(\/\/[^\n]*)/g, '<span class="cmt">$1</span>')
-    .replace(/\b(enum|fn|record|let|match|if|else|return|store|on|for|in|import|export|type|async|await)\b/g, '<span class="kw">$1</span>')
-    .replace(/\b(int|float|string|bool|list|any)\b/g, '<span class="tp">$1</span>')
-    .replace(/\b([A-Z][A-Za-z0-9_]*)/g, '<span class="tp">$1</span>')
-    .replace(/\b(\d[\d_]*(?:\.\d[\d_]*)?|0x[\da-fA-F_]+|0b[01_]+)\b/g, '<span class="num">$1</span>')
-    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
+  const escaped = src
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Single-pass tokeniser — each character matched at most once,
+  // so generated span tags are never re-processed by later patterns.
+  return escaped.replace(
+    /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*")|(0x[\da-fA-F_]+|0b[01_]+|\d[\d_]*(?:\.\d[\d_]*)?)(?=\W|$)|(\b(?:enum|fn|record|let|match|if|else|return|store|on|for|in|import|export|type|async|await)\b)|(\b(?:int|float|string|bool|list|any)\b)|([A-Z][A-Za-z0-9_]*)/g,
+    (_, cmt, str, num, kw, tp, tp2) => {
+      if (cmt)  return `<span class="cmt">${cmt}</span>`;
+      if (str)  return `<span class="str">${str}</span>`;
+      if (num)  return `<span class="num">${num}</span>`;
+      if (kw)   return `<span class="kw">${kw}</span>`;
+      if (tp)   return `<span class="tp">${tp}</span>`;
+      if (tp2)  return `<span class="tp">${tp2}</span>`;
+      return _;
+    }
+  );
 }
 
 showSrc('types');
