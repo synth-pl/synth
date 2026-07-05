@@ -553,30 +553,34 @@
       .hero-install code { font-size: 13px; flex: 1; min-width: 0; }
       .install-copy { flex-shrink: 0; }
 
-      /* Showcase */
-      .showcase { padding: 0 16px 48px; overflow-x: hidden; }
+      /* Showcase — overflow:clip clips visually without creating a
+         scroll context, so child elements can still scroll themselves */
+      .showcase {
+        padding: 0 16px 48px;
+        overflow-x: clip;
+        max-width: 100%;
+      }
       .showcase-tabs {
+        display: flex;
         flex-wrap: nowrap;
+        width: 100%;
+        max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         gap: 4px;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 0;
       }
       .showcase-tabs::-webkit-scrollbar { display: none; }
       .showcase-tab {
         padding: 6px 12px;
         font-size: 11px;
         flex-shrink: 0;
-        border-radius: 6px 6px 0 0;
+        white-space: nowrap;
       }
-      .showcase-tab.active { border-color: var(--border); }
       .showcase-pane {
-        border-radius: var(--radius);
-        border-top: 1px solid var(--border);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        max-width: 100%;
       }
       .showcase-pane pre {
         font-size: 12px;
