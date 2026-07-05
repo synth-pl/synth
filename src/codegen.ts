@@ -505,20 +505,24 @@ export class Codegen {
       case 'AwaitExpr': return `await ${this.emitExpr(expr.value)}`
       case 'Identifier':  return expr.name
 
-      case 'UnaryExpr':
+      case 'UnaryExpr': {
+        const unaryOp = expr.op === 'not' ? '!' : expr.op
         if (expr.prefix) {
-          const needsSpace = /[a-z]/.test(expr.op)
-          return `${expr.op}${needsSpace ? ' ' : ''}${this.emitExpr(expr.operand)}`
+          const needsSpace = /[a-z]/.test(unaryOp)
+          return `${unaryOp}${needsSpace ? ' ' : ''}${this.emitExpr(expr.operand)}`
         }
-        return `${this.emitExpr(expr.operand)}${expr.op}`
+        return `${this.emitExpr(expr.operand)}${unaryOp}`
+      }
 
       case 'BinaryExpr': {
         if (expr.op === '=') {
           return `${this.emitExpr(expr.left)} = ${this.emitExpr(expr.right)}`
         }
-        const l = this.emitExprParenIfNeeded(expr.left, expr.op)
-        const r = this.emitExprParenIfNeeded(expr.right, expr.op)
-        return `${l} ${expr.op} ${r}`
+        const opAlias: Record<string, string> = { and: '&&', or: '||', not: '!' }
+        const op = opAlias[expr.op] ?? expr.op
+        const l = this.emitExprParenIfNeeded(expr.left, op)
+        const r = this.emitExprParenIfNeeded(expr.right, op)
+        return `${l} ${op} ${r}`
       }
 
       case 'TernaryExpr': {
