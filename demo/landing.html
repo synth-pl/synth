@@ -453,63 +453,199 @@
       font-weight: 600;
     }
 
-    /* ── Roadmap strip ───────────────────────────────────────────────────── */
-    .roadmap-strip {
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: rgba(176,96,255,0.03);
-      padding: 40px 32px;
-      margin-bottom: 80px;
-      overflow-x: auto;
+    /* ── Roadmap v2 ──────────────────────────────────────────────────────── */
+    .roadmap-v2 {
+      max-width: 860px;
+      margin: 0 auto 96px;
+      padding: 0 32px;
     }
 
-    .roadmap-track {
+    /* Progress bar */
+    .rm-progress-wrap {
+      margin-bottom: 40px;
+    }
+    .rm-progress-meta {
       display: flex;
-      gap: 0;
-      max-width: 900px;
-      margin: 0 auto;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
     }
-
-    .roadmap-stop {
-      flex: 1;
-      min-width: 110px;
-      text-align: center;
-      position: relative;
+    .rm-progress-label {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
     }
-
-    .roadmap-stop::after {
-      content: '';
-      position: absolute;
-      top: 16px;
-      left: 50%;
-      right: -50%;
-      height: 2px;
-      background: var(--border);
-      z-index: 0;
-    }
-    .roadmap-stop:last-child::after { display: none; }
-
-    .roadmap-dot {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      margin: 0 auto 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .rm-progress-pct {
       font-size: 13px;
       font-weight: 700;
+      font-family: 'Courier New', monospace;
+      background: linear-gradient(90deg, var(--pink), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .rm-bar-track {
+      height: 8px;
+      background: rgba(176,96,255,0.1);
+      border-radius: 100px;
+      overflow: hidden;
+      border: 1px solid rgba(176,96,255,0.15);
+    }
+    .rm-bar-fill {
+      height: 100%;
+      width: 82%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+      box-shadow: 0 0 12px rgba(255,45,120,0.4);
       position: relative;
-      z-index: 1;
+    }
+    .rm-bar-fill::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 32px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25));
+      border-radius: 0 100px 100px 0;
     }
 
-    .rd-done  { background: var(--purple); color: #fff; box-shadow: var(--glow-purple); }
-    .rd-now   { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; box-shadow: var(--glow-pink); }
-    .rd-next  { background: rgba(176,96,255,0.15); border: 2px solid rgba(176,96,255,0.3); color: var(--purple); }
-    .rd-later { background: rgba(90,61,128,0.1); border: 2px solid rgba(90,61,128,0.2); color: var(--text-dim); }
+    /* History chip */
+    .rm-history {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+      padding: 12px 16px;
+      background: rgba(176,96,255,0.05);
+      border: 1px solid rgba(176,96,255,0.12);
+      border-radius: 10px;
+    }
+    .rm-history-check {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--purple);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: var(--glow-purple);
+    }
+    .rm-history-text {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .rm-history-text strong {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .rm-history-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-left: auto;
+    }
+    .rm-chip {
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: rgba(176,96,255,0.1);
+      color: var(--text-dim);
+      border: 1px solid rgba(176,96,255,0.15);
+    }
 
-    .roadmap-ver { font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--text-muted); margin-bottom: 2px; }
-    .roadmap-theme { font-size: 11px; color: var(--text-dim); }
-    .rd-now + .roadmap-ver, .roadmap-stop.rs-now .roadmap-ver { color: var(--pink); }
+    /* Remaining milestones */
+    .rm-remaining {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .rm-card {
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .rm-card-now {
+      background: linear-gradient(135deg, rgba(255,45,120,0.08), rgba(176,96,255,0.1));
+      border: 1px solid rgba(255,45,120,0.25);
+    }
+    .rm-card-next {
+      background: rgba(176,96,255,0.05);
+      border: 1px solid rgba(176,96,255,0.15);
+    }
+    .rm-card-goal {
+      background: linear-gradient(135deg, rgba(176,96,255,0.1), rgba(0,210,210,0.07));
+      border: 1px solid rgba(176,96,255,0.3);
+    }
+    .rm-card-goal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(176,96,255,0.15), transparent 70%);
+      pointer-events: none;
+    }
+
+    .rm-card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .rm-badge-now  { background: rgba(255,45,120,0.15); color: var(--pink); border: 1px solid rgba(255,45,120,0.3); }
+    .rm-badge-next { background: rgba(176,96,255,0.12); color: var(--purple); border: 1px solid rgba(176,96,255,0.25); }
+    .rm-badge-goal { background: rgba(176,96,255,0.18); color: var(--purple); border: 1px solid rgba(176,96,255,0.4); }
+
+    .rm-card-ver {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+    .rm-ver-now  { color: var(--pink); }
+    .rm-ver-next { color: var(--text-muted); }
+    .rm-ver-goal {
+      background: linear-gradient(90deg, var(--purple), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .rm-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .rm-card-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+    .rm-card-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 12px;
+    }
+    .rm-feat {
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      padding: 2px 7px;
+      border-radius: 20px;
+      border: 1px solid rgba(176,96,255,0.2);
+      color: var(--text-dim);
+      background: rgba(176,96,255,0.07);
+    }
 
     /* ── Footer ──────────────────────────────────────────────────────────── */
     footer {
@@ -626,9 +762,10 @@
       .demos { padding: 0 16px 48px; }
       .demo-grid { grid-template-columns: 1fr; }
 
-      /* Roadmap strip — keep horizontal with scroll */
-      .roadmap-strip { padding: 28px 0; margin-bottom: 56px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .roadmap-track { min-width: 580px; padding: 0 16px; }
+      /* Roadmap v2 — stack cards on mobile */
+      .roadmap-v2 { padding: 0 16px; margin-bottom: 56px; }
+      .rm-remaining { grid-template-columns: 1fr; }
+      .rm-history-chips { display: none; }
 
       /* Footer */
       footer { padding: 24px 16px; flex-direction: column; align-items: center; text-align: center; }
@@ -821,68 +958,82 @@
     </div>
   </section>
 
-  <!-- ── Roadmap strip ──────────────────────────────────────────────────────── -->
-  <section style="max-width:900px;margin:0 auto 20px;padding:0 32px;">
+  <!-- ── Roadmap v2 ────────────────────────────────────────────────────────── -->
+  <section style="max-width:860px;margin:0 auto 24px;padding:0 32px;">
     <div class="section-label">Roadmap</div>
-    <h2 class="section-title" style="margin-bottom:32px;">The path to v1.0.</h2>
+    <h2 class="section-title" style="margin-bottom:8px;">Almost there.</h2>
+    <p style="color:var(--text-dim);font-size:15px;margin-bottom:40px;">3 milestones stand between Axon and v1.0.</p>
   </section>
-  <div class="roadmap-strip">
-    <div class="roadmap-track">
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.1–0.3</div>
-        <div class="roadmap-theme">Foundation</div>
+  <div class="roadmap-v2">
+
+    <!-- Progress bar -->
+    <div class="rm-progress-wrap">
+      <div class="rm-progress-meta">
+        <span class="rm-progress-label">v0.1 ───────────────────── v1.0</span>
+        <span class="rm-progress-pct">82% complete</span>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.4</div>
-        <div class="roadmap-theme">Guards & Unions</div>
+      <div class="rm-bar-track">
+        <div class="rm-bar-fill"></div>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.5</div>
-        <div class="roadmap-theme">Modules</div>
+    </div>
+
+    <!-- History chip -->
+    <div class="rm-history">
+      <div class="rm-history-check">✓</div>
+      <div class="rm-history-text"><strong>10 milestones shipped</strong> · v0.1 through v0.9.7</div>
+      <div class="rm-history-chips">
+        <span class="rm-chip">Foundation</span>
+        <span class="rm-chip">Guards</span>
+        <span class="rm-chip">Modules</span>
+        <span class="rm-chip">Safety</span>
+        <span class="rm-chip">Generics</span>
+        <span class="rm-chip">Async</span>
+        <span class="rm-chip">Tooling</span>
+        <span class="rm-chip">Ergonomics</span>
+        <span class="rm-chip">Compound Ops</span>
+        <span class="rm-chip">Stdlib</span>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.6</div>
-        <div class="roadmap-theme">Safety</div>
+    </div>
+
+    <!-- Remaining milestones -->
+    <div class="rm-remaining">
+
+      <div class="rm-card rm-card-now">
+        <div class="rm-card-badge rm-badge-now">★ Now</div>
+        <div class="rm-card-ver rm-ver-now">v0.9.8</div>
+        <div class="rm-card-title">Control Flow</div>
+        <div class="rm-card-desc">while loops, break, and continue — completing Axon's iteration model.</div>
+        <div class="rm-card-features">
+          <span class="rm-feat">while</span>
+          <span class="rm-feat">break</span>
+          <span class="rm-feat">continue</span>
+        </div>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.7</div>
-        <div class="roadmap-theme">Type System</div>
+
+      <div class="rm-card rm-card-next">
+        <div class="rm-card-badge rm-badge-next">Next</div>
+        <div class="rm-card-ver rm-ver-next">v0.9.9</div>
+        <div class="rm-card-title">Polish &amp; Docs</div>
+        <div class="rm-card-desc">Final ergonomic fixes, improved error messages, and a complete docs site.</div>
+        <div class="rm-card-features">
+          <span class="rm-feat">error messages</span>
+          <span class="rm-feat">docs site</span>
+          <span class="rm-feat">bugfixes</span>
+        </div>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.8</div>
-        <div class="roadmap-theme">Async &amp; Reactive</div>
+
+      <div class="rm-card rm-card-goal">
+        <div class="rm-card-badge rm-badge-goal">🎯 Goal</div>
+        <div class="rm-card-ver rm-ver-goal">v1.0</div>
+        <div class="rm-card-title">Stable Release</div>
+        <div class="rm-card-desc">Stable API, full test suite, production-ready tooling. Axon ships.</div>
+        <div class="rm-card-features">
+          <span class="rm-feat">stable API</span>
+          <span class="rm-feat">npm publish</span>
+          <span class="rm-feat">full coverage</span>
+        </div>
       </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.9</div>
-        <div class="roadmap-theme">Tooling</div>
-      </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.9.5</div>
-        <div class="roadmap-theme">Ergonomics</div>
-      </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-done">✓</div>
-        <div class="roadmap-ver">v0.9.6</div>
-        <div class="roadmap-theme">Compound Ops</div>
-      </div>
-      <div class="roadmap-stop rs-now">
-        <div class="roadmap-dot rd-now">★</div>
-        <div class="roadmap-ver" style="color:var(--cyan)">v0.9.7</div>
-        <div class="roadmap-theme">Stdlib Expansion</div>
-      </div>
-      <div class="roadmap-stop">
-        <div class="roadmap-dot rd-later">0</div>
-        <div class="roadmap-ver">v1.0</div>
-        <div class="roadmap-theme">Stability</div>
-      </div>
+
     </div>
   </div>
 
