@@ -21,11 +21,7 @@
       --red:     #ff4d6a;
       --orange:  #ff8c42;
       --dim:     #14002a;
-
-      --code-color:   #00e5ff;
-      --art-color:    #ff2d78;
-      --design-color: #ffd166;
-      --audio-color:  #c060ff;
+      --modal-bg: rgba(0,0,0,0.7);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -41,12 +37,13 @@
     .site-header {
       background: linear-gradient(180deg, rgba(180,60,255,0.08) 0%, var(--bg2) 100%);
       border-bottom: 1px solid var(--border);
-      padding: 1rem 1.5rem;
+      padding: 0.9rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
     .header-left { display: flex; align-items: center; gap: 0.9rem; }
     .header-icon { font-size: 1.8rem; }
@@ -63,214 +60,192 @@
     .prog-wrap {
       background: var(--bg2);
       border-bottom: 1px solid var(--border);
-      padding: 0.7rem 1.5rem;
+      padding: 0.6rem 1.5rem;
       display: flex;
       align-items: center;
       gap: 1rem;
+      flex-shrink: 0;
     }
     .prog-label { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-    .prog-track {
-      flex: 1;
-      height: 6px;
-      background: var(--dim);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .prog-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--cyan));
-      border-radius: 3px;
-      transition: width 0.4s ease;
-      width: 0%;
-    }
-    .prog-pct { font-size: 0.8rem; font-weight: 700; color: var(--cyan); min-width: 3rem; text-align: right; }
+    .prog-track { flex: 1; height: 6px; background: var(--dim); border-radius: 3px; overflow: hidden; }
+    .prog-fill  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--cyan)); border-radius: 3px; transition: width 0.4s ease; width: 0%; }
+    .prog-pct   { font-size: 0.8rem; font-weight: 700; color: var(--cyan); min-width: 2.8rem; text-align: right; }
 
     /* ── Filter bar ──────────────────────────────────────── */
     .filter-bar {
       background: var(--bg2);
       border-bottom: 1px solid var(--border);
-      padding: 0.6rem 1.5rem;
+      padding: 0.55rem 1.5rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
     .filter-label { font-size: 0.72rem; color: var(--muted); margin-right: 0.3rem; }
     .filter-btn {
-      font-size: 0.78rem;
-      padding: 0.3rem 0.85rem;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.18s;
+      font-size: 0.78rem; padding: 0.28rem 0.8rem;
+      border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); cursor: pointer; transition: all 0.18s;
     }
     .filter-btn:hover { color: var(--text); border-color: var(--accent); }
     .filter-btn.active { background: rgba(192,96,255,0.15); color: var(--accent); border-color: var(--accent); }
-    .filter-btn.f-code   { --fc: var(--code-color); }
-    .filter-btn.f-art    { --fc: var(--art-color); }
-    .filter-btn.f-design { --fc: var(--design-color); }
-    .filter-btn.f-audio  { --fc: var(--audio-color); }
-    .filter-btn.f-code.active   { background: rgba(0,229,255,0.1);  color: var(--code-color);   border-color: var(--code-color); }
-    .filter-btn.f-art.active    { background: rgba(255,45,120,0.1); color: var(--art-color);    border-color: var(--art-color); }
-    .filter-btn.f-design.active { background: rgba(255,209,102,0.1); color: var(--design-color); border-color: var(--design-color); }
-    .filter-btn.f-audio.active  { background: rgba(192,96,255,0.1); color: var(--audio-color);  border-color: var(--audio-color); }
+    .filter-btn.f-code.active   { background: rgba(0,229,255,0.1);   color: var(--cyan);   border-color: var(--cyan); }
+    .filter-btn.f-art.active    { background: rgba(255,45,120,0.1);  color: var(--pink);   border-color: var(--pink); }
+    .filter-btn.f-design.active { background: rgba(255,209,102,0.1); color: var(--gold);   border-color: var(--gold); }
+    .filter-btn.f-audio.active  { background: rgba(192,96,255,0.1);  color: var(--accent); border-color: var(--accent); }
 
     /* ── Board ───────────────────────────────────────────── */
+    .board-wrap { flex: 1; overflow-x: auto; overflow-y: hidden; }
     .board {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      display: flex;
+      min-height: calc(100vh - 185px);
       gap: 0;
-      overflow-x: auto;
-      padding: 0;
     }
 
+    /* ── Lane ────────────────────────────────────────────── */
     .lane {
+      flex: 0 0 260px;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      min-width: 220px;
     }
-    .lane:last-child { border-right: none; }
-
     .lane-header {
-      padding: 0.9rem 1rem 0.6rem;
+      padding: 0.85rem 1rem 0.6rem;
       border-bottom: 1px solid var(--border);
       background: rgba(255,255,255,0.02);
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
+      gap: 0.5rem;
     }
-    .lane-header h2 { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; }
-    .lane-pts { font-size: 0.7rem; color: var(--muted); }
-
-    .lane-backlog  .lane-header h2 { color: var(--muted); }
-    .lane-progress .lane-header h2 { color: var(--cyan); }
-    .lane-review   .lane-header h2 { color: var(--gold); }
-    .lane-done     .lane-header h2 { color: var(--green); }
-
+    .lane-title {
+      font-size: 0.83rem; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--muted); white-space: nowrap;
+    }
+    .lane-meta { display: flex; align-items: center; gap: 0.5rem; }
+    .lane-pts  { font-size: 0.7rem; color: var(--muted); }
     .col-count {
-      display: inline-block;
-      background: rgba(192,96,255,0.15);
-      color: var(--accent);
-      border-radius: 10px;
-      padding: 0.05rem 0.45rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      margin-left: 0.4rem;
+      display: inline-block; background: rgba(192,96,255,0.15); color: var(--accent);
+      border-radius: 10px; padding: 0.05rem 0.45rem;
+      font-size: 0.7rem; font-weight: 700; margin-left: 0.3rem;
     }
+    .add-card-btn {
+      background: rgba(192,96,255,0.1); border: 1px solid rgba(192,96,255,0.25);
+      color: var(--accent); border-radius: 5px; width: 22px; height: 22px;
+      font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s; flex-shrink: 0; padding: 0;
+    }
+    .add-card-btn:hover { background: rgba(192,96,255,0.25); }
 
     .lane-cards {
-      flex: 1;
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      overflow-y: auto;
+      flex: 1; padding: 0.7rem; display: flex; flex-direction: column;
+      gap: 0.55rem; overflow-y: auto;
     }
+    .empty-col { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 2rem 0; opacity: 0.4; }
 
-    .empty-col {
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.8rem;
-      padding: 2rem 0;
-      opacity: 0.5;
+    /* ── Add Column lane ─────────────────────────────────── */
+    .lane-add-col {
+      flex: 0 0 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: none;
     }
+    .add-col-btn {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      background: transparent;
+      border: 1px dashed rgba(192,96,255,0.25);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 1rem 0.5rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      height: 120px;
+      letter-spacing: 0.06em;
+    }
+    .add-col-btn:hover { color: var(--accent); border-color: var(--accent); }
 
     /* ── Cards ───────────────────────────────────────────── */
     .kcard {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.7rem 0.75rem;
-      transition: border-color 0.18s, transform 0.15s, box-shadow 0.18s;
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.7rem 0.75rem; transition: border-color 0.18s, transform 0.15s, box-shadow 0.18s;
       border-left: 3px solid var(--muted);
     }
-    .kcard:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-    .kcard.type-code   { border-left-color: var(--code-color); }
-    .kcard.type-art    { border-left-color: var(--art-color); }
-    .kcard.type-design { border-left-color: var(--design-color); }
-    .kcard.type-audio  { border-left-color: var(--audio-color); }
+    .kcard:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .kcard.type-code   { border-left-color: var(--cyan); }
+    .kcard.type-art    { border-left-color: var(--pink); }
+    .kcard.type-design { border-left-color: var(--gold); }
+    .kcard.type-audio  { border-left-color: var(--accent); }
 
-    .kcard-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.45rem;
-    }
+    .kcard-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
     .kcard-icon { font-size: 0.9rem; }
     .kcard-badge {
-      font-size: 0.65rem;
-      font-weight: 700;
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 0.64rem; font-weight: 700; padding: 0.15rem 0.45rem;
+      border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
     }
     .kcard-badge.crit { background: rgba(255,77,106,0.15);  color: var(--red);    border: 1px solid rgba(255,77,106,0.3); }
     .kcard-badge.high { background: rgba(255,140,66,0.13);  color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
     .kcard-badge.med  { background: rgba(255,209,102,0.12); color: var(--gold);   border: 1px solid rgba(255,209,102,0.3); }
     .kcard-badge.low  { background: rgba(100,100,180,0.12); color: #9090d0;       border: 1px solid rgba(100,100,180,0.2); }
 
-    .kcard-title {
-      font-size: 0.83rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.55rem;
-      line-height: 1.35;
-    }
-
-    .kcard-foot {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .kcard-pts { font-size: 0.7rem; color: var(--muted); }
-    .kcard-moves { display: flex; gap: 0.25rem; }
+    .kcard-title { font-size: 0.83rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; line-height: 1.35; }
+    .kcard-foot  { display: flex; align-items: center; justify-content: space-between; }
+    .kcard-pts   { font-size: 0.7rem; color: var(--muted); }
+    .kcard-moves { display: flex; gap: 0.2rem; }
 
     .mv-btn {
-      background: rgba(192,96,255,0.1);
-      border: 1px solid rgba(192,96,255,0.2);
-      color: var(--accent);
-      border-radius: 4px;
-      width: 22px;
-      height: 22px;
-      font-size: 1rem;
-      line-height: 1;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s, border-color 0.15s;
-      padding: 0;
+      background: rgba(192,96,255,0.08); border: 1px solid rgba(192,96,255,0.2);
+      color: var(--accent); border-radius: 4px; width: 22px; height: 22px;
+      font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s; padding: 0;
     }
-    .mv-btn:hover { background: rgba(192,96,255,0.25); border-color: var(--accent); }
-    .mv-ph { display: inline-block; width: 22px; height: 22px; }
+    .mv-btn:hover { background: rgba(192,96,255,0.22); border-color: var(--accent); }
+    .mv-btn.mv-del { color: var(--muted); border-color: rgba(255,255,255,0.08); }
+    .mv-btn.mv-del:hover { background: rgba(255,77,106,0.15); color: var(--red); border-color: var(--red); }
+
+    /* ── Modals ──────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: var(--modal-bg); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.5rem; width: 340px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .modal h3 { font-size: 1rem; color: var(--accent); margin-bottom: 1.1rem; font-weight: 700; }
+    .form-row { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.8rem; }
+    .form-row label { font-size: 0.73rem; color: var(--muted); }
+    .form-row input, .form-row select {
+      background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.45rem 0.7rem; font-size: 0.85rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-row input:focus, .form-row select:focus { border-color: var(--accent); }
+    .form-row input[type=number] { width: 90px; }
+    .modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+    .btn-cancel {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.82rem; cursor: pointer; transition: all 0.18s;
+    }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+    .btn-submit {
+      background: rgba(192,96,255,0.2); border: 1px solid var(--accent); color: var(--accent);
+      padding: 0.4rem 1.1rem; border-radius: 6px; font-size: 0.82rem;
+      cursor: pointer; font-weight: 600; transition: all 0.18s;
+    }
+    .btn-submit:hover { background: rgba(192,96,255,0.35); }
 
     /* ── Footer ──────────────────────────────────────────── */
-    .synth-tag {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-align: center;
-      padding: 0.8rem;
-      border-top: 1px solid var(--border);
-    }
+    .synth-tag { font-size: 0.7rem; color: var(--muted); text-align: center; padding: 0.7rem; border-top: 1px solid var(--border); flex-shrink: 0; }
     .synth-tag a { color: var(--accent); text-decoration: none; }
     .synth-tag a:hover { text-decoration: underline; }
-
-    @media (max-width: 800px) {
-      .board { grid-template-columns: repeat(2, 1fr); }
-      .lane:nth-child(2) { border-right: none; }
-    }
-    @media (max-width: 500px) {
-      .board { grid-template-columns: 1fr; }
-      .lane { border-right: none; border-bottom: 1px solid var(--border); }
-    }
   </style>
 </head>
 <body>
@@ -287,51 +262,22 @@
   </header>
 
   <div class="prog-wrap">
-    <span class="prog-label">Overall progress</span>
-    <div class="prog-track">
-      <div class="prog-fill" id="prog-bar-fill"></div>
-    </div>
+    <span class="prog-label">Done</span>
+    <div class="prog-track"><div class="prog-fill" id="prog-bar-fill"></div></div>
     <span class="prog-pct" id="done-pct">0%</span>
   </div>
 
   <div class="filter-bar">
     <span class="filter-label">Filter:</span>
-    <button class="filter-btn active"     onclick="setFilter('All')"    id="fb-All">All</button>
-    <button class="filter-btn f-code"     onclick="setFilter('code')"   id="fb-code">⚡ Code</button>
-    <button class="filter-btn f-art"      onclick="setFilter('art')"    id="fb-art">🎨 Art</button>
-    <button class="filter-btn f-design"   onclick="setFilter('design')" id="fb-design">📐 Design</button>
-    <button class="filter-btn f-audio"    onclick="setFilter('audio')"  id="fb-audio">🎵 Audio</button>
+    <button class="filter-btn active"   onclick="setFilter('All')"    id="fb-All">All</button>
+    <button class="filter-btn f-code"   onclick="setFilter('code')"   id="fb-code">⚡ Code</button>
+    <button class="filter-btn f-art"    onclick="setFilter('art')"    id="fb-art">🎨 Art</button>
+    <button class="filter-btn f-design" onclick="setFilter('design')" id="fb-design">📐 Design</button>
+    <button class="filter-btn f-audio"  onclick="setFilter('audio')"  id="fb-audio">🎵 Audio</button>
   </div>
 
-  <div class="board">
-    <div class="lane lane-backlog">
-      <div class="lane-header">
-        <h2 id="hdr-backlog">Backlog</h2>
-        <span class="lane-pts" id="pts-backlog"></span>
-      </div>
-      <div class="lane-cards" id="col-backlog"></div>
-    </div>
-    <div class="lane lane-progress">
-      <div class="lane-header">
-        <h2 id="hdr-progress">In Progress</h2>
-        <span class="lane-pts" id="pts-progress"></span>
-      </div>
-      <div class="lane-cards" id="col-progress"></div>
-    </div>
-    <div class="lane lane-review">
-      <div class="lane-header">
-        <h2 id="hdr-review">Review</h2>
-        <span class="lane-pts" id="pts-review"></span>
-      </div>
-      <div class="lane-cards" id="col-review"></div>
-    </div>
-    <div class="lane lane-done">
-      <div class="lane-header">
-        <h2 id="hdr-done">✓ Done</h2>
-        <span class="lane-pts" id="pts-done"></span>
-      </div>
-      <div class="lane-cards" id="col-done"></div>
-    </div>
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
   </div>
 
   <div class="synth-tag">
@@ -339,17 +285,132 @@
     view <a href="https://github.com/synth-pl/synth/blob/main/examples/kanban.syn" target="_blank">kanban.syn</a>
   </div>
 
+  <!-- Add Card Modal -->
+  <div class="modal-overlay" id="add-card-modal">
+    <div class="modal">
+      <h3>+ Add Card</h3>
+      <input type="hidden" id="modal-col" />
+      <div class="form-row">
+        <label>Title</label>
+        <input type="text" id="modal-title" placeholder="Card title…" />
+      </div>
+      <div class="form-row">
+        <label>Type</label>
+        <select id="modal-type">
+          <option value="code">⚡ Code</option>
+          <option value="art">🎨 Art</option>
+          <option value="design">📐 Design</option>
+          <option value="audio">🎵 Audio</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Priority</label>
+        <select id="modal-priority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high" selected>High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Points</label>
+        <input type="number" id="modal-pts" value="3" min="1" max="99" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideAddCard()">Cancel</button>
+        <button class="btn-submit" onclick="submitAddCard()">Add Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Column Modal -->
+  <div class="modal-overlay" id="add-col-modal">
+    <div class="modal">
+      <h3>+ Add Column</h3>
+      <div class="form-row">
+        <label>Column name</label>
+        <input type="text" id="modal-col-name" placeholder="e.g. Testing, Blocked…" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideAddCol()">Cancel</button>
+        <button class="btn-submit" onclick="submitAddCol()">Add Column</button>
+      </div>
+    </div>
+  </div>
+
   <script src="synth.stdlib.js"></script>
   <script src="kanban.sources.js"></script>
   <script>
-    const FILTERS = ['All', 'code', 'art', 'design', 'audio']
+    // ── Dynamic card movement (handles variable-length Board.cols) ───────────
+    function move_card_js(id, dir) {
+      const cols = Board.cols
+      const card = Board.cards.find(c => c.id === id)
+      if (!card) return
+      const ci = cols.findIndex(col => col.id === card.col)
+      if (ci === -1) return
+      const ni = Math.max(0, Math.min(cols.length - 1, ci + dir))
+      Board.set({ cards: Board.cards.map(c => c.id === id ? { ...c, col: cols[ni].id } : c) })
+    }
 
+    // ── Append "Add Column" lane after Synth renders ─────────────────────────
+    Board.subscribe(() => {
+      const board = document.getElementById('board')
+      const addLane = document.createElement('div')
+      addLane.className = 'lane lane-add-col'
+      addLane.innerHTML = '<button class="add-col-btn" onclick="showAddCol()">+ Add Column</button>'
+      board.appendChild(addLane)
+    })
+
+    // ── Add Card modal ───────────────────────────────────────────────────────
+    function showAddCard(col) {
+      document.getElementById('modal-col').value = col
+      document.getElementById('modal-title').value = ''
+      document.getElementById('add-card-modal').classList.add('open')
+      setTimeout(() => document.getElementById('modal-title').focus(), 50)
+    }
+    function hideAddCard() {
+      document.getElementById('add-card-modal').classList.remove('open')
+    }
+    function submitAddCard() {
+      const col      = document.getElementById('modal-col').value
+      const title    = document.getElementById('modal-title').value.trim()
+      const kind     = document.getElementById('modal-type').value
+      const priority = document.getElementById('modal-priority').value
+      const pts      = parseInt(document.getElementById('modal-pts').value) || 1
+      if (!title) { document.getElementById('modal-title').focus(); return }
+      add_card(col, title, kind, priority, pts)
+      hideAddCard()
+    }
+
+    // ── Add Column modal ─────────────────────────────────────────────────────
+    function showAddCol() {
+      document.getElementById('modal-col-name').value = ''
+      document.getElementById('add-col-modal').classList.add('open')
+      setTimeout(() => document.getElementById('modal-col-name').focus(), 50)
+    }
+    function hideAddCol() {
+      document.getElementById('add-col-modal').classList.remove('open')
+    }
+    function submitAddCol() {
+      const label = document.getElementById('modal-col-name').value.trim()
+      if (!label) { document.getElementById('modal-col-name').focus(); return }
+      const id = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      add_col(id, label)
+      hideAddCol()
+    }
+
+    // ── Filter ───────────────────────────────────────────────────────────────
+    const FILTER_IDS = ['All', 'code', 'art', 'design', 'audio']
     function setFilter(f) {
       set_filter(f)
-      FILTERS.forEach(id => {
-        document.getElementById('fb-' + id)?.classList.toggle('active', id === f)
-      })
+      FILTER_IDS.forEach(id => document.getElementById('fb-' + id)?.classList.toggle('active', id === f))
     }
+
+    // ── Close modals on backdrop click / Enter key ───────────────────────────
+    document.getElementById('add-card-modal').addEventListener('click', e => { if (e.target.id === 'add-card-modal') hideAddCard() })
+    document.getElementById('add-col-modal').addEventListener('click',  e => { if (e.target.id === 'add-col-modal')  hideAddCol() })
+    document.getElementById('modal-title').addEventListener('keydown',    e => { if (e.key === 'Enter') submitAddCard() })
+    document.getElementById('modal-col-name').addEventListener('keydown', e => { if (e.key === 'Enter') submitAddCol() })
   </script>
 </body>
 </html>

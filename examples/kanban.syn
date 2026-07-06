@@ -1,7 +1,12 @@
 // ── Neon Kanban — Synth Demo ─────────────────────────────────────────────────
 // Game-dev task board. Showcases: store · match · @memo · spread · stdlib methods
 
-let COLS = ["backlog", "progress", "review", "done"]
+let initial_cols = [
+  { id: "backlog",  label: "Backlog" },
+  { id: "progress", label: "In Progress" },
+  { id: "review",   label: "Review" },
+  { id: "done",     label: "Done" },
+]
 
 let initial_cards = [
   { id: 1,  title: "Procedural dungeon gen",  col: "backlog",  type: "code",   priority: "high",     pts: 8 },
@@ -23,27 +28,11 @@ let initial_cards = [
 ]
 
 store Board {
-  cards:  any[]  = initial_cards
-  filter: string = "All"
+  cards:   any[] = initial_cards
+  cols:    any[] = initial_cols
+  filter:  string = "All"
+  next_id: int   = 17
 }
-
-// ── Column helpers ─────────────────────────────────────────────────────────────
-
-fn col_index(col: string) -> int =
-  match col {
-    | "backlog"  => 0
-    | "progress" => 1
-    | "review"   => 2
-    | _          => 3
-  }
-
-fn col_label(col: string) -> string =
-  match col {
-    | "backlog"  => "Backlog"
-    | "progress" => "In Progress"
-    | "review"   => "Review"
-    | _          => "✓ Done"
-  }
 
 // ── Card label helpers ─────────────────────────────────────────────────────────
 
@@ -75,22 +64,20 @@ fn priority_label(p: string) -> string =
     | _          => "Low"
   }
 
-// ── Card movement ──────────────────────────────────────────────────────────────
+// ── Mutations (called directly from HTML JS) ───────────────────────────────────
 
-// Short-form fn returning a spread object — codegen wraps in parens automatically
-fn card_moved(c: any, new_col: string) = { ...c, col: new_col }
-
-fn updated_col(c: any, id: int, dir: int) -> any {
-  if c.id == id {
-    let ni = clamp(col_index(c.col) + dir, 0, 3)
-    card_moved(c, COLS[ni])
-  } else {
-    c
-  }
+fn add_card(col: string, title: string, kind: string, priority: string, pts: int) {
+  let new_card = { id: Board.next_id, title, col, type: kind, priority, pts }
+  Board.set({ cards: [...Board.cards, new_card], next_id: Board.next_id + 1 })
 }
 
-fn move_card(id: int, dir: int) {
-  Board.set({ cards: Board.cards.map(c => updated_col(c, id, dir)) })
+fn add_col(id: string, label: string) {
+  let new_col = { id, label }
+  Board.set({ cols: [...Board.cols, new_col] })
+}
+
+fn remove_card(id: int) {
+  Board.set({ cards: Board.cards.filter(c => c.id != id) })
 }
 
 fn set_filter(f: string) {
@@ -99,26 +86,18 @@ fn set_filter(f: string) {
 
 // ── Views ──────────────────────────────────────────────────────────────────────
 
-// Separate helper avoids the and/or precedence issue when compiling to JS &&/||
 fn type_matches(c: any) -> bool =
   Board.filter == "All" or c.type == Board.filter
 
 fn col_cards(col: string) -> any[] =
   Board.cards.filter(c => c.col == col and type_matches(c))
 
-// ── HTML renderer ──────────────────────────────────────────────────────────────
+// ── HTML renderers ─────────────────────────────────────────────────────────────
 
 fn render_card(c: any) -> string {
-  let icon  = type_icon(c.type)
-  let pcls  = priority_cls(c.priority)
-  let plbl  = priority_label(c.priority)
-  let ci    = col_index(c.col)
-  let btn_l = ci > 0
-    ? "<button class=\"mv-btn\" onclick=\"move_card(" + c.id + ",-1)\">‹</button>"
-    : "<span class=\"mv-ph\"></span>"
-  let btn_r = ci < 3
-    ? "<button class=\"mv-btn\" onclick=\"move_card(" + c.id + ",1)\">›</button>"
-    : "<span class=\"mv-ph\"></span>"
+  let icon = type_icon(c.type)
+  let pcls = priority_cls(c.priority)
+  let plbl = priority_label(c.priority)
   "<div class=\"kcard type-" + c.type + "\">" +
     "<div class=\"kcard-head\">" +
       "<span class=\"kcard-icon\">" + icon + "</span>" +
@@ -127,33 +106,45 @@ fn render_card(c: any) -> string {
     "<div class=\"kcard-title\">" + c.title + "</div>" +
     "<div class=\"kcard-foot\">" +
       "<span class=\"kcard-pts\">" + c.pts + " pts</span>" +
-      "<div class=\"kcard-moves\">" + btn_l + btn_r + "</div>" +
+      "<div class=\"kcard-moves\">" +
+        "<button class=\"mv-btn\" title=\"Move left\"  onclick=\"move_card_js(" + c.id + ",-1)\">‹</button>" +
+        "<button class=\"mv-btn mv-del\" title=\"Remove\" onclick=\"remove_card(" + c.id + ")\">✕</button>" +
+        "<button class=\"mv-btn\" title=\"Move right\" onclick=\"move_card_js(" + c.id + ",1)\">›</button>" +
+      "</div>" +
     "</div>" +
   "</div>"
 }
 
-fn render_col(col: string) {
+fn render_lane(col_obj: any) -> string {
+  let col   = col_obj.id
+  let label = col_obj.label
   let cards = col_cards(col)
   let n     = cards.count()
   let pts   = cards.sum_by(c => c.pts)
   let parts = cards.map(c => render_card(c))
   let html  = parts.join("")
-  document.getElementById("col-" + col).innerHTML =
-    html == "" ? "<div class=\"empty-col\">— empty —</div>" : html
-  document.getElementById("hdr-" + col).innerHTML =
-    col_label(col) + " <span class=\"col-count\">" + n + "</span>"
-  document.getElementById("pts-" + col).textContent = pts + " pts"
+  "<div class=\"lane\" data-col=\"" + col + "\">" +
+    "<div class=\"lane-header\">" +
+      "<h2 class=\"lane-title\">" + label + " <span class=\"col-count\">" + n + "</span></h2>" +
+      "<div class=\"lane-meta\">" +
+        "<span class=\"lane-pts\">" + pts + " pts</span>" +
+        "<button class=\"add-card-btn\" title=\"Add card\" onclick=\"showAddCard('" + col + "')\">+</button>" +
+      "</div>" +
+    "</div>" +
+    "<div class=\"lane-cards\">" +
+      (html == "" ? "<div class=\"empty-col\">— empty —</div>" : html) +
+    "</div>" +
+  "</div>"
 }
 
 fn render() {
-  render_col("backlog")
-  render_col("progress")
-  render_col("review")
-  render_col("done")
+  let lane_parts = Board.cols.map(c => render_lane(c))
+  let lanes_html = lane_parts.join("")
+  document.getElementById("board").innerHTML = lanes_html
   let done_cards = Board.cards.filter(c => c.col == "done")
-  let done_n     = done_cards.count()
-  let total_n    = Board.cards.count()
-  let pct        = total_n > 0 ? floor(done_n * 100 / total_n) : 0
+  let done_n  = done_cards.count()
+  let total_n = Board.cards.count()
+  let pct     = total_n > 0 ? floor(done_n * 100 / total_n) : 0
   document.getElementById("done-pct").textContent = pct + "%"
   document.getElementById("prog-bar-fill").style.width = pct + "%"
 }
