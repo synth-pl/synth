@@ -1,5 +1,57 @@
 # Axon Changelog
 
+## v0.9.7 — Standard Library Expansion
+
+### New stdlib functions
+
+**String**
+
+| Function | Signature | Description |
+|---|---|---|
+| `trim` | `(s: string) -> string` | Strip leading/trailing whitespace |
+| `split` | `(s: string, sep: string) -> string[]` | Split on separator |
+| `starts_with` | `(s: string, prefix: string) -> bool` | Prefix check |
+| `ends_with` | `(s: string, suffix: string) -> bool` | Suffix check |
+| `contains` | `(s: string, sub: string) -> bool` | Substring/element check |
+| `to_upper` | `(s: string) -> string` | Uppercase |
+| `to_lower` | `(s: string) -> string` | Lowercase |
+| `replace_all` | `(s: string, from: string, to: string) -> string` | Replace every occurrence |
+| `pad_start` | `(s: string, len: int, char?: string) -> string` | Left-pad to length |
+| `pad_end` | `(s: string, len: int, char?: string) -> string` | Right-pad to length |
+
+**Array**
+
+| Function | Signature | Description |
+|---|---|---|
+| `min` | `(xs: T[]) -> T` | Smallest value |
+| `max` | `(xs: T[]) -> T` | Largest value |
+| `min_by` | `(xs: T[], fn: T -> U) -> T` | Element with smallest key |
+| `max_by` | `(xs: T[], fn: T -> U) -> T` | Element with largest key |
+| `take` | `(xs: T[], n: int) -> T[]` | First n elements |
+| `drop` | `(xs: T[], n: int) -> T[]` | Skip first n elements |
+| `uniq` | `(xs: T[]) -> T[]` | Remove duplicates |
+| `chunk` | `(xs: T[], n: int) -> T[][]` | Split into groups of n |
+| `flat_map` | `(xs: T[], fn: T -> U[]) -> U[]` | Map then flatten |
+| `set_at` | `(xs: T[], i: int, v: T) -> T[]` | Immutable index update |
+| `reverse` | `(xs: T[]) -> T[]` | Reverse without mutation |
+| `sum_by` | `(xs: T[], fn: T -> number) -> number` | Sum a numeric projection |
+
+**Math**
+
+| Function | Signature | Description |
+|---|---|---|
+| `clamp` | `(x, lo, hi) -> number` | Clamp to range [lo, hi] |
+| `abs` | `(x: number) -> number` | Absolute value |
+| `round` | `(x: number) -> int` | Round to nearest int |
+| `floor` | `(x: number) -> int` | Round down |
+| `ceil` | `(x: number) -> int` | Round up |
+| `pow` | `(x, exp: number) -> number` | Exponentiation |
+| `sqrt` | `(x: number) -> number` | Square root |
+| `random` | `() -> float` | Random float in [0, 1) |
+| `random_int` | `(lo, hi: int) -> int` | Random int in [lo, hi] |
+
+---
+
 ## v0.9.6 — Compound Assignment
 
 ### New language features

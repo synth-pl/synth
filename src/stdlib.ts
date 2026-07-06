@@ -175,6 +175,111 @@ const sort_by_desc = (xs, keyFn) => [...xs].sort((a, b) => {
   return ka > kb ? -1 : ka < kb ? 1 : 0;
 });
 
+// ── v0.9.7 stdlib expansion ───────────────────────────────────────────────────
+
+// ── String ───────────────────────────────────────────────────────────────────
+
+/** Strip leading and trailing whitespace. @pure @total */
+const trim = (s) => s.trim();
+
+/** Split string s on separator sep. Returns an array of strings. @pure @total */
+const split = (s, sep) => s.split(sep);
+
+/** True if s starts with prefix. @pure @total */
+const starts_with = (s, prefix) => s.startsWith(prefix);
+
+/** True if s ends with suffix. @pure @total */
+const ends_with = (s, suffix) => s.endsWith(suffix);
+
+/** True if s contains substr (works for arrays too). @pure @total */
+const contains = (s, sub) => s.includes(sub);
+
+/** Convert string to UPPER CASE. @pure @total */
+const to_upper = (s) => s.toUpperCase();
+
+/** Convert string to lower case. @pure @total */
+const to_lower = (s) => s.toLowerCase();
+
+/** Replace every occurrence of from with to in s. @pure @total */
+const replace_all = (s, from, to) => s.replaceAll(from, to);
+
+/** Pad s on the left with padChar until it reaches length len. @pure @total */
+const pad_start = (s, len, padChar = ' ') => s.padStart(len, padChar);
+
+/** Pad s on the right with padChar until it reaches length len. @pure @total */
+const pad_end = (s, len, padChar = ' ') => s.padEnd(len, padChar);
+
+// ── Array ────────────────────────────────────────────────────────────────────
+
+/** Return the smallest value in xs. @pure @total */
+const min = (xs) => xs.reduce((a, b) => a < b ? a : b);
+
+/** Return the largest value in xs. @pure @total */
+const max = (xs) => xs.reduce((a, b) => a > b ? a : b);
+
+/** Return the element of xs for which keyFn returns the smallest value. @pure @total */
+const min_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) <= keyFn(b) ? a : b);
+
+/** Return the element of xs for which keyFn returns the largest value. @pure @total */
+const max_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) >= keyFn(b) ? a : b);
+
+/** Return the first n elements of xs. @pure @total */
+const take = (xs, n) => xs.slice(0, n);
+
+/** Return xs with the first n elements removed. @pure @total */
+const drop = (xs, n) => xs.slice(n);
+
+/** Return a new array with duplicate values removed (preserves first occurrence). @pure @total */
+const uniq = (xs) => [...new Set(xs)];
+
+/** Split xs into consecutive chunks of size n. Last chunk may be smaller. @pure @total */
+const chunk = (xs, n) => {
+  const out = [];
+  for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n));
+  return out;
+};
+
+/** Map each element to an array then flatten one level. @pure @total */
+const flat_map = (xs, fn) => xs.flatMap(fn);
+
+/** Return xs with the element at index i replaced by val. @pure @total */
+const set_at = (xs, i, val) => [...xs.slice(0, i), val, ...xs.slice(i + 1)];
+
+/** Reverse an array without mutating it. @pure @total */
+const reverse = (xs) => [...xs].reverse();
+
+/** Sum xs using a numeric key function, or directly if xs is numeric. @pure @total */
+const sum_by = (xs, keyFn) => xs.reduce((acc, x) => acc + keyFn(x), 0);
+
+// ── Math ─────────────────────────────────────────────────────────────────────
+
+/** Clamp x to the range [lo, hi]. @pure @total */
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+/** Absolute value. @pure @total */
+const abs = (x) => Math.abs(x);
+
+/** Round to nearest integer. @pure @total */
+const round = (x) => Math.round(x);
+
+/** Round down to nearest integer. @pure @total */
+const floor = (x) => Math.floor(x);
+
+/** Round up to nearest integer. @pure @total */
+const ceil = (x) => Math.ceil(x);
+
+/** x raised to the power of exp. @pure @total */
+const pow = (x, exp) => Math.pow(x, exp);
+
+/** Square root of x. @pure @total */
+const sqrt = (x) => Math.sqrt(x);
+
+/** Random float in [0, 1). Not pure — use sparingly. */
+const random = () => Math.random();
+
+/** Random integer in [lo, hi] inclusive. Not pure. */
+const random_int = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;
+
 const __axon_presets = {
   email:   /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,
   url:     /^https?:\\/\\//,

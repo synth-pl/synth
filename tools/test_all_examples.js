@@ -1,6 +1,7 @@
 const { Lexer } = require('../dist/lexer.js')
 const { Parser } = require('../dist/parser.js')
 const { Codegen } = require('../dist/codegen.js')
+const stdlib = require('../dist/stdlib.js')
 const vm = require('vm')
 
 const examples = {
@@ -111,6 +112,31 @@ let golden      = 1.618_033_988
 console.log(population)
 console.log(red.toString(16))
 console.log(FULL_PERMS.toString(2))`,
+
+  compound: `let mut score = 0
+score += 10
+score += 25
+score -= 5
+score *= 2
+score /= 4
+console.log(score)
+let mut msg = "Hello"
+msg += ", Axon!"
+console.log(msg)
+let mut cfg = null
+cfg ??= "production"
+console.log(cfg)`,
+
+  stdlib: `let words = split("one,two,three", ",")
+console.log(to_upper(trim("  axon  ")))
+console.log(min([3,1,4,1,5]))
+console.log(max([3,1,4,1,5]))
+console.log(uniq([1,2,2,3,3]))
+console.log(take([1,2,3,4,5], 3))
+console.log(chunk([1,2,3,4,5,6], 2))
+console.log(clamp(150, 0, 100))
+console.log(abs(-42))
+console.log(pow(2, 8))`,
 }
 
 let passed = 0, failed = 0
@@ -122,7 +148,7 @@ for (const [name, src] of Object.entries(examples)) {
       failed++; continue
     }
     const js = new Codegen().generate(ast)
-    const ctx = { console: { log: () => {}, error: () => {}, warn: () => {} }, setTimeout: () => {}, Promise }
+    const ctx = { console: { log: () => {}, error: () => {}, warn: () => {} }, setTimeout: () => {}, Promise, ...stdlib }
     vm.createContext(ctx)
     vm.runInContext(js, ctx)
     console.log(`PASS           [${name}]`)

@@ -5,7 +5,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="favicon.png" type="image/png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Axon Playground — v0.9.6</title>
+  <title>Axon Playground — v0.9.7</title>
   <style>
     /* ── Synthwave palette ─────────────────────────────────────────────────── */
     :root {
@@ -428,7 +428,7 @@
 <header class="page-header">
   <div class="header-logo">⬡</div>
   <div class="header-title">Axon Playground</div>
-  <div class="header-badge">v0.9.6</div>
+  <div class="header-badge">v0.9.7</div>
   <div class="header-sep"></div>
   <label class="header-example-label" for="example-select">Examples:</label>
   <select class="header-examples" id="example-select" onchange="loadExample(this.value)">
@@ -446,6 +446,7 @@
     <option value="enums">Enums (v0.9.5)</option>
     <option value="numbers">Numeric Literals (v0.9.5)</option>
     <option value="compound">Compound Assignment (v0.9.6)</option>
+    <option value="stdlib">Standard Library (v0.9.7)</option>
     <option value="multilambda">Multi-line Lambdas (v0.9.5)</option>
   </select>
   <a class="header-nav" href="landing.html">← Axon</a>
@@ -832,6 +833,48 @@ console.log(config)  // "default"
 let mut existing = "keep me"
 existing ??= "ignored"
 console.log(existing)  // "keep me"`,
+
+  stdlib: `// Standard Library Expansion (v0.9.7)
+// ── Strings ──────────────────────────────────────────────────────────────────
+let raw = "  Hello, Axon World!  "
+console.log(trim(raw))                     // "Hello, Axon World!"
+console.log(to_upper("quiet"))             // "QUIET"
+console.log(to_lower("LOUD"))              // "loud"
+console.log(starts_with("axon", "ax"))     // true
+console.log(ends_with("axon", "on"))       // true
+console.log(contains("axon", "xo"))        // true
+console.log(replace_all("1.2.3", ".", "-")) // "1-2-3"
+let words = split("one two three", " ")
+console.log(words)                         // ["one","two","three"]
+console.log(pad_start("7", 3, "0"))        // "007"
+
+// ── Arrays ────────────────────────────────────────────────────────────────────
+let ns = [3, 1, 4, 1, 5, 9, 2, 6, 5]
+console.log(min(ns))                       // 1
+console.log(max(ns))                       // 9
+console.log(uniq(ns))                      // [3,1,4,5,9,2,6]
+console.log(take(ns, 4))                   // [3,1,4,1]
+console.log(drop(ns, 6))                   // [2,6,5]
+console.log(reverse([1, 2, 3]))            // [3,2,1]
+let rows = chunk([1, 2, 3, 4, 5, 6], 2)
+console.log(rows)                          // [[1,2],[3,4],[5,6]]
+
+record Player { name: string, score: int }
+let players = [Player("Alice", 82), Player("Bob", 95), Player("Cara", 71)]
+let best = max_by(players, p => p.score)
+console.log(best.name)                     // "Bob"
+let ranked = sort_by(players, p => p.score)
+console.log(map(ranked, p => p.name))      // ["Cara","Alice","Bob"]
+
+// ── Math ──────────────────────────────────────────────────────────────────────
+console.log(clamp(150, 0, 100))            // 100
+console.log(clamp(-5, 0, 100))             // 0
+console.log(abs(-42))                      // 42
+console.log(round(3.7))                   // 4
+console.log(floor(3.9))                   // 3
+console.log(ceil(3.1))                    // 4
+console.log(pow(2, 8))                    // 256
+console.log(sqrt(144))                    // 12`,
 
   multilambda: `// Multi-line lambdas (v0.9.5) — block bodies in arrow functions
 record User {

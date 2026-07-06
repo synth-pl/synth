@@ -655,7 +655,7 @@
 
   <!-- ── Hero ────────────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="hero-eyebrow">✦ AI-native · v0.9.6</div>
+    <div class="hero-eyebrow">✦ AI-native · v0.9.7</div>
     <h1 class="hero-title">
       <span class="grad">A programming language<br>built for AI.</span>
     </h1>
@@ -691,6 +691,7 @@
         <button class="showcase-tab" onclick="showPane('tooling', this)" style="color:var(--pink)">Tooling <span style="font-size:0.65rem;opacity:0.8">v0.9</span></button>
         <button class="showcase-tab" onclick="showPane('ergonomics', this)" style="color:var(--accent)">Ergonomics <span style="font-size:0.65rem;opacity:0.8">v0.9.5</span></button>
         <button class="showcase-tab" onclick="showPane('compound', this)" style="color:var(--green)">Compound Ops <span style="font-size:0.65rem;opacity:0.8">v0.9.6</span></button>
+        <button class="showcase-tab" onclick="showPane('stdlib', this)" style="color:var(--cyan)">Stdlib <span style="font-size:0.65rem;opacity:0.8">v0.9.7</span></button>
       </div>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
@@ -704,6 +705,7 @@
     <div class="showcase-pane" id="pane-tooling"><pre id="code-tooling"></pre></div>
     <div class="showcase-pane" id="pane-ergonomics"><pre id="code-ergonomics"></pre></div>
     <div class="showcase-pane" id="pane-compound"><pre id="code-compound"></pre></div>
+    <div class="showcase-pane" id="pane-stdlib"><pre id="code-stdlib"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
@@ -866,10 +868,15 @@
         <div class="roadmap-ver">v0.9.5</div>
         <div class="roadmap-theme">Ergonomics</div>
       </div>
+      <div class="roadmap-stop">
+        <div class="roadmap-dot rd-done">✓</div>
+        <div class="roadmap-ver">v0.9.6</div>
+        <div class="roadmap-theme">Compound Ops</div>
+      </div>
       <div class="roadmap-stop rs-now">
         <div class="roadmap-dot rd-now">★</div>
-        <div class="roadmap-ver" style="color:var(--green)">v0.9.6</div>
-        <div class="roadmap-theme">Compound Ops</div>
+        <div class="roadmap-ver" style="color:var(--cyan)">v0.9.7</div>
+        <div class="roadmap-theme">Stdlib Expansion</div>
       </div>
       <div class="roadmap-stop">
         <div class="roadmap-dot rd-later">0</div>
@@ -1219,7 +1226,7 @@ fn run_demo() {
   // result.js         — transpiled JavaScript string
   // result.errors     — [{ message, line, col, kind }]   multi-error (v0.9.5)
   // result.warnings   — [{ severity, message, line, col }]
-  // AxonCompiler.version   — "0.9.6"
+  // AxonCompiler.version   — "0.9.7"
 }
 
 run_demo()
@@ -1299,6 +1306,37 @@ console.log("Total: " + total)   // 100
 // English-word logical aliases (v0.9.6)
 type Score = int where value >= 0 and value <= 100
 fn valid(s: Score) -> bool = s > 0 and s <= 100
+`);
+
+    setCode('code-stdlib', `
+// ── Standard Library v0.9.7 ───────────────────────────────────────────────────
+
+// String helpers
+let name = "  Axon Language  "
+console.log(trim(name))               // "Axon Language"
+console.log(to_upper("hello"))        // "HELLO"
+console.log(starts_with("axon", "ax")) // true
+console.log(replace_all("a.b.c", ".", "/")) // "a/b/c"
+let parts = split("one,two,three", ",")
+console.log(parts)                    // ["one","two","three"]
+
+// Array helpers
+let nums = [3, 1, 4, 1, 5, 9, 2, 6]
+console.log(min(nums))                // 1
+console.log(max(nums))                // 9
+console.log(uniq(nums))               // [3,1,4,5,9,2,6]
+console.log(take(nums, 3))            // [3,1,4]
+console.log(drop(nums, 5))            // [9,2,6]
+let groups = chunk([1, 2, 3, 4, 5, 6], 2)
+console.log(groups)                   // [[1,2],[3,4],[5,6]]
+
+// Math helpers
+console.log(clamp(150, 0, 100))       // 100
+console.log(abs(-42))                 // 42
+console.log(round(3.7))              // 4
+console.log(floor(3.9))              // 3
+console.log(ceil(3.1))               // 4
+console.log(pow(2, 10))              // 1024
 `);
   </script>
 </body>
