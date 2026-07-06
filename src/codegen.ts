@@ -738,7 +738,8 @@ export class Codegen {
 
   private applyPipeStep(step: Expr, acc: string): string {
     if (step.kind === 'Identifier') {
-      return `${step.name}(${acc})`
+      const fn = STDLIB_ALL.has(step.name) ? `synth_${step.name}` : step.name
+      return `${fn}(${acc})`
     }
     if (step.kind === 'CallExpr') {
       const callee = this.emitExpr(step.callee)
