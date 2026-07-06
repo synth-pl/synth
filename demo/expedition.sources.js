@@ -1,4 +1,3 @@
-/** @store Fleet — reactive state boundary (v0.8) */
 const Fleet = (() => {
   let _state = { sector: "All", max_danger: 5, sort_key: "distance" };
   const _subs = [];
@@ -13,7 +12,6 @@ const Fleet = (() => {
     subscribe(fn) { _subs.push(fn); fn(_state); },
   };
 })();
-
 let alpha_wing = [{
   id: 1,
   name: "Vanguard",
@@ -51,7 +49,6 @@ let alpha_wing = [{
   fuel: 100,
   data: 25
 }];
-
 let beta_wing = [{
   id: 5,
   name: "Horizon",
@@ -134,62 +131,40 @@ let beta_wing = [{
   fuel: 15,
   data: 200
 }];
-
 let fleet = [...alpha_wing, ...beta_wing];
-
 const danger_label = (n) => ((_m) => (_m === 1) ? "Safe" : (_m === 2) ? "Low" : (_m === 3) ? "Moderate" : (_m === 4) ? "High" : "Critical")(n);
-
 const danger_cls = (n) => ((_m) => (_m === 1) ? "safe" : (_m === 2) ? "low" : (_m === 3) ? "mod" : (_m === 4) ? "high" : "crit")(n);
-
 const mission_summary = (name, sector, danger) => ({ name, sector, danger });
-
-/**
- * @returns {*}
- */
 const visible_missions = () => {
   let sector = Fleet.sector;
   let max_danger = Fleet.max_danger;
   let sort_key = Fleet.sort_key;
-  let filtered = synth_filter(fleet, m => sector == "All" || m.sector == sector && m.danger <= max_danger);
-  return ((_m) => (_m === "distance") ? synth_sort_by(filtered, m => m.distance) : (_m === "danger") ? synth_sort_by(filtered, m => m.danger) : (_m === "ore") ? synth_sort_by_desc(filtered, m => m.ore) : (_m === "data") ? synth_sort_by_desc(filtered, m => m.data) : filtered)(sort_key);
+  let filtered = $filter(fleet, m => sector == "All" || m.sector == sector && m.danger <= max_danger);
+  return ((_m) => (_m === "distance") ? $sort_by(filtered, m => m.distance) : (_m === "danger") ? $sort_by(filtered, m => m.danger) : (_m === "ore") ? $sort_by_desc(filtered, m => m.ore) : (_m === "data") ? $sort_by_desc(filtered, m => m.data) : filtered)(sort_key);
 };
-
-/**
- * @param {*} missions
- * @returns {*}
- */
 const fleet_stats = (missions) => {
   return (() => {
-  let n = synth_count(missions);
-  let ore = synth_sum_by(missions, m => m.ore);
-  let fuel = synth_sum_by(missions, m => m.fuel);
-  let data = synth_sum_by(missions, m => m.data);
-  let sum_d = synth_sum_by(missions, m => m.danger);
+  let n = $count(missions);
+  let ore = $sum_by(missions, m => m.ore);
+  let fuel = $sum_by(missions, m => m.fuel);
+  let data = $sum_by(missions, m => m.data);
+  let sum_d = $sum_by(missions, m => m.danger);
   let avg_d = n > 0 ? Math.round(sum_d * 10 / n) / 10 : 0;
-  let max_dist = n > 0 ? synth_max_by(missions, m => m.distance).distance : 0;
-  let danger4 = synth_filter(missions, m => m.danger >= 4);
-  let high_risk = synth_count(danger4);
+  let max_dist = n > 0 ? $max_by(missions, m => m.distance).distance : 0;
+  let danger4 = $filter(missions, m => m.danger >= 4);
+  let high_risk = $count(danger4);
   return { count: n, ore, fuel, data, avg_d, max_dist, high_risk };
 })();
 };
-
-/**
- * @param {*} m
- * @returns {string}
- */
 const render_card = (m) => {
   let cls = danger_cls(m.danger);
   let label = danger_label(m.danger);
   return "<div class=\"mc\">" + "<div class=\"mc-top\">" + "<span class=\"mc-name\">" + m.name + "</span>" + "<span class=\"mc-badge " + cls + "\">" + label + "</span>" + "</div>" + "<div class=\"mc-sector\">" + m.sector + " Sector</div>" + "<div class=\"mc-row\">" + "<span class=\"mc-stat s-dist\">📡 " + m.distance + " ly</span>" + "<span class=\"mc-stat s-ore\">⛏ " + m.ore + "</span>" + "<span class=\"mc-stat s-fuel\">⚡ " + m.fuel + "</span>" + "<span class=\"mc-stat s-data\">💾 " + m.data + "</span>" + "</div>" + "</div>";
 };
-
-/**
- * @returns {*}
- */
 const render = () => {
   let missions = visible_missions();
   let s = fleet_stats(missions);
-  document.getElementById("grid").innerHTML = synth_count(missions) > 0 ? synth_map(missions, m => render_card(m)).join("") : "<div class=\"empty-state\">No missions match the current filters.</div>";
+  document.getElementById("grid").innerHTML = $count(missions) > 0 ? $map(missions, m => render_card(m)).join("") : "<div class=\"empty-state\">No missions match the current filters.</div>";
   document.getElementById("stat-count").textContent = s.count;
   document.getElementById("stat-ore").textContent = s.ore;
   document.getElementById("stat-fuel").textContent = s.fuel;
@@ -197,10 +172,8 @@ const render = () => {
   document.getElementById("stat-avgd").textContent = s.avg_d;
   document.getElementById("stat-dist").textContent = s.max_dist + " ly";
   document.getElementById("stat-risk").textContent = s.high_risk;
-  return document.getElementById("fleet-total").textContent = s.count + " of " + synth_count(fleet) + " missions";
+  return document.getElementById("fleet-total").textContent = s.count + " of " + $count(fleet) + " missions";
 };
-
 Fleet.subscribe(() => {
   render();
 });
-
