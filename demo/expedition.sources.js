@@ -189,7 +189,7 @@ const render_card = (m) => {
 const render = () => {
   let missions = visible_missions();
   let s = fleet_stats(missions);
-  document.getElementById("grid").innerHTML = count(missions) > 0 ? join(map(missions, m => render_card(m)), "") : "<div class=\"empty-state\">No missions match the current filters.</div>";
+  document.getElementById("grid").innerHTML = count(missions) > 0 ? map(missions, m => render_card(m)).join("") : "<div class=\"empty-state\">No missions match the current filters.</div>";
   document.getElementById("stat-count").textContent = s.count;
   document.getElementById("stat-ore").textContent = s.ore;
   document.getElementById("stat-fuel").textContent = s.fuel;

@@ -1990,7 +1990,7 @@ const STDLIB_METHODS = new Set([
     'replace_all', 'pad_start', 'pad_end',
     'map', 'filter', 'fold', 'zip', 'first', 'last', 'sum', 'count', 'any', 'all',
     'flat', 'flat_map', 'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse',
-    'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc', 'join',
+    'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc',
     'is_ok', 'is_err', 'unwrap', 'unwrap_or',
 ]);
 class Codegen {
