@@ -930,7 +930,7 @@
 
   <!-- ── Hero ────────────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="hero-eyebrow">✦ AI-native · v0.9.9</div>
+    <div class="hero-eyebrow">✦ AI-native · v1.0.0</div>
     <h1 class="hero-title">
       <span class="grad">A programming language<br>built for AI.</span>
     </h1>
@@ -969,6 +969,7 @@
         <button class="showcase-tab" onclick="showPane('stdlib', this)" style="color:var(--cyan)">Stdlib <span style="font-size:0.65rem;opacity:0.8">v0.9.7</span></button>
         <button class="showcase-tab" onclick="showPane('while', this)" style="color:var(--pink)">While Loops <span style="font-size:0.65rem;opacity:0.8">v0.9.8</span></button>
         <button class="showcase-tab" onclick="showPane('v099', this)" style="color:var(--accent)">Ergonomics II <span style="font-size:0.65rem;opacity:0.8">v0.9.9</span></button>
+        <button class="showcase-tab" onclick="showPane('v100', this)" style="color:var(--gold)">v1.0 Features <span style="font-size:0.65rem;opacity:0.8">v1.0</span></button>
       </div>
     </div>
     <div class="showcase-pane active" id="pane-types"><pre id="code-types"></pre></div>
@@ -985,6 +986,7 @@
     <div class="showcase-pane" id="pane-stdlib"><pre id="code-stdlib"></pre></div>
     <div class="showcase-pane" id="pane-while"><pre id="code-while"></pre></div>
     <div class="showcase-pane" id="pane-v099"><pre id="code-v099"></pre></div>
+    <div class="showcase-pane" id="pane-v100"><pre id="code-v100"></pre></div>
   </section>
 
   <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
@@ -1815,6 +1817,45 @@ let grade = do {
   if avg >= 90 { "A" } else if avg >= 80 { "B" } else { "C" }
 }
 print("Class grade: " + grade)
+`);
+
+    setCode('code-v100', `
+// ── v1.0.0 — Template Literals, Precedence Fixes & More ──────────────────────
+
+// Template string literals with full Synth expression interpolation
+let hero   = "Nova"
+let score  = 9800
+let rank   = 3
+
+let banner = \`Hero: \${hero} — Score: \${score} — Rank #\${rank}\`
+let detail = \`Top score: \${score * 1.5} | Doubled: \${score * 2}\`
+let report = \`Players: \${"alice,bob,carol".split(",").count()} active\`
+
+// Multiline templates with complex expressions
+fn render_card(name: string, pts: int, rank: int) =
+  \`[\${rank}] \${name} — \${pts} pts\`
+
+// and/or precedence now correctly parenthesizes sub-expressions
+fn is_valid(active: bool, score: int, tag: string) =
+  active and (score > 0 or tag == "free")
+
+// Object literal in lambda — no do {} needed
+let leaderboard = ["alice", "bob", "carol"].map((name, i) => { name, pos: i + 1 })
+
+// Reserved words usable as parameter names
+fn describe(type: string, name: string, level: int) =
+  \`[\${type}] \${name} lv\${level}\`
+
+// New stdlib: find, find_index
+let heroes   = ["Nova", "Arc", "Flux", "Prism"]
+let first_f  = heroes.find(h => h.starts_with("F"))       // "Flux"
+let idx_arc  = heroes.find_index(h => h == "Arc")          // 1
+
+// parse_int / parse_float — safe null-returning conversions
+let pts_raw  = "1250"
+let pts      = parse_int(pts_raw)      // 1250
+let ratio    = parse_float("0.975")    // 0.975
+let invalid  = parse_int("bad")        // null
 `);
 
     setCode('code-stdlib', `
