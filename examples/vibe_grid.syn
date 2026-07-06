@@ -1,0 +1,118 @@
+// ── VIBE GRID — Synthwave Idle Game ──────────────────────────────────────────
+// Showcases: store · @memo · match · do notation · sum_by · object shorthand
+
+// ── Building catalog ──────────────────────────────────────────────────────────
+
+let catalog = [
+  { id: 0, name: "Beat Box",     icon: "🥁", base_cost: 15,     rate: 0.1,   desc: "Simple percussion"    },
+  { id: 1, name: "Drum Machine", icon: "🎛", base_cost: 100,    rate: 0.5,   desc: "Four-on-the-floor"    },
+  { id: 2, name: "Synthesizer",  icon: "🎹", base_cost: 500,    rate: 4.0,   desc: "Analog wave generator" },
+  { id: 3, name: "Vocoder",      icon: "🎤", base_cost: 2000,   rate: 10.0,  desc: "Harmonic processor"   },
+  { id: 4, name: "Sequencer",    icon: "⚡", base_cost: 8000,   rate: 40.0,  desc: "Pattern automation"   },
+  { id: 5, name: "Studio",       icon: "🏠", base_cost: 30000,  rate: 150.0, desc: "Full mixing suite"    },
+  { id: 6, name: "Label",        icon: "💿", base_cost: 100000, rate: 500.0, desc: "Global distribution"  },
+]
+
+// ── Reactive store ────────────────────────────────────────────────────────────
+
+store Game {
+  vibes:       float = 0
+  total_vibes: float = 0
+  vps:         float = 0
+  counts:      any   = [0, 0, 0, 0, 0, 0, 0]
+}
+
+// ── Core calculations ─────────────────────────────────────────────────────────
+
+// Cost scales 1.15x per owned copy — @memo caches results
+@memo
+fn building_cost(base_cost, owned) =
+  floor(base_cost * pow(1.15, owned))
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+fn click() {
+  Game.set({ vibes: Game.vibes + 1, total_vibes: Game.total_vibes + 1 })
+}
+
+fn buy(idx) {
+  let b    = catalog[idx]
+  let cost = building_cost(b.base_cost, Game.counts[idx])
+  if Game.vibes >= cost {
+    let new_counts = set_at(Game.counts, idx, Game.counts[idx] + 1)
+    let new_vps    = catalog.sum_by(b => b.rate * new_counts[b.id])
+    Game.set({ vibes: Game.vibes - cost, vps: new_vps, counts: new_counts })
+  }
+}
+
+fn tick(dt) {
+  let earned = Game.vps * dt
+  if earned > 0 {
+    Game.set({ vibes: Game.vibes + earned, total_vibes: Game.total_vibes + earned })
+  }
+}
+
+// ── Display helpers ───────────────────────────────────────────────────────────
+
+fn fmt(v) =
+  v >= 1000000000 ? (floor(v / 1000000000) + "B")
+    : v >= 1000000 ? (floor(v / 1000000) + "M")
+    : v >= 1000    ? (floor(v / 1000)    + "K")
+    : floor(v) + ""
+
+fn milestone() {
+  let tv = floor(Game.total_vibes)
+  tv < 1       ? "Drop the beat..."
+    : tv < 10  ? "Feeling the rhythm"
+    : tv < 100 ? "Warming up the synths"
+    : tv < 1000 ? "The groove is building"
+    : tv < 10000 ? "Riding the wave"
+    : tv < 100000 ? "This slaps hard"
+    : "MAXIMUM VIBES"
+}
+
+// ── Building card renderer ────────────────────────────────────────────────────
+
+fn render_building(b) {
+  // do notation: compute affordability in a scoped block (v0.9.9)
+  let info = do {
+    let owned = Game.counts[b.id]
+    let cost  = building_cost(b.base_cost, owned)
+    let cls   = Game.vibes >= cost ? "can-afford" : ""
+    { owned, cost, cls }
+  }
+  "<div class=\"bld " + info.cls + "\" onclick=\"buy(" + b.id + ")\">" +
+    "<span class=\"bld-icon\">" + b.icon + "</span>" +
+    "<div class=\"bld-info\">" +
+      "<div class=\"bld-name\">" + b.name + "</div>" +
+      "<div class=\"bld-desc\">" + b.desc + " · " + b.rate + " v/s ea</div>" +
+      "<div class=\"bld-cost\">⚡ " + fmt(info.cost) + " vibes</div>" +
+    "</div>" +
+    "<span class=\"bld-count\">" + info.owned + "</span>" +
+  "</div>"
+}
+
+// ── Stats panel (pipeline showcase) ──────────────────────────────────────────
+
+fn total_owned() =
+  Game.counts
+    |> fold(0, (acc, n) => acc + n)
+
+fn best_building() =
+  catalog
+    |> filter(b => Game.counts[b.id] > 0)
+    |> max_by(b => b.rate * Game.counts[b.id])
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+fn render() {
+  document.getElementById("vibes").textContent   = fmt(Game.vibes)
+  document.getElementById("vps").textContent     = fmt(Game.vps) + " v/s"
+  document.getElementById("total").textContent   = fmt(Game.total_vibes) + " total"
+  document.getElementById("msg").textContent     = milestone()
+  document.getElementById("owned").textContent   = total_owned() + " producers"
+  document.getElementById("blds").innerHTML      =
+    catalog.map(b => render_building(b)).join("")
+}
+
+on Game.change { render() }
