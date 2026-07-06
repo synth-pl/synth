@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.5 — CLI entry point
+// Synth v0.9.6 — CLI entry point
 // Usage: node dist/cli.js <input.syn> [output.js] [--test] [--bundle]
 //        node dist/cli.js --fmt <input.syn>
 //        node dist/cli.js --check <input.syn>
 //        node dist/cli.js --watch <input.syn> [output.js]
+//        node dist/cli.js --compact <input.syn> [output.js]
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as fs from 'fs'
@@ -24,7 +25,7 @@ function parseSource(source: string): { ast: Program; parseErrors: ParseError[] 
   return { ast, parseErrors: errors }
 }
 
-function transpileSource(source: string): { js: string; warnings: string[] } {
+function transpileSource(source: string, compact = false): { js: string; warnings: string[] } {
   const { ast, parseErrors } = parseSource(source)
   if (parseErrors.length > 0) {
     const msgs = parseErrors.map(e => `  ERROR ${e.message}`)
@@ -32,7 +33,7 @@ function transpileSource(source: string): { js: string; warnings: string[] } {
   }
   const diagnostics = new Checker().check(ast)
   const warnings = diagnostics.map(d => `  ${d.severity.toUpperCase()} [line ${d.line}]: ${d.message}`)
-  const js = new Codegen().generate(ast)
+  const js = new Codegen().generate(ast, false, compact)
   return { js, warnings }
 }
 
@@ -63,7 +64,7 @@ function parseModule(absPath: string): ModuleEntry {
   return { absPath, source, ast, imports }
 }
 
-function buildBundle(entryPath: string): { js: string; warnings: string[]; files: string[] } {
+function buildBundle(entryPath: string, compact = false): { js: string; warnings: string[]; files: string[] } {
   const visited = new Map<string, ModuleEntry>()
   const order: string[] = []
 
@@ -89,9 +90,9 @@ function buildBundle(entryPath: string): { js: string; warnings: string[]; files
       `  ${d.severity.toUpperCase()} [${path.basename(absPath)} line ${d.line}]: ${d.message}`
     )
     allWarnings.push(...warnings)
-    const js = new Codegen().generate(entry.ast, isFirst)
+    const js = new Codegen().generate(entry.ast, isFirst, compact)
     isFirst = false
-    jsParts.push(`// ─── ${path.basename(absPath)} ${'─'.repeat(Math.max(0, 50 - path.basename(absPath).length))}`)
+    if (!compact) jsParts.push(`// ─── ${path.basename(absPath)} ${'─'.repeat(Math.max(0, 50 - path.basename(absPath).length))}`)
     jsParts.push(js)
   }
 
@@ -103,27 +104,38 @@ function buildBundle(entryPath: string): { js: string; warnings: string[]; files
 function main(): void {
   const args = process.argv.slice(2)
 
-  if (args.length === 0 || args[0] === '--help') {
+  const compact = args.includes('--compact')
+  const filteredArgs = args.filter(a => a !== '--compact')
+
+  if (filteredArgs.length === 0 || filteredArgs[0] === '--help') {
     console.log(`
-  Synth v0.9.5 Transpiler
+  Synth v0.9.6 Transpiler
   ──────────────────────
   Usage:
-    synth <input.syn> [output.js]           Transpile a single file to JS
-    synth --bundle <input.syn> [out.js]     Bundle multi-file project (resolves imports)
-    synth --test <input.syn>                Transpile and run @test declarations
-    synth --fmt <input.syn>                 Format Synth source in-place
-    synth --check <input.syn>              Static analysis only — no emit
-    synth --watch <input.syn> [output.js]  Watch and recompile on change
+    synth <input.syn> [output.js]               Transpile a single file to JS
+    synth --bundle <input.syn> [out.js]         Bundle multi-file project (resolves imports)
+    synth --test <input.syn>                    Transpile and run @test declarations
+    synth --fmt <input.syn>                     Format Synth source in-place
+    synth --check <input.syn>                   Static analysis only — no emit
+    synth --watch <input.syn> [output.js]       Watch and recompile on change
+    synth --compact <input.syn> [output.js]     Emit compact JS (no blank lines or JSDoc)
+
+  Flags:
+    --compact   Strip blank lines and JSDoc from output (reduces token usage for AI tools)
 
   If output.js is omitted, transpiled JS is written to stdout.
-  Multiple parse errors are reported together (v0.9.5).
   `)
     process.exit(0)
   }
 
+  // Alias: treat --compact as a mode when it's the first arg
+  if (filteredArgs[0] === '--compact') {
+    filteredArgs.shift()
+  }
+
   // ── synth --fmt ─────────────────────────────────────────────────────────────
-  if (args[0] === '--fmt') {
-    const inputPath = path.resolve(args[1] ?? '')
+  if (filteredArgs[0] === '--fmt') {
+    const inputPath = path.resolve(filteredArgs[1] ?? '')
     if (!fs.existsSync(inputPath)) {
       console.error(`Error: File not found: ${inputPath}`)
       process.exit(1)
@@ -140,8 +152,8 @@ function main(): void {
   }
 
   // ── synth --check ───────────────────────────────────────────────────────────
-  if (args[0] === '--check') {
-    const inputPath = path.resolve(args[1] ?? '')
+  if (filteredArgs[0] === '--check') {
+    const inputPath = path.resolve(filteredArgs[1] ?? '')
     if (!fs.existsSync(inputPath)) {
       console.error(`Error: File not found: ${inputPath}`)
       process.exit(1)
@@ -169,9 +181,9 @@ function main(): void {
   }
 
   // ── synth --watch ──────────────────────────────────────────────────────────
-  if (args[0] === '--watch') {
-    const inputPath  = path.resolve(args[1] ?? '')
-    const outputPath = args[2] ? path.resolve(args[2]) : null
+  if (filteredArgs[0] === '--watch') {
+    const inputPath  = path.resolve(filteredArgs[1] ?? '')
+    const outputPath = filteredArgs[2] ? path.resolve(filteredArgs[2]) : null
     if (!fs.existsSync(inputPath)) {
       console.error(`Error: File not found: ${inputPath}`)
       process.exit(1)
@@ -202,8 +214,8 @@ function main(): void {
   }
 
   // ── synth --test ────────────────────────────────────────────────────────────
-  if (args[0] === '--test') {
-    const inputPath = path.resolve(args[1] ?? '')
+  if (filteredArgs[0] === '--test') {
+    const inputPath = path.resolve(filteredArgs[1] ?? '')
     if (!fs.existsSync(inputPath)) {
       console.error(`Error: File not found: ${inputPath}`)
       process.exit(1)
@@ -213,10 +225,10 @@ function main(): void {
       let warnings: string[]
       const source = fs.readFileSync(inputPath, 'utf8')
       if (/^\s*import\s*\{/m.test(source)) {
-        const bundle = buildBundle(inputPath)
+        const bundle = buildBundle(inputPath, compact)
         js = bundle.js; warnings = bundle.warnings
       } else {
-        const result = transpileSource(source)
+        const result = transpileSource(source, compact)
         js = result.js; warnings = result.warnings
       }
       if (warnings.length > 0) {
@@ -245,15 +257,15 @@ function main(): void {
   }
 
   // ── synth --bundle ─────────────────────────────────────────────────────────
-  if (args[0] === '--bundle') {
-    const inputPath  = path.resolve(args[1] ?? '')
-    const outputPath = args[2] ? path.resolve(args[2]) : null
+  if (filteredArgs[0] === '--bundle') {
+    const inputPath  = path.resolve(filteredArgs[1] ?? '')
+    const outputPath = filteredArgs[2] ? path.resolve(filteredArgs[2]) : null
     if (!fs.existsSync(inputPath)) {
       console.error(`Error: File not found: ${inputPath}`)
       process.exit(1)
     }
     try {
-      const bundle = buildBundle(inputPath)
+      const bundle = buildBundle(inputPath, compact)
       if (bundle.warnings.length > 0) {
         console.warn(`⚠  Synth checker warnings:`)
         bundle.warnings.forEach(w => console.warn(w))
@@ -275,8 +287,8 @@ function main(): void {
   }
 
   // ── Single-file transpile ─────────────────────────────────────────────────
-  const inputPath  = path.resolve(args[0])
-  const outputPath = args[1] ? path.resolve(args[1]) : null
+  const inputPath  = path.resolve(filteredArgs[0])
+  const outputPath = filteredArgs[1] ? path.resolve(filteredArgs[1]) : null
 
   if (!fs.existsSync(inputPath)) {
     console.error(`Error: File not found: ${inputPath}`)
@@ -285,7 +297,7 @@ function main(): void {
 
   const source = fs.readFileSync(inputPath, 'utf8')
   try {
-    const { js, warnings } = transpileSource(source)
+    const { js, warnings } = transpileSource(source, compact)
     if (warnings.length > 0) {
       console.warn(`⚠  Synth checker warnings:`)
       warnings.forEach(w => console.warn(w))

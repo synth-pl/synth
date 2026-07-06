@@ -1,21 +1,12 @@
 let CANVAS_W = 800;
-
 let CANVAS_H = 520;
-
 let LANE_COUNT = 3;
-
 let LANE_W = 120;
-
 let ROAD_W = LANE_W * LANE_COUNT;
-
 let ROAD_X = (CANVAS_W - ROAD_W) / 2;
-
 let CAR_W = 54;
-
 let CAR_H = 90;
-
 let PLAYER_Y = CANVAS_H - 130;
-
 let SPAWN_Y = 0 - CAR_H;
 
 /** @store Game — reactive state boundary (v0.8) */
@@ -37,17 +28,11 @@ const Game = (() => {
 })();
 
 let player_lane = 1;
-
 let player_target = 1;
-
 let player_x = ROAD_X + LANE_W + (LANE_W - CAR_W) / 2;
-
 let traffic = [];
-
 let road_scroll = 0.0;
-
 let spawn_timer = 0.0;
-
 let invuln_timer = 0.0;
 
 const lane_x = (lane) => ROAD_X + lane * LANE_W + (LANE_W - CAR_W) / 2;

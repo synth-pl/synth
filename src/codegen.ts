@@ -41,15 +41,26 @@ const STDLIB_ALL = new Set([
   'delay', 'println',
 ])
 
+const BLOCK_DECL_KINDS = new Set([
+  'FnDecl', 'StoreDecl', 'RecordDecl', 'TaggedUnionDecl',
+  'TestDecl', 'ModuleDecl', 'EnumDecl', 'InterfaceDecl',
+])
+
+function isBlockDecl(decl: TopLevelDecl): boolean {
+  if (decl.kind === 'ExportDecl') return isBlockDecl(decl.decl)
+  return BLOCK_DECL_KINDS.has(decl.kind)
+}
+
 export class Codegen {
   private out: string[] = []
   private indent = 0
   private propagateCounter = 0   // unique temp-var IDs for ? propagation
   private validatedTypes: Set<string> = new Set()
-  // v0.4: track known union variant names for tag pattern matching
   private unionVariants: Map<string, string[]> = new Map()
+  private compact = false
 
-  generate(program: Program, emitStdlib = false): string {
+  generate(program: Program, emitStdlib = false, compact = false): string {
+    this.compact = compact
     // Pre-pass: collect constrained types and tagged union variants
     for (const decl of program.body) {
       if (decl.kind === 'TypeAlias' && decl.constraint) {
@@ -78,9 +89,17 @@ export class Codegen {
 
     if (emitStdlib) this.out.push(SYNTH_STDLIB)
 
-    for (const decl of program.body) {
+    for (let i = 0; i < program.body.length; i++) {
+      const decl = program.body[i]
       this.emitTopLevel(decl)
-      this.emitLine('')
+      if (!compact) {
+        // Blank line after every block declaration; also before any block declaration
+        // that follows a simple let/expr (one blank line between groups).
+        const next = program.body[i + 1]
+        if (isBlockDecl(decl) || (next && isBlockDecl(next))) {
+          this.emitLine('')
+        }
+      }
     }
 
     return this.out.join('')
@@ -123,19 +142,21 @@ export class Codegen {
         break
       // v0.7: interface is type-level only — emit as a JSDoc @interface comment
       case 'InterfaceDecl': {
-        const tp = decl.typeParams?.length ? `<${decl.typeParams.join(', ')}>` : ''
-        this.emitLine(`/** @interface ${decl.name}${tp}`)
-        for (const f of decl.fields) {
-          this.emitLine(` * @property {${this.typeToJS(f.type)}} ${f.name}`)
+        if (!this.compact) {
+          const tp = decl.typeParams?.length ? `<${decl.typeParams.join(', ')}>` : ''
+          this.emitLine(`/** @interface ${decl.name}${tp}`)
+          for (const f of decl.fields) {
+            this.emitLine(` * @property {${this.typeToJS(f.type)}} ${f.name}`)
+          }
+          this.emitLine(` */`)
         }
-        this.emitLine(` */`)
         break
       }
     }
   }
 
   private emitTypeAlias(decl: TypeAlias): void {
-    this.emitLine(`/** @typedef {${this.typeToJS(decl.type)}} ${decl.name} */`)
+    if (!this.compact) this.emitLine(`/** @typedef {${this.typeToJS(decl.type)}} ${decl.name} */`)
     if (decl.constraint) {
       this.emitConstraintValidator(decl.name, decl.type, decl.constraint)
     }
@@ -145,7 +166,7 @@ export class Codegen {
   // Unit variants → frozen constant object.
   // Payload variants → factory function returning a frozen object.
   private emitTaggedUnion(decl: TaggedUnionDecl): void {
-    this.emitLine(`// Tagged union: ${decl.name}`)
+    if (!this.compact) this.emitLine(`// Tagged union: ${decl.name}`)
     for (const v of decl.variants) {
       if (v.fields.length === 0) {
         // Unit variant: Point → frozen constant
@@ -230,7 +251,7 @@ export class Codegen {
   private emitStore(decl: StoreDecl): void {
     const fieldNames = decl.fields.map(f => f.name)
     const defaults = decl.fields.map(f => `${f.name}: ${this.emitExpr(f.default)}`).join(', ')
-    this.emitLine(`/** @store ${decl.name} — reactive state boundary (v0.8) */`)
+    if (!this.compact) this.emitLine(`/** @store ${decl.name} — reactive state boundary (v0.8) */`)
     this.emitLine(`const ${decl.name} = (() => {`)
     this.indent++
     this.emitLine(`let _state = { ${defaults} };`)
@@ -257,7 +278,7 @@ export class Codegen {
   // → const Color = Object.freeze({ Red: 'Red', Green: 'Green', Blue: 'Blue' });
   private emitEnum(decl: EnumDecl): void {
     const members = decl.variants.map(v => `${v}: '${v}'`).join(', ')
-    this.emitLine(`/** @enum {string} ${decl.name} */`)
+    if (!this.compact) this.emitLine(`/** @enum {string} ${decl.name} */`)
     this.emitLine(`const ${decl.name} = Object.freeze({ ${members} });`)
   }
 
@@ -368,6 +389,7 @@ export class Codegen {
   // ── JSDoc emitter ────────────────────────────────────────────────────────────
 
   private emitJSDoc(anns: Annotation[], params: FnParam[], returnType: TypeExpr, isAsync = false): void {
+    if (this.compact) return
     const intent  = anns.find(a => a.name === 'intent')
     const effects = anns.find(a => a.name === 'effects')
     const pure    = anns.find(a => a.name === 'pure')

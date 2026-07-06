@@ -1,25 +1,14 @@
 let CANVAS_W = 800;
-
 let CANVAS_H = 520;
-
 let COLS = 10;
-
 let ROWS = 6;
-
 let BRICK_GAP = 5;
-
 let BRICK_W = (CANVAS_W - (COLS - 1) * BRICK_GAP) / COLS;
-
 let BRICK_H = 22;
-
 let PADDLE_W = 100;
-
 let PADDLE_H = 12;
-
 let BALL_R = 8;
-
 let PADDLE_Y = CANVAS_H - 40;
-
 let BALL_SPEED = 630;
 
 const row_color = (row) => ((_m) => (_m === 0) ? "#ff2d78" : (_m === 1) ? "#ff6e3a" : (_m === 2) ? "#ffd166" : (_m === 3) ? "#06d6a0" : (_m === 4) ? "#00e5ff" : "#b84fff")(row);
@@ -45,15 +34,10 @@ const Game = (() => {
 })();
 
 let ball_x = CANVAS_W / 2;
-
 let ball_y = CANVAS_H / 2;
-
 let ball_vx = BALL_SPEED * 0.6;
-
 let ball_vy = 0 - BALL_SPEED * 0.8;
-
 let paddle_x = (CANVAS_W - PADDLE_W) / 2;
-
 let bricks = synth_map(synth_range(0, ROWS * COLS), i => true);
 
 const brick_x = (col) => col * (BRICK_W + BRICK_GAP);

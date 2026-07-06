@@ -1,11 +1,7 @@
 let CANVAS_W = 800;
-
 let CANVAS_H = 520;
-
 let CELL_SIZE = 10;
-
 let COLS = 80;
-
 let ROWS = 52;
 
 /** @store Life — reactive state boundary (v0.8) */

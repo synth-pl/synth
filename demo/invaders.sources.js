@@ -1,39 +1,21 @@
 let CANVAS_W = 800;
-
 let CANVAS_H = 520;
-
 let ALIEN_COLS = 11;
-
 let ALIEN_ROWS = 5;
-
 let ALIEN_W = 36;
-
 let ALIEN_H = 24;
-
 let ALIEN_GAP_X = 16;
-
 let ALIEN_GAP_Y = 14;
-
 let GRID_W = ALIEN_COLS * ALIEN_W + (ALIEN_COLS - 1) * ALIEN_GAP_X;
-
 let ALIEN_OX = (CANVAS_W - GRID_W) / 2;
-
 let ALIEN_OY = 60;
-
 let PLAYER_W = 52;
-
 let PLAYER_H = 26;
-
 let PLAYER_Y = CANVAS_H - 55;
-
 let BULLET_W = 3;
-
 let BULLET_H = 14;
-
 let PBULLET_SPD = 440;
-
 let ABULLET_SPD = 160;
-
 let MARCH_BASE = 36;
 
 /** @store Game — reactive state boundary (v0.8) */
@@ -55,21 +37,13 @@ const Game = (() => {
 })();
 
 let aliens = synth_map(synth_range(0, ALIEN_ROWS * ALIEN_COLS), i => true);
-
 let alien_dx = 0.0;
-
 let alien_dy = 0.0;
-
 let alien_dir = 1;
-
 let player_x = (CANVAS_W - PLAYER_W) / 2;
-
 let p_bullets = [];
-
 let a_bullets = [];
-
 let fire_cd = 0.0;
-
 let alien_fire_timer = 1.5;
 
 const alien_row = (i) => synth_floor(i / ALIEN_COLS);
