@@ -173,7 +173,6 @@ const tick = (dt) => {
     }
     let prev_vy = ball_vy;
     let on_paddle_x = ball_x + BALL_R > paddle_x && ball_x - BALL_R < paddle_x + PADDLE_W;
-    let in_paddle_y = ball_y + BALL_R > PADDLE_Y && ball_y - BALL_R < PADDLE_Y + PADDLE_H;
     if (on_paddle_x && prev_vy > 0 && ball_y + BALL_R >= PADDLE_Y) {
       ball_y = PADDLE_Y - BALL_R;
       let hit_pos = synth_clamp((ball_x - paddle_x) / PADDLE_W, 0.05, 0.95);
@@ -182,7 +181,8 @@ const tick = (dt) => {
       ball_vx = speed * angle;
       ball_vy = 0 - synth_sqrt(speed * speed - ball_vx * ball_vx);
     }
-    if (on_paddle_x && in_paddle_y && prev_vy <= 0) {
+    let side_in_y = ball_y + BALL_R > PADDLE_Y && ball_y - BALL_R < PADDLE_Y + PADDLE_H;
+    if (on_paddle_x && side_in_y && prev_vy <= 0) {
       let left_pen = ball_x + BALL_R - paddle_x;
       let right_pen = paddle_x + PADDLE_W + BALL_R - ball_x;
       if (left_pen < right_pen) {
