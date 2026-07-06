@@ -2,11 +2,11 @@ let COLS = 10;
 
 let ROWS = 6;
 
-let BRICK_W = 72;
+let BRICK_GAP = 5;
+
+let BRICK_W = (CANVAS_W - (COLS - 1) * BRICK_GAP) / COLS;
 
 let BRICK_H = 22;
-
-let BRICK_GAP = 5;
 
 let PADDLE_W = 100;
 
@@ -56,7 +56,7 @@ let paddle_x = (CANVAS_W - PADDLE_W) / 2;
 
 let bricks = synth_map(synth_range(0, ROWS * COLS), i => true);
 
-const brick_x = (col) => (CANVAS_W - COLS * BRICK_W - (COLS - 1) * BRICK_GAP) / 2 + col * (BRICK_W + BRICK_GAP);
+const brick_x = (col) => col * (BRICK_W + BRICK_GAP);
 
 const brick_y = (row) => 60 + row * (BRICK_H + BRICK_GAP);
 
