@@ -500,13 +500,13 @@
 </div>
 
 <!-- ── Compiler bundle ───────────────────────────────────────────────────────── -->
-<script src="axon.compiler.js?v=0.9.8-249476e"></script>
+<script src="axon.compiler.js?v=0.9.9-1f921ad"></script>
 
 <script>
 // ── Example snippets ─────────────────────────────────────────────────────────
 const EXAMPLES = {
   hello: `// Hello World
-console.log("Hello, World!")`,
+print("Hello, World!")`,
 
   vibes: `// Vibe Check — Enums
 // Because some situations require more than a boolean
@@ -540,7 +540,7 @@ for s in situations {
     | Vibe.Concerning   => "⚠  Concerning"
     | Vibe.CallALawyer  => "!! Call A Lawyer"
   }
-  console.log(pad_end(s, 36) + label)
+  print(pad_end(s, 36) + label)
 }`,
 
   password: `// Password From Hell — Constrained Types + Functions
@@ -565,10 +565,10 @@ let attempts = [
   "xK9#mP2qL7vR4wN8zT1yC6uA3sB0",
 ]
 
-console.log("=== PASSWORD STRENGTH REPORT ===")
-console.log("")
+print("=== PASSWORD STRENGTH REPORT ===")
+print("")
 for p in attempts {
-  console.log(pad_end(p, 32) + rate_password(p))
+  print(pad_end(p, 32) + rate_password(p))
 }`,
 
   horoscope: `// Horoscope Machine — Pattern Matching
@@ -596,11 +596,11 @@ let signs = [
   "aries", "taurus", "libra", "scorpio", "aquarius", "pisces"
 ]
 
-console.log("=== TODAY S COSMIC GUIDANCE ===")
-console.log("Accuracy not guaranteed. Void where prohibited.")
-console.log("")
+print("=== TODAY S COSMIC GUIDANCE ===")
+print("Accuracy not guaranteed. Void where prohibited.")
+print("")
 for s in signs {
-  console.log(to_upper(s) + ": " + daily_reading(s))
+  print(to_upper(s) + ": " + daily_reading(s))
 }`,
 
   coffee: `// Coffee Tax Pipeline — Pipeline Operator |>
@@ -635,17 +635,17 @@ let receipts =
     })
     |> sort_by(r => r.total)
 
-console.log("=== MORNING TAB ===")
-console.log("(All orders include a $0.50 ambient fee. Non-negotiable.)")
-console.log("(Decaf orders have been cancelled. You are welcome.)")
-console.log("")
+print("=== MORNING TAB ===")
+print("(All orders include a $0.50 ambient fee. Non-negotiable.)")
+print("(Decaf orders have been cancelled. You are welcome.)")
+print("")
 for r in receipts {
-  console.log(pad_end(r.name, 10) + pad_end(r.drink, 16) + "$" + r.total)
+  print(pad_end(r.name, 10) + pad_end(r.drink, 16) + "$" + r.total)
 }
 let grand = sum_by(receipts, r => r.total)
-console.log("")
-console.log("Grand total: $" + grand)
-console.log("Someone will Venmo request you for $0.03. You know who.")`,
+print("")
+print("Grand total: $" + grand)
+print("Someone will Venmo request you for $0.03. You know who.")`,
 
   rpg: `// RPG Battle — while loops + compound assignment + records
 // Our hero is doing his best
@@ -659,40 +659,40 @@ record Fighter {
 let hero   = Fighter("Bravington the Adequate", 30, 8)
 let goblin = Fighter("Slightly Irritated Goblin", 25, 6)
 
-console.log("=== BATTLE ===")
-console.log(hero.name + "  vs  " + goblin.name)
-console.log("")
+print("=== BATTLE ===")
+print(hero.name + "  vs  " + goblin.name)
+print("")
 
 let mut hero_hp   = hero.hp
 let mut goblin_hp = goblin.hp
 let mut turn      = 1
 
 while goblin_hp > 0 and hero_hp > 0 {
-  console.log("Turn " + turn)
+  print("Turn " + turn)
   goblin_hp -= hero.atk
-  console.log("  " + hero.name + " strikes for " + hero.atk + " damage!")
+  print("  " + hero.name + " strikes for " + hero.atk + " damage!")
   if goblin_hp <= 0 { break }
   hero_hp -= goblin.atk
-  console.log("  " + goblin.name + " retaliates for " + goblin.atk + " damage.")
-  console.log("  Hero HP: " + hero_hp + " / " + hero.hp)
+  print("  " + goblin.name + " retaliates for " + goblin.atk + " damage.")
+  print("  Hero HP: " + hero_hp + " / " + hero.hp)
   turn += 1
 }
 
-console.log("")
+print("")
 if hero_hp > 0 {
-  console.log("Victory! " + hero.name + " wins with " + hero_hp + " HP remaining.")
-  console.log("Loot: 3 gold coins, 1 damp sock, and lingering self-doubt.")
+  print("Victory! " + hero.name + " wins with " + hero_hp + " HP remaining.")
+  print("Loot: 3 gold coins, 1 damp sock, and lingering self-doubt.")
 } else {
-  console.log(hero.name + " has been defeated.")
-  console.log("The goblin felt bad about it, honestly.")
+  print(hero.name + " has been defeated.")
+  print("The goblin felt bad about it, honestly.")
 }`,
 
   fizzbuzz: `// FizzBuzz: Corporate Edition — For Loops
 // Classic interview question, enterprise-grade terminology
 
-console.log("=== Q4 INTEGER ENUMERATION DELIVERABLE ===")
-console.log("Objective: enumerate 1-20 with maximum synergy.")
-console.log("")
+print("=== Q4 INTEGER ENUMERATION DELIVERABLE ===")
+print("Objective: enumerate 1-20 with maximum synergy.")
+print("")
 
 for i in 1..=20 {
   let output = match i {
@@ -701,13 +701,13 @@ for i in 1..=20 {
     | _ when i % 5 == 0  => "Buzz (trademark)"
     | _                   => "" + i
   }
-  console.log(output)
+  print(output)
 }
 
-console.log("")
-console.log("Deliverable complete.")
-console.log("Action item: circle back on integer alignment by EOD.")
-console.log("Stakeholders: TBD. Timeline: aggressive.")`,
+print("")
+print("Deliverable complete.")
+print("Action item: circle back on integer alignment by EOD.")
+print("Stakeholders: TBD. Timeline: aggressive.")`,
 
   grab_bag: `// Generic Grab Bag — Generics
 // Type safety meets the mystery box
@@ -730,19 +730,19 @@ let wisdom_box  = Box("Fortune Cookie",        "a productive day (conditions app
 let secret_box  = Box("Area 51 Storage Unit",  "nothing to see here")
 let answer_box  = Box("The Oracle",            42)
 
-console.log(peek(sock_box))
-console.log(peek(wisdom_box))
-console.log(peek(secret_box))
-console.log(peek(answer_box))
+print(peek(sock_box))
+print(peek(wisdom_box))
+print(peek(secret_box))
+print(peek(answer_box))
 
 let upgraded = rewrap(sock_box, "closure issues and a granola bar")
-console.log("")
-console.log("After rewrap:")
-console.log(peek(upgraded))
-console.log("")
-console.log("The original box is unchanged:")
-console.log(peek(sock_box))
-console.log("(rewrap is pure — no boxes were harmed in this operation)")`,
+print("")
+print("After rewrap:")
+print(peek(upgraded))
+print("")
+print("The original box is unchanged:")
+print(peek(sock_box))
+print("(rewrap is pure — no boxes were harmed in this operation)")`,
 
   roast: `// Celebrity String Roast — Standard Library Strings
 // All string functions. One fictional victim.
@@ -751,27 +751,27 @@ let name      = "  Reginald Pumpernickel III  "
 let bio       = "thought leader, synergy architect, certified disruptor, keynote haver"
 let buzzwords = "leverage,circle-back,bandwidth,pivot,learnings,ideate,holistic,synergy"
 
-console.log("=== STRING FUNCTIONS: A ROAST ===")
-console.log("Subject: " + trim(name))
-console.log("")
-console.log("trim()              -> \\"" + trim(name) + "\\"")
-console.log("to_upper()          -> " + to_upper(trim(name)))
-console.log("to_lower()          -> " + to_lower(trim(name)))
-console.log("starts_with(Reg)?   -> " + starts_with(trim(name), "Reg"))
-console.log("ends_with(III)?     -> " + ends_with(trim(name), "III"))
-console.log("contains(thought)?  -> " + contains(bio, "thought leader"))
-console.log("replace_all(. -> !) -> " + replace_all(trim(name), " ", "!"))
-console.log("")
+print("=== STRING FUNCTIONS: A ROAST ===")
+print("Subject: " + trim(name))
+print("")
+print("trim()              -> \\"" + trim(name) + "\\"")
+print("to_upper()          -> " + to_upper(trim(name)))
+print("to_lower()          -> " + to_lower(trim(name)))
+print("starts_with(Reg)?   -> " + starts_with(trim(name), "Reg"))
+print("ends_with(III)?     -> " + ends_with(trim(name), "III"))
+print("contains(thought)?  -> " + contains(bio, "thought leader"))
+print("replace_all(. -> !) -> " + replace_all(trim(name), " ", "!"))
+print("")
 
 let words = split(buzzwords, ",")
-console.log("Vocabulary (" + words.length + " words, all meaningless):")
+print("Vocabulary (" + words.length + " words, all meaningless):")
 for w in words {
-  console.log("  " + to_upper(replace_all(w, "-", " ")))
+  print("  " + to_upper(replace_all(w, "-", " ")))
 }
 
-console.log("")
-console.log("TED talk rating: " + pad_start("2.1", 5) + " / 10")
-console.log("Exit velocity:   " + pad_end("fast", 12, ".") + " door")`,
+print("")
+print("TED talk rating: " + pad_start("2.1", 5) + " / 10")
+print("Exit velocity:   " + pad_end("fast", 12, ".") + " door")`,
 
   stonks: `// STONKS — Math + Numeric Literals
 // A completely reliable portfolio tracker. Do not sue us.
@@ -784,8 +784,8 @@ let portfolio = [
   { ticker: "BRRR",  shares: 1,       buy: 999_999,  now: 1_000_001 },
 ]
 
-console.log("=== PORTFOLIO TRACKER (unreliable) ===")
-console.log("")
+print("=== PORTFOLIO TRACKER (unreliable) ===")
+print("")
 
 let mut total_gain = 0.0
 for s in portfolio {
@@ -793,16 +793,16 @@ for s in portfolio {
   let pct   = round((gain / (s.shares * s.buy)) * 1000) / 10
   let arrow = if gain >= 0 { "UP  " } else { "DOWN" }
   total_gain += gain
-  console.log(pad_end(s.ticker, 6) + arrow + "  " + pct + "%   gain: $" + round(gain))
+  print(pad_end(s.ticker, 6) + arrow + "  " + pct + "%   gain: $" + round(gain))
 }
 
-console.log("")
-console.log("Net gain:    $" + round(total_gain))
-console.log("After fees:  $" + round(total_gain * 0.65))
-console.log("After taxes: $" + clamp(round(total_gain * 0.40), 0, 999_999))
-console.log("")
-console.log("Note: HODL has not moved. HODL never moves.")
-console.log("Past performance is fabricated. Future performance also.")`,
+print("")
+print("Net gain:    $" + round(total_gain))
+print("After fees:  $" + round(total_gain * 0.65))
+print("After taxes: $" + clamp(round(total_gain * 0.40), 0, 999_999))
+print("")
+print("Note: HODL has not moved. HODL never moves.")
+print("Past performance is fabricated. Future performance also.")`,
 
   sheep: `// Counting Sheep — while + break + continue
 // Some sheep are behind a paywall. This is the future.
@@ -827,32 +827,32 @@ let flock = [
 let mut counted = 0
 let mut idx     = 0
 
-console.log("Counting sheep to fall asleep...")
-console.log("(Premium sheep require Sheep Plus. $9.99/month.)")
-console.log("")
+print("Counting sheep to fall asleep...")
+print("(Premium sheep require Sheep Plus. $9.99/month.)")
+print("")
 
 while idx < flock.length {
   let sheep = flock[idx]
   idx += 1
 
   if sheep.isPremium {
-    console.log("** " + sheep.name + " — PREMIUM. Upgrade to see this sheep.")
+    print("** " + sheep.name + " — PREMIUM. Upgrade to see this sheep.")
     continue
   }
 
   counted += 1
-  console.log(counted + ". " + sheep.name + " jumps over the fence.")
+  print(counted + ". " + sheep.name + " jumps over the fence.")
 
   if counted >= 5 { break }
 }
 
-console.log("")
+print("")
 if counted >= 5 {
-  console.log("Asleep. Took " + counted + " free sheep.")
-  console.log("The premium sheep are still out there. Waiting.")
+  print("Asleep. Took " + counted + " free sheep.")
+  print("The premium sheep are still out there. Waiting.")
 } else {
-  console.log("Still awake. Not enough free-tier sheep.")
-  console.log("Consider upgrading to Sheep Plus.")
+  print("Still awake. Not enough free-tier sheep.")
+  print("Consider upgrading to Sheep Plus.")
 }`,
 
 
@@ -865,18 +865,18 @@ fn fib(n: int) -> int {
 }
 
 // The ratio of consecutive terms converges on the golden ratio: 1.6180339...
-console.log("Convergence on phi (the golden ratio):")
+print("Convergence on phi (the golden ratio):")
 for i in 5..=14 {
   let ratio = fib(i + 1) / fib(i)
-  console.log("  fib(" + pad_start("" + (i+1), 2) + ") / fib(" + pad_start("" + i, 2) + ") = " + ratio.toFixed(9))
+  print("  fib(" + pad_start("" + (i+1), 2) + ") / fib(" + pad_start("" + i, 2) + ") = " + ratio.toFixed(9))
 }
 
-console.log("")
-console.log("Without @memo, fib(40) needs ~330 million calls.")
-console.log("fib(40)  = " + fib(40))
-console.log("fib(50)  = " + fib(50))
-console.log("fib(75)  = " + fib(75))
-console.log("All instant. @memo is carrying this entire example.")`,
+print("")
+print("Without @memo, fib(40) needs ~330 million calls.")
+print("fib(40)  = " + fib(40))
+print("fib(50)  = " + fib(50))
+print("fib(75)  = " + fib(75))
+print("All instant. @memo is carrying this entire example.")`,
 
   types: `// Constrained Types — Rocket Launch Clearance
 // Type constraints enforce safety rules at the call site, not inside the function.
@@ -905,9 +905,9 @@ let missions = [
   { name: "Axon-1",       fuel: 100, temp: 20 },
 ]
 
-console.log("=== LAUNCH CONTROL ===")
+print("=== LAUNCH CONTROL ===")
 for m in missions {
-  console.log(launch_status(m.name, m.fuel, m.temp))
+  print(launch_status(m.name, m.fuel, m.temp))
 }`,
 
   match: `// Pattern Matching — Space Weather Alert System
@@ -943,9 +943,9 @@ let events = [
   AsteroidPass(1.2),
 ]
 
-console.log("=== SPACE WEATHER FEED ===")
+print("=== SPACE WEATHER FEED ===")
 for e in events {
-  console.log(alert(e))
+  print(alert(e))
 }`,
 
   generics: `// Generics (v0.7) + interfaces
@@ -970,9 +970,9 @@ let p = Pair(42, "hello")
 let q = swap(p)
 let r = map_pair(p, n => n * 2)
 
-console.log("original: " + p.first + ", " + p.second)
-console.log("swapped:  " + q.first + ", " + q.second)
-console.log("mapped:   " + r.first + ", " + r.second)`,
+print("original: " + p.first + ", " + p.second)
+print("swapped:  " + q.first + ", " + q.second)
+print("mapped:   " + r.first + ", " + r.second)`,
 
   pipeline: `// Pipeline Operator |> — Weekly Music Chart
 // Data flows left to right. No temp variables, no nesting.
@@ -1003,10 +1003,10 @@ let chart =
       pad_start("" + m + "M", 8) + "  " + pad_end(t.title, 16) + t.artist
     })
 
-console.log("=== THIS WEEK'S CHART ===")
+print("=== THIS WEEK'S CHART ===")
 let mut rank = 1
 for entry in chart {
-  console.log("#" + rank + "  " + entry)
+  print("#" + rank + "  " + entry)
   rank += 1
 }
 
@@ -1016,8 +1016,8 @@ let synthwave_plays =
     |> map(t => t.plays)
     |> sum
 
-console.log("")
-console.log("Total synthwave plays: " + (round(synthwave_plays / 100_000) / 10) + "M")`,
+print("")
+print("Total synthwave plays: " + (round(synthwave_plays / 100_000) / 10) + "M")`,
 
   store: `// Reactive store + on...change (v0.8)
 store Counter {
@@ -1027,7 +1027,7 @@ store Counter {
 }
 
 on Counter.change {
-  console.log("Counter → " + Counter.value + " " + Counter.label)
+  print("Counter → " + Counter.value + " " + Counter.label)
 }
 
 fn increment() {
@@ -1047,7 +1047,7 @@ increment()
 reset()
 increment()
 
-console.log("History: " + Counter.history.join(", "))`,
+print("History: " + Counter.history.join(", "))`,
 
   async: `// Async / await (v0.8) — simulated with resolved promises
 @effects ["log"]
@@ -1061,11 +1061,11 @@ async fn fetch_user(id: int) -> string {
 @effects ["log"]
 async fn main() {
   let name = await fetch_user(1)
-  console.log("Fetched user: " + name)
+  print("Fetched user: " + name)
 
   for i in 0..3 {
     let user = await fetch_user(i)
-    console.log("User " + i + ": " + user)
+    print("User " + i + ": " + user)
   }
 }
 
@@ -1102,12 +1102,12 @@ fn try_order(item: string, qty: int) -> string {
   }
 }
 
-console.log(try_order("Margherita",   2))
-console.log(try_order("Truffle Fries", 1))
-console.log(try_order("nothing",       1))
-console.log(try_order("Tiramisu",      0))
-console.log(try_order("Espresso",    150))
-console.log(try_order("",             1))`,
+print(try_order("Margherita",   2))
+print(try_order("Truffle Fries", 1))
+print(try_order("nothing",       1))
+print(try_order("Tiramisu",      0))
+print(try_order("Espresso",    150))
+print(try_order("",             1))`,
 
   loops: `// For Loops — Prime Number Sieve
 // Ranges, array iteration, nested loops, and let mut — all in one example.
@@ -1128,9 +1128,9 @@ for n in 2..=60 {
   }
 }
 
-console.log("Primes up to 60:")
-console.log(primes.join("  "))
-console.log("Count: " + primes.length)
+print("Primes up to 60:")
+print(primes.join("  "))
+print("Count: " + primes.length)
 
 // Sum and product of the first 5
 let first5 = primes.slice(0, 5)
@@ -1141,17 +1141,17 @@ for p in first5 {
   product *= p
 }
 
-console.log("")
-console.log("First 5 primes: " + first5.join(", "))
-console.log("Sum:            " + sum)
-console.log("Product:        " + product)
+print("")
+print("First 5 primes: " + first5.join(", "))
+print("Sum:            " + sum)
+print("Product:        " + product)
 
 // Gaps between consecutive primes (twin primes have gap = 2)
-console.log("")
-console.log("Twin prime pairs (gap = 2):")
+print("")
+print("Twin prime pairs (gap = 2):")
 for i in 0..primes.length - 1 {
   if primes[i + 1] - primes[i] == 2 {
-    console.log("  (" + primes[i] + ", " + primes[i + 1] + ")")
+    print("  (" + primes[i] + ", " + primes[i + 1] + ")")
   }
 }`,
 
@@ -1193,14 +1193,14 @@ let manifest = [
   Task("Orbital insertion burn", Status.Queued,      Priority.Critical),
 ]
 
-console.log("=== MISSION AXON-1 CHECKLIST ===")
+print("=== MISSION AXON-1 CHECKLIST ===")
 for t in manifest {
-  console.log(format_task(t))
+  print(format_task(t))
 }
 
 let complete = filter(manifest, t => t.status == Status.Complete)
-console.log("")
-console.log(complete.length + " / " + manifest.length + " tasks complete")`,
+print("")
+print(complete.length + " / " + manifest.length + " tasks complete")`,
 
   numbers: `// Numeric literals (v0.9.5) — separators, hex, binary
 // Underscore separators for readability
@@ -1224,11 +1224,11 @@ let FULL_PERMS  = 0b0111
 let golden      = 1.618_033_988
 let light_speed = 299_792_458.0
 
-console.log("Population: " + population.toLocaleString())
-console.log("Red channel: #" + red.toString(16))
-console.log("Perms: " + FULL_PERMS.toString(2))
-console.log("Golden ratio: " + golden.toFixed(6))
-console.log("Light speed: " + light_speed.toLocaleString() + " m/s")`,
+print("Population: " + population.toLocaleString())
+print("Red channel: #" + red.toString(16))
+print("Perms: " + FULL_PERMS.toString(2))
+print("Golden ratio: " + golden.toFixed(6))
+print("Light speed: " + light_speed.toLocaleString() + " m/s")`,
 
   compound: `// Compound Assignment — Road Trip Tracker
 // += -= *= /= ??= — update values in place without restating the variable name.
@@ -1246,33 +1246,33 @@ let legs = [
   { drive: 55,  fuel_used: 10.5, jams: 4, coffee: 1 },
 ]
 
-console.log("=== ROAD TRIP LOG ===")
+print("=== ROAD TRIP LOG ===")
 for leg in legs {
   miles   += leg.drive
   fuel    -= leg.fuel_used
   songs   += leg.jams
   coffees += leg.coffee
-  console.log("+" + pad_start("" + leg.drive, 3) + " mi  fuel: " + fuel.toFixed(1) + "%  songs: " + songs)
+  print("+" + pad_start("" + leg.drive, 3) + " mi  fuel: " + fuel.toFixed(1) + "%  songs: " + songs)
 }
 
-console.log("")
-console.log("Total: " + miles + " miles")
-console.log("Fuel remaining: " + fuel.toFixed(1) + "%")
-console.log("Songs: " + songs + "  Coffees: " + coffees)
-console.log("")
+print("")
+print("Total: " + miles + " miles")
+print("Fuel remaining: " + fuel.toFixed(1) + "%")
+print("Songs: " + songs + "  Coffees: " + coffees)
+print("")
 
 // Nullish assignment — set a default only if value is null
 let mut playlist = null
 playlist ??= "Road Classics Vol. 3"
-console.log("Now playing: " + playlist)
+print("Now playing: " + playlist)
 
 playlist ??= "This would not overwrite"
-console.log("Still playing: " + playlist)
+print("Still playing: " + playlist)
 
 // Compound on strings
 let mut status = "Road trip"
 status += " complete. " + miles + " miles."
-console.log(status)
+print(status)
 
 `,
 
@@ -1300,36 +1300,36 @@ let entries =
     })
 
 // Full log
-console.log("=== MISSION LOG ===")
+print("=== MISSION LOG ===")
 for e in entries {
   let tag = pad_end("[" + e.type + "]", 13)
-  console.log(e.date + "  " + tag + "  " + e.msg)
+  print(e.date + "  " + tag + "  " + e.msg)
 }
 
 // Warnings only
 let warnings = filter(entries, e => e.type == "WARNING")
-console.log("")
-console.log("=== WARNINGS (" + warnings.length + ") ===")
+print("")
+print("=== WARNINGS (" + warnings.length + ") ===")
 for w in warnings {
-  console.log(to_upper(w.date) + "  " + w.msg)
+  print(to_upper(w.date) + "  " + w.msg)
 }
 
 // Summary stats
 let days    = uniq(map(entries, e => e.date))
 let types   = uniq(map(entries, e => e.type))
-console.log("")
-console.log("Days logged:    " + days.length)
-console.log("Event types:    " + types.join(", "))
-console.log("Total entries:  " + entries.length)`,
+print("")
+print("Days logged:    " + days.length)
+print("Event types:    " + types.join(", "))
+print("Total entries:  " + entries.length)`,
 
   while: `// While loops (v0.9.8)
 // ── Basic while ──────────────────────────────────────────────────────────────
 let mut n = 5
 while n > 0 {
-  console.log("T-minus " + n)
+  print("T-minus " + n)
   n -= 1
 }
-console.log("Liftoff!")
+print("Liftoff!")
 
 // ── break — exit loop early ───────────────────────────────────────────────────
 let search = [3, 7, 1, 9, 4, 6, 2]
@@ -1343,14 +1343,14 @@ while idx < search.length {
   }
   idx += 1
 }
-console.log("Found at index: " + found)
+print("Found at index: " + found)
 
 // ── continue — skip iterations ────────────────────────────────────────────────
 let mut x = 0
 while x < 10 {
   x += 1
   if x % 2 == 0 { continue }
-  console.log(x)   // 1 3 5 7 9
+  print(x)   // 1 3 5 7 9
 }
 
 // ── Collatz sequence ─────────────────────────────────────────────────────────
@@ -1360,7 +1360,7 @@ while val != 1 {
   val = if val % 2 == 0 { val / 2 } else { val * 3 + 1 }
   steps += 1
 }
-console.log("Collatz(27) → " + steps + " steps")`,
+print("Collatz(27) → " + steps + " steps")`,
 
   multilambda: `// Multi-line Lambdas — Recipe Difficulty Ranker
 // Block-body lambdas let you use local variables and multi-step logic inline.
@@ -1402,9 +1402,9 @@ let ranked =
     })
     |> sort_by(r => r.effort)
 
-console.log("=== RECIPES BY EFFORT (max 200 min, skill 2+) ===")
+print("=== RECIPES BY EFFORT (max 200 min, skill 2+) ===")
 for r in ranked {
-  console.log(pad_end(r.name, 22) + pad_end("[" + r.label + "]", 12) + "effort: " + r.effort)
+  print(pad_end(r.name, 22) + pad_end("[" + r.label + "]", 12) + "effort: " + r.effort)
 }`
 }
 

@@ -364,6 +364,22 @@ const unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fal
  */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ── Axon v0.9.9 print helpers ────────────────────────────────────────────────
+
+/**
+ * Print one or more values to the console, separated by spaces.
+ * Shorthand for console.log — idiomatic Axon output.
+ * @param {...*} args  Values to print
+ */
+const print = (...args) => console.log(...args);
+
+/**
+ * Print one or more values followed by a blank line.
+ * Useful for separating sections of output.
+ * @param {...*} args  Values to print
+ */
+const println = (...args) => { console.log(...args); console.log(''); };
+
 // ── Axon v0.4.0 test runner ──────────────────────────────────────────────────
 // @test declarations push entries here. Call __runAxonTests() to execute them.
 // Also exposed on globalThis so the CLI's vm context can access it.
