@@ -61,6 +61,10 @@ const __synth_presets = {
   slug:    /^[a-z0-9-]+$/,
   hex:     /^#?[0-9a-fA-F]{3,8}$/,
 };
+const $find = (xs, pred) => xs.find(pred);
+const $find_index = (xs, pred) => xs.findIndex(pred);
+const $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };
+const $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
 const $ok = (value) => ({ tag: 'Ok', value });
 const $err = (message) => ({ tag: 'Err', message });
 const $is_ok = (r) => r != null && r.tag === 'Ok';

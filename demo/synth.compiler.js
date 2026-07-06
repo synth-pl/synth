@@ -70,6 +70,10 @@ const __synth_presets = {
   slug:    /^[a-z0-9-]+$/,
   hex:     /^#?[0-9a-fA-F]{3,8}$/,
 };
+const $find = (xs, pred) => xs.find(pred);
+const $find_index = (xs, pred) => xs.findIndex(pred);
+const $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };
+const $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
 const $ok = (value) => ({ tag: 'Ok', value });
 const $err = (message) => ({ tag: 'Err', message });
 const $is_ok = (r) => r != null && r.tag === 'Ok';
@@ -389,15 +393,23 @@ class Lexer {
         const startCol = this.col;
         let raw = '`';
         this.advance();
-        while (this.pos < this.src.length && this.src[this.pos] !== '`') {
-            raw += this.src[this.pos];
-            if (this.src[this.pos] === '\n') {
+        let braceDepth = 0; // track { } depth so nested braces don't end the template early
+        while (this.pos < this.src.length) {
+            const ch = this.src[this.pos];
+            if (ch === '`' && braceDepth === 0)
+                break; // closing backtick outside any expression
+            raw += ch;
+            if (ch === '\n') {
                 this.line++;
                 this.col = 1;
             }
             else {
                 this.col++;
             }
+            if (ch === '{')
+                braceDepth++;
+            else if (ch === '}' && braceDepth > 0)
+                braceDepth--;
             this.pos++;
         }
         raw += '`';
@@ -988,7 +1000,7 @@ class Parser {
             const params = [];
             while (!this.check('RPAREN') && !this.isEOF()) {
                 const spread = !!this.tryConsume('SPREAD');
-                const paramName = this.expect('IDENT').value;
+                const paramName = this.expectIdentOrKeyword().value;
                 let paramType = { name: 'any' };
                 if (this.check('COLON')) {
                     this.advance();
@@ -1026,7 +1038,7 @@ class Parser {
         const params = [];
         while (!this.check('RPAREN') && !this.isEOF()) {
             const spread = !!this.tryConsume('SPREAD');
-            const paramName = this.expect('IDENT').value;
+            const paramName = this.expectIdentOrKeyword().value;
             this.expect('COLON');
             const paramType = this.parseTypeExpr();
             params.push({ name: paramName, type: paramType, spread });
@@ -1649,7 +1661,41 @@ class Parser {
         }
         if (tok.type === 'TEMPLATE') {
             this.advance();
-            return { kind: 'TemplateLit', raw: tok.value };
+            const raw = tok.value; // includes surrounding backticks
+            const inner = raw.slice(1, -1); // strip leading/trailing `
+            const quasis = [];
+            const exprs = [];
+            let i = 0;
+            while (i < inner.length) {
+                const dollarIdx = inner.indexOf('${', i);
+                if (dollarIdx === -1) {
+                    quasis.push(inner.slice(i));
+                    break;
+                }
+                quasis.push(inner.slice(i, dollarIdx));
+                let depth = 1, j = dollarIdx + 2;
+                while (j < inner.length && depth > 0) {
+                    if (inner[j] === '{')
+                        depth++;
+                    else if (inner[j] === '}')
+                        depth--;
+                    j++;
+                }
+                const exprStr = inner.slice(dollarIdx + 2, j - 1);
+                try {
+                    const subTokens = new lexer_js_1.Lexer(exprStr).tokenize();
+                    const subExpr = new Parser(subTokens).parseExpr();
+                    exprs.push(subExpr);
+                }
+                catch {
+                    // Fallback: emit the expression as a raw JS identifier if parse fails
+                    exprs.push({ kind: 'RawJS', code: exprStr });
+                }
+                i = j;
+            }
+            if (quasis.length === exprs.length)
+                quasis.push('');
+            return { kind: 'TemplateLit', raw, quasis, exprs };
         }
         if (tok.type === 'KW_TRUE') {
             this.advance();
@@ -1932,6 +1978,10 @@ class Parser {
     }
     parseLambdaBody() {
         if (this.check('LBRACE')) {
+            // Detect object literal: x => { key: val } vs block: x => { let y = … }
+            if (this.isObjectLitAhead()) {
+                return this.parseObjectLit();
+            }
             this.advance();
             const body = this.parseBlockBody();
             this.expect('RBRACE');
@@ -1941,6 +1991,24 @@ class Parser {
             return body;
         }
         return this.parseExpr();
+    }
+    // Look ahead past { to determine whether it opens an object literal or a block.
+    // Object literal indicators (all evaluated without consuming tokens):
+    //   {} | { ... | { key: | { key, | { key }
+    isObjectLitAhead() {
+        const t1 = this.tokens[this.pos + 1]; // first token inside {
+        if (!t1)
+            return false;
+        if (t1.type === 'RBRACE')
+            return true; // {}
+        if (t1.type === 'SPREAD')
+            return true; // { ...x }
+        const t2 = this.tokens[this.pos + 2];
+        if ((t1.type === 'IDENT' || t1.type === 'STRING') && t2?.type === 'COLON')
+            return true;
+        if (t1.type === 'IDENT' && (t2?.type === 'COMMA' || t2?.type === 'RBRACE'))
+            return true;
+        return false;
     }
     isLambdaAhead() {
         let i = this.pos + 1; // skip (
@@ -1995,18 +2063,20 @@ const STDLIB_METHODS = new Set([
     'map', 'filter', 'fold', 'zip', 'first', 'last', 'sum', 'count', 'any', 'all',
     'flat', 'flat_map', 'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse',
     'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc',
+    'find', 'find_index',
     'is_ok', 'is_err', 'unwrap', 'unwrap_or',
 ]);
 // All stdlib identifiers — prefixed $ in output to keep generated code compact
 const STDLIB_ALL = new Set([
     'map', 'filter', 'fold', 'pipe', 'zip', 'range', 'first', 'last', 'sum', 'count',
     'any', 'all', 'flat', 'flat_map', 'groupBy', 'pick', 'omit',
-    'sort_by', 'sort_by_desc',
+    'sort_by', 'sort_by_desc', 'find', 'find_index',
     'trim', 'split', 'starts_with', 'ends_with', 'contains', 'to_upper', 'to_lower',
     'replace_all', 'pad_start', 'pad_end',
     'min', 'max', 'min_by', 'max_by',
     'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse', 'sum_by',
     'clamp', 'abs', 'round', 'floor', 'ceil', 'pow', 'sqrt', 'random', 'random_int',
+    'parse_int', 'parse_float',
     'ok', 'err', 'is_ok', 'is_err', 'unwrap', 'unwrap_or',
     'delay', 'println',
 ]);
@@ -2543,7 +2613,17 @@ class Codegen {
         switch (expr.kind) {
             case 'NumberLit': return expr.raw ?? String(expr.value);
             case 'StringLit': return this.emitString(expr.value, expr.raw);
-            case 'TemplateLit': return expr.raw;
+            case 'TemplateLit': {
+                // Fully parsed template with Synth sub-expressions
+                if (expr.quasis && expr.exprs) {
+                    const parts = expr.quasis.map((q, i) => {
+                        const safe = q.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+                        return i < expr.exprs.length ? safe + '${' + this.emitExpr(expr.exprs[i]) + '}' : safe;
+                    });
+                    return '`' + parts.join('') + '`';
+                }
+                return expr.raw; // fallback for any legacy raw-only nodes
+            }
             case 'BoolLit': return String(expr.value);
             case 'RegexLit': return `/${expr.pattern}/${expr.flags}`;
             case 'NullLit': return 'null';
@@ -2872,8 +2952,14 @@ class Codegen {
     }
     emitExprParenIfNeeded(expr, parentOp) {
         const s = this.emitExpr(expr);
-        if (expr.kind === 'BinaryExpr' && this.precedence(expr.op) < this.precedence(parentOp)) {
-            return `(${s})`;
+        if (expr.kind === 'BinaryExpr') {
+            // Map keyword aliases (and→&&, or→||) before precedence comparison so that
+            // e.g. "A and (B or C)" correctly wraps the 'or' sub-expression in parens.
+            const opAlias = { and: '&&', or: '||', not: '!' };
+            const childOp = opAlias[expr.op] ?? expr.op;
+            if (this.precedence(childOp) < this.precedence(parentOp)) {
+                return `(${s})`;
+            }
         }
         // Ternary has lower precedence than all binary operators — always wrap to preserve semantics
         if (expr.kind === 'TernaryExpr') {

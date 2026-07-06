@@ -139,7 +139,7 @@ const visible_missions = () => {
   let sector = Fleet.sector;
   let max_danger = Fleet.max_danger;
   let sort_key = Fleet.sort_key;
-  let filtered = $filter(fleet, m => sector == "All" || m.sector == sector && m.danger <= max_danger);
+  let filtered = $filter(fleet, m => (sector == "All" || m.sector == sector) && m.danger <= max_danger);
   return ((_m) => (_m === "distance") ? $sort_by(filtered, m => m.distance) : (_m === "danger") ? $sort_by(filtered, m => m.danger) : (_m === "ore") ? $sort_by_desc(filtered, m => m.ore) : (_m === "data") ? $sort_by_desc(filtered, m => m.data) : filtered)(sort_key);
 };
 const fleet_stats = (missions) => {

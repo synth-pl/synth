@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.5 — JavaScript code generator
+// Synth v1.0.0 — JavaScript code generator
 // Walks the AST and emits clean, idiomatic JS with JSDoc annotations.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ const STDLIB_METHODS = new Set([
   'map', 'filter', 'fold', 'zip', 'first', 'last', 'sum', 'count', 'any', 'all',
   'flat', 'flat_map', 'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse',
   'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc',
+  'find', 'find_index',
   'is_ok', 'is_err', 'unwrap', 'unwrap_or',
 ])
 
@@ -31,12 +32,13 @@ const STDLIB_METHODS = new Set([
 const STDLIB_ALL = new Set([
   'map', 'filter', 'fold', 'pipe', 'zip', 'range', 'first', 'last', 'sum', 'count',
   'any', 'all', 'flat', 'flat_map', 'groupBy', 'pick', 'omit',
-  'sort_by', 'sort_by_desc',
+  'sort_by', 'sort_by_desc', 'find', 'find_index',
   'trim', 'split', 'starts_with', 'ends_with', 'contains', 'to_upper', 'to_lower',
   'replace_all', 'pad_start', 'pad_end',
   'min', 'max', 'min_by', 'max_by',
   'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse', 'sum_by',
   'clamp', 'abs', 'round', 'floor', 'ceil', 'pow', 'sqrt', 'random', 'random_int',
+  'parse_int', 'parse_float',
   'ok', 'err', 'is_ok', 'is_err', 'unwrap', 'unwrap_or',
   'delay', 'println',
 ])
@@ -556,7 +558,17 @@ export class Codegen {
     switch (expr.kind) {
       case 'NumberLit':   return expr.raw ?? String(expr.value)
       case 'StringLit':   return this.emitString(expr.value, expr.raw)
-      case 'TemplateLit': return expr.raw
+      case 'TemplateLit': {
+        // Fully parsed template with Synth sub-expressions
+        if (expr.quasis && expr.exprs) {
+          const parts = expr.quasis.map((q, i) => {
+            const safe = q.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
+            return i < expr.exprs!.length ? safe + '${' + this.emitExpr(expr.exprs![i]) + '}' : safe
+          })
+          return '`' + parts.join('') + '`'
+        }
+        return expr.raw  // fallback for any legacy raw-only nodes
+      }
       case 'BoolLit':     return String(expr.value)
       case 'RegexLit':    return `/${expr.pattern}/${expr.flags}`
       case 'NullLit':     return 'null'
@@ -914,8 +926,14 @@ export class Codegen {
 
   private emitExprParenIfNeeded(expr: Expr, parentOp: string): string {
     const s = this.emitExpr(expr)
-    if (expr.kind === 'BinaryExpr' && this.precedence(expr.op) < this.precedence(parentOp)) {
-      return `(${s})`
+    if (expr.kind === 'BinaryExpr') {
+      // Map keyword aliases (and→&&, or→||) before precedence comparison so that
+      // e.g. "A and (B or C)" correctly wraps the 'or' sub-expression in parens.
+      const opAlias: Record<string, string> = { and: '&&', or: '||', not: '!' }
+      const childOp = opAlias[expr.op] ?? expr.op
+      if (this.precedence(childOp) < this.precedence(parentOp)) {
+        return `(${s})`
+      }
     }
     // Ternary has lower precedence than all binary operators — always wrap to preserve semantics
     if (expr.kind === 'TernaryExpr') {

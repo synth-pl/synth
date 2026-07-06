@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.5 — Lexer
+// Synth v1.0.0 — Lexer
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Token, TokenType } from './types.js'
@@ -225,9 +225,14 @@ export class Lexer {
     const startCol = this.col
     let raw = '`'
     this.advance()
-    while (this.pos < this.src.length && this.src[this.pos] !== '`') {
-      raw += this.src[this.pos]
-      if (this.src[this.pos] === '\n') { this.line++; this.col = 1 } else { this.col++ }
+    let braceDepth = 0  // track { } depth so nested braces don't end the template early
+    while (this.pos < this.src.length) {
+      const ch = this.src[this.pos]
+      if (ch === '`' && braceDepth === 0) break  // closing backtick outside any expression
+      raw += ch
+      if (ch === '\n') { this.line++; this.col = 1 } else { this.col++ }
+      if (ch === '{') braceDepth++
+      else if (ch === '}' && braceDepth > 0) braceDepth--
       this.pos++
     }
     raw += '`'

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.5 — Recursive-descent parser
+// Synth v1.0.0 — Recursive-descent parser
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -16,6 +16,7 @@ import {
   AwaitExpr,
   Constraint, PipeAsStep,
 } from './types.js'
+import { Lexer } from './lexer.js'
 
 export class ParseError extends Error {
   constructor(msg: string, public line: number, public col: number) {
@@ -466,7 +467,7 @@ export class Parser {
       const params: FnParam[] = []
       while (!this.check('RPAREN') && !this.isEOF()) {
         const spread = !!this.tryConsume('SPREAD')
-        const paramName = this.expect('IDENT').value
+        const paramName = this.expectIdentOrKeyword().value
         let paramType: TypeExpr = { name: 'any' }
         if (this.check('COLON')) {
           this.advance()
@@ -504,7 +505,7 @@ export class Parser {
     const params: FnParam[] = []
     while (!this.check('RPAREN') && !this.isEOF()) {
       const spread = !!this.tryConsume('SPREAD')
-      const paramName = this.expect('IDENT').value
+      const paramName = this.expectIdentOrKeyword().value
       this.expect('COLON')
       const paramType = this.parseTypeExpr()
       params.push({ name: paramName, type: paramType, spread })
@@ -926,7 +927,7 @@ export class Parser {
 
   // ── Expression parsing (precedence climbing) ─────────────────────────────────
 
-  private parseExpr(): Expr {
+  parseExpr(): Expr {
     const left = this.parsePipeline()
     if (this.check('ASSIGN') && this.isAssignable(left)) {
       this.advance()
@@ -1168,7 +1169,34 @@ export class Parser {
 
     if (tok.type === 'TEMPLATE') {
       this.advance()
-      return { kind: 'TemplateLit', raw: tok.value }
+      const raw = tok.value                   // includes surrounding backticks
+      const inner = raw.slice(1, -1)          // strip leading/trailing `
+      const quasis: string[] = []
+      const exprs: Expr[] = []
+      let i = 0
+      while (i < inner.length) {
+        const dollarIdx = inner.indexOf('${', i)
+        if (dollarIdx === -1) { quasis.push(inner.slice(i)); break }
+        quasis.push(inner.slice(i, dollarIdx))
+        let depth = 1, j = dollarIdx + 2
+        while (j < inner.length && depth > 0) {
+          if (inner[j] === '{') depth++
+          else if (inner[j] === '}') depth--
+          j++
+        }
+        const exprStr = inner.slice(dollarIdx + 2, j - 1)
+        try {
+          const subTokens = new Lexer(exprStr).tokenize()
+          const subExpr = new Parser(subTokens).parseExpr()
+          exprs.push(subExpr)
+        } catch {
+          // Fallback: emit the expression as a raw JS identifier if parse fails
+          exprs.push({ kind: 'RawJS', code: exprStr })
+        }
+        i = j
+      }
+      if (quasis.length === exprs.length) quasis.push('')
+      return { kind: 'TemplateLit', raw, quasis, exprs }
     }
 
     if (tok.type === 'KW_TRUE')  { this.advance(); return { kind: 'BoolLit', value: true } }
@@ -1446,6 +1474,10 @@ export class Parser {
 
   private parseLambdaBody(): Expr {
     if (this.check('LBRACE')) {
+      // Detect object literal: x => { key: val } vs block: x => { let y = … }
+      if (this.isObjectLitAhead()) {
+        return this.parseObjectLit()
+      }
       this.advance()
       const body = this.parseBlockBody()
       this.expect('RBRACE')
@@ -1455,6 +1487,20 @@ export class Parser {
       return body
     }
     return this.parseExpr()
+  }
+
+  // Look ahead past { to determine whether it opens an object literal or a block.
+  // Object literal indicators (all evaluated without consuming tokens):
+  //   {} | { ... | { key: | { key, | { key }
+  private isObjectLitAhead(): boolean {
+    const t1 = this.tokens[this.pos + 1]  // first token inside {
+    if (!t1) return false
+    if (t1.type === 'RBRACE') return true                  // {}
+    if (t1.type === 'SPREAD') return true                  // { ...x }
+    const t2 = this.tokens[this.pos + 2]
+    if ((t1.type === 'IDENT' || t1.type === 'STRING') && t2?.type === 'COLON') return true
+    if (t1.type === 'IDENT' && (t2?.type === 'COMMA' || t2?.type === 'RBRACE')) return true
+    return false
   }
 
   private isLambdaAhead(): boolean {

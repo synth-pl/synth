@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.6 — CLI entry point
+// Synth v1.0.0 — CLI entry point
 // Usage: node dist/cli.js <input.syn> [output.js] [--test] [--bundle]
 //        node dist/cli.js --fmt <input.syn>
 //        node dist/cli.js --check <input.syn>
@@ -109,7 +109,7 @@ function main(): void {
 
   if (filteredArgs.length === 0 || filteredArgs[0] === '--help') {
     console.log(`
-  Synth v0.9.6 Transpiler
+  Synth v1.0.0 Transpiler
   ──────────────────────
   Usage:
     synth <input.syn> [output.js]               Transpile a single file to JS

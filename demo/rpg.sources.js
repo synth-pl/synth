@@ -1188,7 +1188,7 @@ const render_game = (rootId) => {
         let oldParty = state.party;
         let newParty = $map(state.party, h => award_xp(h, xpGain));
         newParty.forEach((h) => {
-          let old = oldParty.find(p => p.name === h.name);
+          let old = $find(oldParty, p => p.name === h.name);
           if (old && h.level > old.level) {
             log.push(fmt_level_up(h.name, h.level));
           }
@@ -1299,7 +1299,7 @@ const render_game = (rootId) => {
           let oldParty = state.party;
           let newParty = $map(state.party, h => award_xp(h, xpGain));
           newParty.forEach((h) => {
-            let old = oldParty.find(p => p.name === h.name);
+            let old = $find(oldParty, p => p.name === h.name);
             if (old && h.level > old.level) {
               log.push(fmt_level_up(h.name, h.level));
             }
@@ -1435,7 +1435,7 @@ const render_game = (rootId) => {
 };
     if (state.pickingFor) {
       let pf = state.pickingFor;
-      let hero = state.party.find(h => h.name === pf.heroName);
+      let hero = $find(state.party, h => h.name === pf.heroName);
       let compat = $filter(state.stash, e => e.slot === pf.slot && can_class_equip(hero.heroClass, e.forClass));
       dialogInner.innerHTML = "";
       let dialogHeader = el("div", { class: "picker-dialog-header" }, el("div", { class: "picker-label" }, `Choose ${pf.slot} for ${pf.heroName}`), el("button", { class: "picker-close" }, "✕"));
@@ -1701,7 +1701,7 @@ Statistically, it could go either way.`
     let header = el("div", { class: "scene-header shop-header" }, el("span", { class: "scene-title" }, "MERCHANT"), el("div", { class: "header-actions" }, el("span", { class: "gold-display" }, `Gold: ${state.gold}`), leaveTop));
     root.appendChild(header);
     let buy_equip = (equip) => {
-      let alreadySold = state.purchased.find(id => id === equip.id) !== undefined;
+      let alreadySold = $find(state.purchased, id => id === equip.id) !== undefined;
       if (!alreadySold && state.gold >= equip.price) {
         state = {
   ...state,
@@ -1714,7 +1714,7 @@ Statistically, it could go either way.`
 };
     let buy_item = (item) => {
       if (state.gold >= item.price) {
-        let existing = state.inventory.find(i => i.id === item.id);
+        let existing = $find(state.inventory, i => i.id === item.id);
         let newInv = existing ? $map(state.inventory, i => i.id === item.id ? { ...i, count: i.count + 1 } : i) : state.inventory.concat([{ ...item, count: 1 }]);
         state = { ...state, gold: state.gold - item.price, inventory: newInv };
         return render();
@@ -1724,7 +1724,7 @@ Statistically, it could go either way.`
       let section = el("div", { class: "shop-section" });
       section.appendChild(el("div", { class: "shop-label" }, label));
       items.forEach((equip) => {
-        let sold = state.purchased.find(id => id === equip.id) !== undefined;
+        let sold = $find(state.purchased, id => id === equip.id) !== undefined;
         let canBuy = !sold && state.gold >= equip.price;
         let forWhom = equip.forClass === "all" ? "any class" : equip.forClass;
         let btnLabel = sold ? "SOLD" : `BUY ${equip.price}g`;

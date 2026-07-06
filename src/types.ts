@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.9.5 — Token and AST type definitions
+// Synth v1.0.0 — Token and AST type definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TokenType =
@@ -328,7 +328,12 @@ export type Expr =
 
 export interface NumberLit  { kind: 'NumberLit';  value: number; raw?: string }
 export interface StringLit  { kind: 'StringLit';  value: string; raw: string }
-export interface TemplateLit { kind: 'TemplateLit'; raw: string }
+export interface TemplateLit {
+  kind: 'TemplateLit'
+  raw: string
+  quasis?: string[]   // n+1 string parts between interpolations
+  exprs?: Expr[]      // n interpolated Synth expressions
+}
 export interface BoolLit    { kind: 'BoolLit';   value: boolean }
 export interface RegexLit   { kind: 'RegexLit';  pattern: string; flags: string }
 export interface NullLit    { kind: 'NullLit' }

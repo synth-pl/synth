@@ -1,0 +1,96 @@
+// Test all v1.0 language improvements
+
+// ─── Template literals ─────────────────────────────────────────────────────
+let name = "Danny"
+let score = 42
+let msg = `Hello ${name}, your score is ${score}!`
+let doubled_msg = `${score * 2} is double`
+let method_msg = `Items: ${"a,b,c".split(",").count()}`
+
+@test "template literal: simple interpolation" {
+  msg == "Hello Danny, your score is 42!"
+}
+
+@test "template literal: arithmetic expression" {
+  doubled_msg == "84 is double"
+}
+
+@test "template literal: method call in interpolation" {
+  method_msg == "Items: 3"
+}
+
+// ─── and/or precedence fix ────────────────────────────────────────────────
+fn check_prec(a: bool, b: bool, c: bool) = a and (b or c)
+
+@test "and/or precedence: A and (B or C) is true when A=true, B=false, C=true" {
+  check_prec(true, false, true) == true
+}
+
+@test "and/or precedence: false and (true or true) is false" {
+  check_prec(false, true, true) == false
+}
+
+@test "and/or precedence: true and (false or false) is false" {
+  check_prec(true, false, false) == false
+}
+
+// ─── find / find_index stdlib ─────────────────────────────────────────────
+let nums = [1, 2, 3, 4, 5]
+
+@test "find: returns first matching element" {
+  nums.find(x => x > 3) == 4
+}
+
+@test "find: returns undefined when no match" {
+  nums.find(x => x > 10) == null
+}
+
+@test "find_index: returns index of first match" {
+  nums.find_index(x => x > 3) == 3
+}
+
+@test "find_index: returns -1 when no match" {
+  nums.find_index(x => x > 10) == -1
+}
+
+// ─── parse_int / parse_float ─────────────────────────────────────────────
+@test "parse_int: valid string" {
+  parse_int("42") == 42
+}
+
+@test "parse_int: hex string" {
+  parse_int("ff", 16) == 255
+}
+
+@test "parse_float: valid string" {
+  parse_float("3.14") == 3.14
+}
+
+@test "parse_int: invalid string returns null" {
+  parse_int("nope") == null
+}
+
+// ─── type as reserved word in param position ─────────────────────────────
+fn describe_item(type: string, name: string) = `${type}: ${name}`
+
+@test "type as param name" {
+  describe_item("weapon", "Sword") == "weapon: Sword"
+}
+
+// ─── object literal in lambda without do ─────────────────────────────────
+let pairs = [1, 2, 3].map(x => { id: x, val: x * 10 })
+
+@test "lambda returning object literal: first element" {
+  pairs[0].id == 1 and pairs[0].val == 10
+}
+
+@test "lambda returning object literal: last element" {
+  pairs[2].id == 3 and pairs[2].val == 30
+}
+
+// ─── if as expression (already worked, now verified) ─────────────────────
+fn grade(score: int) = if score >= 90 { "A" } else if score >= 70 { "B" } else { "C" }
+
+@test "if as expression: 95 = A" { grade(95) == "A" }
+@test "if as expression: 75 = B" { grade(75) == "B" }
+@test "if as expression: 60 = C" { grade(60) == "C" }
