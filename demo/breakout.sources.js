@@ -183,12 +183,15 @@ const tick = (dt) => {
       ball_vy = 0 - synth_sqrt(speed * speed - ball_vx * ball_vx);
     }
     if (on_paddle_x && in_paddle_y && prev_vy <= 0) {
-      if (ball_vx > 0) {
+      let left_pen = ball_x + BALL_R - paddle_x;
+      let right_pen = paddle_x + PADDLE_W + BALL_R - ball_x;
+      if (left_pen < right_pen) {
         ball_x = paddle_x - BALL_R;
+        ball_vx = 0 - synth_abs(ball_vx);
       } else {
         ball_x = paddle_x + PADDLE_W + BALL_R;
+        ball_vx = synth_abs(ball_vx);
       }
-      ball_vx = 0 - ball_vx;
     }
     check_brick_collisions();
     if (ball_y - BALL_R > CANVAS_H) {

@@ -186,14 +186,19 @@ fn tick(dt) {
       ball_vy = 0 - sqrt(speed * speed - ball_vx * ball_vx)
     }
 
-    // Side-surface: ball moving flat or upward but overlapping paddle volume — push out horizontally
+    // Side-surface: ball overlapping paddle volume but not entering from top
+    // Use minimum penetration depth (not ball_vx) to decide which side to push out —
+    // this handles the case where the paddle chases into the ball from behind.
     if on_paddle_x and in_paddle_y and prev_vy <= 0 {
-      if ball_vx > 0 {
-        ball_x = paddle_x - BALL_R
+      let left_pen  = ball_x + BALL_R - paddle_x
+      let right_pen = paddle_x + PADDLE_W + BALL_R - ball_x
+      if left_pen < right_pen {
+        ball_x  = paddle_x - BALL_R
+        ball_vx = 0 - abs(ball_vx)
       } else {
-        ball_x = paddle_x + PADDLE_W + BALL_R
+        ball_x  = paddle_x + PADDLE_W + BALL_R
+        ball_vx = abs(ball_vx)
       }
-      ball_vx = 0 - ball_vx
     }
 
     // Brick collisions
