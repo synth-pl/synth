@@ -26,6 +26,7 @@ export type TokenType =
   | 'KW_ASYNC'          // v0.8:   async fn / async lambda
   | 'KW_AWAIT'          // v0.8:   await expr inside async functions
   | 'KW_ENUM'           // v0.9.5: enum Color = Red | Green | Blue
+  | 'KW_DO'             // v0.9.9: do { } block expression
   // Literals
   | 'NUMBER' | 'STRING' | 'REGEX' | 'TEMPLATE'
   // Identifier
@@ -323,6 +324,7 @@ export type Expr =
   | RawJS
   | ResultPropagateExpr  // v0.6: expr? — propagate Err, unwrap Ok
   | AwaitExpr            // v0.8: await expr — inside async functions
+  | DoExpr               // v0.9.9: do { } — block expression / async IIFE
 
 export interface NumberLit  { kind: 'NumberLit';  value: number; raw?: string }
 export interface StringLit  { kind: 'StringLit';  value: string; raw: string }
@@ -428,6 +430,11 @@ export interface PipelineExpr {
 export interface BlockExpr {
   kind: 'BlockExpr'
   stmts: BlockStmt[]
+}
+
+export interface DoExpr {
+  kind: 'DoExpr'
+  body: BlockExpr
 }
 
 export type BlockStmt =

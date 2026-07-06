@@ -465,13 +465,14 @@ export class Parser {
       this.advance() // (
       const params: FnParam[] = []
       while (!this.check('RPAREN') && !this.isEOF()) {
+        const spread = !!this.tryConsume('SPREAD')
         const paramName = this.expect('IDENT').value
         let paramType: TypeExpr = { name: 'any' }
         if (this.check('COLON')) {
           this.advance()
           paramType = this.parseTypeExpr()
         }
-        params.push({ name: paramName, type: paramType })
+        params.push({ name: paramName, type: paramType, spread })
         this.tryConsume('COMMA')
       }
       this.expect('RPAREN')
@@ -1180,6 +1181,16 @@ export class Parser {
     }
 
     if (tok.type === 'KW_MATCH') return this.parseMatch()
+    if (tok.type === 'KW_DO') {
+      this.advance()
+      this.expect('LBRACE')
+      const parsed = this.parseBlockBody()
+      this.expect('RBRACE')
+      const blockBody = parsed.kind === 'BlockExpr'
+        ? parsed
+        : { kind: 'BlockExpr', stmts: [{ kind: 'ReturnStmt', value: parsed }] }
+      return { kind: 'DoExpr', body: blockBody } as any
+    }
     // if used as a value expression: if cond { a } else { b }
     // stmtMode=false → tail-position ExprStmts inside each branch become ReturnStmts,
     // then the BlockExpr wrapper is emitted as an IIFE: (() => { if (...) { return a } else { return b } })()

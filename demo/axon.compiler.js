@@ -128,6 +128,7 @@ const KEYWORDS = {
     async: 'KW_ASYNC', // v0.8:   async fn — asynchronous function declaration
     await: 'KW_AWAIT', // v0.8:   await expr — inside async functions
     enum: 'KW_ENUM', // v0.9.5: enum Color = Red | Green | Blue
+    do: 'KW_DO', // v0.9.9: do { } — block expression / async IIFE
     and: 'AND', // keyword alias for &&
     or: 'OR', // keyword alias for ||
     not: 'BANG', // keyword alias for !
@@ -983,13 +984,14 @@ class Parser {
             this.advance(); // (
             const params = [];
             while (!this.check('RPAREN') && !this.isEOF()) {
+                const spread = !!this.tryConsume('SPREAD');
                 const paramName = this.expect('IDENT').value;
                 let paramType = { name: 'any' };
                 if (this.check('COLON')) {
                     this.advance();
                     paramType = this.parseTypeExpr();
                 }
-                params.push({ name: paramName, type: paramType });
+                params.push({ name: paramName, type: paramType, spread });
                 this.tryConsume('COMMA');
             }
             this.expect('RPAREN');
@@ -1661,6 +1663,16 @@ class Parser {
         }
         if (tok.type === 'KW_MATCH')
             return this.parseMatch();
+        if (tok.type === 'KW_DO') {
+            this.advance();
+            this.expect('LBRACE');
+            const parsed = this.parseBlockBody();
+            this.expect('RBRACE');
+            const blockBody = parsed.kind === 'BlockExpr'
+                ? parsed
+                : { kind: 'BlockExpr', stmts: [{ kind: 'ReturnStmt', value: parsed }] };
+            return { kind: 'DoExpr', body: blockBody };
+        }
         // if used as a value expression: if cond { a } else { b }
         // stmtMode=false → tail-position ExprStmts inside each branch become ReturnStmts,
         // then the BlockExpr wrapper is emitted as an IIFE: (() => { if (...) { return a } else { return b } })()
@@ -1973,6 +1985,14 @@ class Parser {
 // Axon v0.9.5 — JavaScript code generator
 // Walks the AST and emits clean, idiomatic JS with JSDoc annotations.
 // ─────────────────────────────────────────────────────────────────────────────
+const STDLIB_METHODS = new Set([
+    'trim', 'split', 'starts_with', 'ends_with', 'contains', 'to_upper', 'to_lower',
+    'replace_all', 'pad_start', 'pad_end',
+    'map', 'filter', 'fold', 'zip', 'first', 'last', 'sum', 'count', 'any', 'all',
+    'flat', 'flat_map', 'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse',
+    'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc', 'join',
+    'is_ok', 'is_err', 'unwrap', 'unwrap_or',
+]);
 class Codegen {
     constructor() {
         this.out = [];
@@ -2533,6 +2553,11 @@ class Codegen {
                 if (expr.callee.kind === 'Identifier' && expr.callee.name === 'print') {
                     return `console.log(${args})`;
                 }
+                if (expr.callee.kind === 'MemberExpr' && STDLIB_METHODS.has(expr.callee.property)) {
+                    const obj = this.emitExpr(expr.callee.object);
+                    const fn = expr.callee.property;
+                    return args ? `${fn}(${obj}, ${args})` : `${fn}(${obj})`;
+                }
                 const callee = this.emitExpr(expr.callee);
                 // v0.4: optional call — callee?.(args)
                 if (expr.optional)
@@ -2583,9 +2608,32 @@ class Codegen {
                 this.out = savedOut;
                 return '(() => {\n' + inner + '})()';
             }
+            case 'DoExpr': {
+                const hasAwait = this.blockHasAwait(expr.body);
+                const savedOut = this.out;
+                this.out = [];
+                this.indent++;
+                this.emitBlock(expr.body);
+                this.indent--;
+                const inner = this.out.join('');
+                this.out = savedOut;
+                return hasAwait
+                    ? `(async () => {\n${inner}})()`
+                    : `(() => {\n${inner}})()`;
+            }
             case 'MatchExpr':
                 return this.emitMatch(expr);
         }
+    }
+    blockHasAwait(block) {
+        const check = (expr) => {
+            if (!expr || typeof expr !== 'object')
+                return false;
+            if (expr.kind === 'AwaitExpr')
+                return true;
+            return Object.values(expr).some(v => Array.isArray(v) ? v.some(check) : check(v));
+        };
+        return block.stmts.some(check);
     }
     emitObjectProp(prop) {
         if (prop.spread)

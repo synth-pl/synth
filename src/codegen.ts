@@ -17,6 +17,15 @@ import {
 } from './types.js'
 import { AXON_STDLIB } from './stdlib.js'
 
+const STDLIB_METHODS = new Set([
+  'trim', 'split', 'starts_with', 'ends_with', 'contains', 'to_upper', 'to_lower',
+  'replace_all', 'pad_start', 'pad_end',
+  'map', 'filter', 'fold', 'zip', 'first', 'last', 'sum', 'count', 'any', 'all',
+  'flat', 'flat_map', 'take', 'drop', 'uniq', 'chunk', 'set_at', 'reverse',
+  'sum_by', 'min', 'max', 'min_by', 'max_by', 'sort_by', 'sort_by_desc', 'join',
+  'is_ok', 'is_err', 'unwrap', 'unwrap_or',
+])
+
 export class Codegen {
   private out: string[] = []
   private indent = 0
@@ -570,6 +579,11 @@ export class Codegen {
         if (expr.callee.kind === 'Identifier' && expr.callee.name === 'print') {
           return `console.log(${args})`
         }
+        if (expr.callee.kind === 'MemberExpr' && STDLIB_METHODS.has(expr.callee.property)) {
+          const obj = this.emitExpr(expr.callee.object)
+          const fn = expr.callee.property
+          return args ? `${fn}(${obj}, ${args})` : `${fn}(${obj})`
+        }
         const callee = this.emitExpr(expr.callee)
         // v0.4: optional call — callee?.(args)
         if (expr.optional) return `${callee}?.(${args})`
@@ -626,9 +640,34 @@ export class Codegen {
         return '(() => {\n' + inner + '})()'
       }
 
+      case 'DoExpr': {
+        const hasAwait = this.blockHasAwait(expr.body)
+        const savedOut = this.out
+        this.out = []
+        this.indent++
+        this.emitBlock(expr.body)
+        this.indent--
+        const inner = this.out.join('')
+        this.out = savedOut
+        return hasAwait
+          ? `(async () => {\n${inner}})()`
+          : `(() => {\n${inner}})()`
+      }
+
       case 'MatchExpr':
         return this.emitMatch(expr)
     }
+  }
+
+  private blockHasAwait(block: BlockExpr): boolean {
+    const check = (expr: any): boolean => {
+      if (!expr || typeof expr !== 'object') return false
+      if (expr.kind === 'AwaitExpr') return true
+      return Object.values(expr).some(v =>
+        Array.isArray(v) ? v.some(check) : check(v)
+      )
+    }
+    return block.stmts.some(check)
   }
 
   private emitObjectProp(prop: ObjectProperty): string {

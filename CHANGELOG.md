@@ -1,5 +1,84 @@
 # Axon Changelog
 
+## v0.9.9 — Ergonomics & DX
+
+### New language features
+
+**Spread operator**
+
+`...` works in array literals, object literals, and function arguments:
+
+```axon
+let a = [1, 2, 3]
+let b = [0, ...a, 4]          // [0, 1, 2, 3, 4]
+
+let base = { x: 0, y: 0 }
+let moved = { ...base, x: 5 } // { x: 5, y: 0 }
+
+fn log_all(...items) = items |> join(", ") |> print
+```
+
+Rest parameters (`...name`) in short-form functions now work identically to the `::` form.
+
+**Object shorthand**
+
+When a property name matches a local variable name, the `: value` may be omitted:
+
+```axon
+let x = 10
+let y = 20
+let pt = { x, y }   // same as { x: x, y: y }
+```
+
+**Stdlib as method syntax**
+
+All Axon stdlib functions whose first argument is a value can be called with dot syntax. The compiler rewrites `value.fn(args)` to `fn(value, args)`:
+
+```axon
+"  hello  ".trim()                  // trim("  hello  ")
+"a,b,c".split(",")                  // split("a,b,c", ",")
+"hello".to_upper()                  // to_upper("hello")
+[5, 3, 8].filter(n => n > 4)        // filter([5,3,8], n => n > 4)
+[1, 2, 3].sum()                     // sum([1,2,3])
+[1, 2, 3].map(x => x * 2)          // map([1,2,3], x => x * 2)
+scores.sort_by(s => s.value)        // sort_by(scores, s => s.value)
+result.unwrap()                     // unwrap(result)
+```
+
+All string, array, and Result stdlib functions are supported as method calls. Native JS methods (`.toUpperCase()`, `.indexOf()`, etc.) continue to work unchanged.
+
+**`do` notation**
+
+`do { }` is a block expression — a sequenced computation in expression position. The last expression in the block is the result:
+
+```axon
+let total = do {
+  let a = compute_base()
+  let b = get_bonus()
+  a + b
+}
+```
+
+When the block contains `await`, it automatically becomes an async IIFE:
+
+```axon
+let data = do {
+  let raw = await fetch_data(url)
+  let parsed = await parse(raw)
+  parsed
+}
+// emits: (async () => { ... })()
+```
+
+### Compiler & tooling
+
+- **`print()` is now a compiler intrinsic** — `print(x)` compiles directly to `console.log(x)`. No stdlib dependency.
+- **Stdlib separated** — `axon.stdlib.js` is a standalone file loaded once; compiled output contains only user code (84% fewer output tokens for small programs).
+- **Compiled output is clean** — no JSDoc comments, no wrapper blocks; the transpiled JS pane shows exactly what was written.
+- **CI: self-retrying deploy** — GitHub Pages deploy retries up to 3× automatically, eliminating transient failures.
+
+---
+
 ## v0.9.8 — Control Flow
 
 ### New language features

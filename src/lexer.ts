@@ -37,6 +37,7 @@ const KEYWORDS: Record<string, TokenType> = {
   async:      'KW_ASYNC',      // v0.8:   async fn — asynchronous function declaration
   await:      'KW_AWAIT',      // v0.8:   await expr — inside async functions
   enum:       'KW_ENUM',       // v0.9.5: enum Color = Red | Green | Blue
+  do:         'KW_DO',         // v0.9.9: do { } — block expression / async IIFE
   and:        'AND',           // keyword alias for &&
   or:         'OR',            // keyword alias for ||
   not:        'BANG',          // keyword alias for !
