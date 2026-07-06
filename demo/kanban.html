@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Kanban — Synth Demo</title>
+  <style>
+    :root {
+      --bg:      #0a0015;
+      --bg2:     #100020;
+      --bg3:     #180030;
+      --border:  rgba(180,60,255,0.2);
+      --text:    #e8d4ff;
+      --muted:   #7048a0;
+      --accent:  #c060ff;
+      --cyan:    #00e5ff;
+      --pink:    #ff2d78;
+      --gold:    #ffd166;
+      --green:   #06d6a0;
+      --red:     #ff4d6a;
+      --orange:  #ff8c42;
+      --dim:     #14002a;
+
+      --code-color:   #00e5ff;
+      --art-color:    #ff2d78;
+      --design-color: #ffd166;
+      --audio-color:  #c060ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    .site-header {
+      background: linear-gradient(180deg, rgba(180,60,255,0.08) 0%, var(--bg2) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .header-left { display: flex; align-items: center; gap: 0.9rem; }
+    .header-icon { font-size: 1.8rem; }
+    .header-title h1 { font-size: 1.3rem; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
+    .header-title p  { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .back-link {
+      font-size: 0.8rem; color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.35rem 0.8rem; transition: color 0.2s, border-color 0.2s;
+    }
+    .back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── Progress bar ────────────────────────────────────── */
+    .prog-wrap {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.7rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .prog-label { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .prog-track {
+      flex: 1;
+      height: 6px;
+      background: var(--dim);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    .prog-pct { font-size: 0.8rem; font-weight: 700; color: var(--cyan); min-width: 3rem; text-align: right; }
+
+    /* ── Filter bar ──────────────────────────────────────── */
+    .filter-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-label { font-size: 0.72rem; color: var(--muted); margin-right: 0.3rem; }
+    .filter-btn {
+      font-size: 0.78rem;
+      padding: 0.3rem 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .filter-btn:hover { color: var(--text); border-color: var(--accent); }
+    .filter-btn.active { background: rgba(192,96,255,0.15); color: var(--accent); border-color: var(--accent); }
+    .filter-btn.f-code   { --fc: var(--code-color); }
+    .filter-btn.f-art    { --fc: var(--art-color); }
+    .filter-btn.f-design { --fc: var(--design-color); }
+    .filter-btn.f-audio  { --fc: var(--audio-color); }
+    .filter-btn.f-code.active   { background: rgba(0,229,255,0.1);  color: var(--code-color);   border-color: var(--code-color); }
+    .filter-btn.f-art.active    { background: rgba(255,45,120,0.1); color: var(--art-color);    border-color: var(--art-color); }
+    .filter-btn.f-design.active { background: rgba(255,209,102,0.1); color: var(--design-color); border-color: var(--design-color); }
+    .filter-btn.f-audio.active  { background: rgba(192,96,255,0.1); color: var(--audio-color);  border-color: var(--audio-color); }
+
+    /* ── Board ───────────────────────────────────────────── */
+    .board {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      overflow-x: auto;
+      padding: 0;
+    }
+
+    .lane {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-width: 220px;
+    }
+    .lane:last-child { border-right: none; }
+
+    .lane-header {
+      padding: 0.9rem 1rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .lane-header h2 { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; }
+    .lane-pts { font-size: 0.7rem; color: var(--muted); }
+
+    .lane-backlog  .lane-header h2 { color: var(--muted); }
+    .lane-progress .lane-header h2 { color: var(--cyan); }
+    .lane-review   .lane-header h2 { color: var(--gold); }
+    .lane-done     .lane-header h2 { color: var(--green); }
+
+    .col-count {
+      display: inline-block;
+      background: rgba(192,96,255,0.15);
+      color: var(--accent);
+      border-radius: 10px;
+      padding: 0.05rem 0.45rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-left: 0.4rem;
+    }
+
+    .lane-cards {
+      flex: 1;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      overflow-y: auto;
+    }
+
+    .empty-col {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 2rem 0;
+      opacity: 0.5;
+    }
+
+    /* ── Cards ───────────────────────────────────────────── */
+    .kcard {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.7rem 0.75rem;
+      transition: border-color 0.18s, transform 0.15s, box-shadow 0.18s;
+      border-left: 3px solid var(--muted);
+    }
+    .kcard:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .kcard.type-code   { border-left-color: var(--code-color); }
+    .kcard.type-art    { border-left-color: var(--art-color); }
+    .kcard.type-design { border-left-color: var(--design-color); }
+    .kcard.type-audio  { border-left-color: var(--audio-color); }
+
+    .kcard-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.45rem;
+    }
+    .kcard-icon { font-size: 0.9rem; }
+    .kcard-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .kcard-badge.crit { background: rgba(255,77,106,0.15);  color: var(--red);    border: 1px solid rgba(255,77,106,0.3); }
+    .kcard-badge.high { background: rgba(255,140,66,0.13);  color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
+    .kcard-badge.med  { background: rgba(255,209,102,0.12); color: var(--gold);   border: 1px solid rgba(255,209,102,0.3); }
+    .kcard-badge.low  { background: rgba(100,100,180,0.12); color: #9090d0;       border: 1px solid rgba(100,100,180,0.2); }
+
+    .kcard-title {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.55rem;
+      line-height: 1.35;
+    }
+
+    .kcard-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kcard-pts { font-size: 0.7rem; color: var(--muted); }
+    .kcard-moves { display: flex; gap: 0.25rem; }
+
+    .mv-btn {
+      background: rgba(192,96,255,0.1);
+      border: 1px solid rgba(192,96,255,0.2);
+      color: var(--accent);
+      border-radius: 4px;
+      width: 22px;
+      height: 22px;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      padding: 0;
+    }
+    .mv-btn:hover { background: rgba(192,96,255,0.25); border-color: var(--accent); }
+    .mv-ph { display: inline-block; width: 22px; height: 22px; }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .synth-tag {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+    .synth-tag a { color: var(--accent); text-decoration: none; }
+    .synth-tag a:hover { text-decoration: underline; }
+
+    @media (max-width: 800px) {
+      .board { grid-template-columns: repeat(2, 1fr); }
+      .lane:nth-child(2) { border-right: none; }
+    }
+    @media (max-width: 500px) {
+      .board { grid-template-columns: 1fr; }
+      .lane { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-left">
+      <div class="header-icon">🎮</div>
+      <div class="header-title">
+        <h1>Neon Kanban</h1>
+        <p>Game-dev task board — Synth <code>store</code> · <code>match</code> · <code>@memo</code> · spread</p>
+      </div>
+    </div>
+    <a class="back-link" href="landing.html">← All Demos</a>
+  </header>
+
+  <div class="prog-wrap">
+    <span class="prog-label">Overall progress</span>
+    <div class="prog-track">
+      <div class="prog-fill" id="prog-bar-fill"></div>
+    </div>
+    <span class="prog-pct" id="done-pct">0%</span>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active"     onclick="setFilter('All')"    id="fb-All">All</button>
+    <button class="filter-btn f-code"     onclick="setFilter('code')"   id="fb-code">⚡ Code</button>
+    <button class="filter-btn f-art"      onclick="setFilter('art')"    id="fb-art">🎨 Art</button>
+    <button class="filter-btn f-design"   onclick="setFilter('design')" id="fb-design">📐 Design</button>
+    <button class="filter-btn f-audio"    onclick="setFilter('audio')"  id="fb-audio">🎵 Audio</button>
+  </div>
+
+  <div class="board">
+    <div class="lane lane-backlog">
+      <div class="lane-header">
+        <h2 id="hdr-backlog">Backlog</h2>
+        <span class="lane-pts" id="pts-backlog"></span>
+      </div>
+      <div class="lane-cards" id="col-backlog"></div>
+    </div>
+    <div class="lane lane-progress">
+      <div class="lane-header">
+        <h2 id="hdr-progress">In Progress</h2>
+        <span class="lane-pts" id="pts-progress"></span>
+      </div>
+      <div class="lane-cards" id="col-progress"></div>
+    </div>
+    <div class="lane lane-review">
+      <div class="lane-header">
+        <h2 id="hdr-review">Review</h2>
+        <span class="lane-pts" id="pts-review"></span>
+      </div>
+      <div class="lane-cards" id="col-review"></div>
+    </div>
+    <div class="lane lane-done">
+      <div class="lane-header">
+        <h2 id="hdr-done">✓ Done</h2>
+        <span class="lane-pts" id="pts-done"></span>
+      </div>
+      <div class="lane-cards" id="col-done"></div>
+    </div>
+  </div>
+
+  <div class="synth-tag">
+    Powered by <a href="https://synth-pl.github.io/synth/playground.html" target="_blank">Synth</a> —
+    view <a href="https://github.com/synth-pl/synth/blob/main/examples/kanban.syn" target="_blank">kanban.syn</a>
+  </div>
+
+  <script src="synth.stdlib.js"></script>
+  <script src="kanban.sources.js"></script>
+  <script>
+    const FILTERS = ['All', 'code', 'art', 'design', 'audio']
+
+    function setFilter(f) {
+      set_filter(f)
+      FILTERS.forEach(id => {
+        document.getElementById('fb-' + id)?.classList.toggle('active', id === f)
+      })
+    }
+  </script>
+</body>
+</html>

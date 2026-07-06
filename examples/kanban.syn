@@ -1,0 +1,161 @@
+// ── Neon Kanban — Synth Demo ─────────────────────────────────────────────────
+// Game-dev task board. Showcases: store · match · @memo · spread · stdlib methods
+
+let COLS = ["backlog", "progress", "review", "done"]
+
+let initial_cards = [
+  { id: 1,  title: "Procedural dungeon gen",  col: "backlog",  type: "code",   priority: "high",     pts: 8 },
+  { id: 2,  title: "Boss battle cutscene",    col: "backlog",  type: "art",    priority: "medium",   pts: 5 },
+  { id: 3,  title: "Leaderboard system",      col: "backlog",  type: "code",   priority: "medium",   pts: 4 },
+  { id: 4,  title: "Ambient sound pack",      col: "backlog",  type: "audio",  priority: "low",      pts: 3 },
+  { id: 5,  title: "Tutorial level design",   col: "backlog",  type: "design", priority: "high",     pts: 6 },
+  { id: 6,  title: "Player movement physics", col: "progress", type: "code",   priority: "critical", pts: 8 },
+  { id: 7,  title: "Main menu UI",            col: "progress", type: "art",    priority: "high",     pts: 5 },
+  { id: 8,  title: "Synthwave OST",           col: "progress", type: "audio",  priority: "high",     pts: 7 },
+  { id: 9,  title: "Level 2 tilemap",         col: "progress", type: "design", priority: "medium",   pts: 5 },
+  { id: 10, title: "Inventory system",        col: "review",   type: "code",   priority: "high",     pts: 6 },
+  { id: 11, title: "Character sprite sheet",  col: "review",   type: "art",    priority: "medium",   pts: 4 },
+  { id: 12, title: "Save / load system",      col: "review",   type: "code",   priority: "critical", pts: 7 },
+  { id: 13, title: "Core game loop",          col: "done",     type: "code",   priority: "critical", pts: 8 },
+  { id: 14, title: "Title screen",            col: "done",     type: "art",    priority: "high",     pts: 5 },
+  { id: 15, title: "SFX library",             col: "done",     type: "audio",  priority: "medium",   pts: 3 },
+  { id: 16, title: "World map layout",        col: "done",     type: "design", priority: "high",     pts: 6 },
+]
+
+store Board {
+  cards:  any[]  = initial_cards
+  filter: string = "All"
+}
+
+// ── Column helpers ─────────────────────────────────────────────────────────────
+
+fn col_index(col: string) -> int =
+  match col {
+    | "backlog"  => 0
+    | "progress" => 1
+    | "review"   => 2
+    | _          => 3
+  }
+
+fn col_label(col: string) -> string =
+  match col {
+    | "backlog"  => "Backlog"
+    | "progress" => "In Progress"
+    | "review"   => "Review"
+    | _          => "✓ Done"
+  }
+
+// ── Card label helpers ─────────────────────────────────────────────────────────
+
+@memo
+fn type_icon(t: string) -> string =
+  match t {
+    | "code"   => "⚡"
+    | "art"    => "🎨"
+    | "design" => "📐"
+    | "audio"  => "🎵"
+    | _        => "📋"
+  }
+
+@memo
+fn priority_cls(p: string) -> string =
+  match p {
+    | "critical" => "crit"
+    | "high"     => "high"
+    | "medium"   => "med"
+    | _          => "low"
+  }
+
+@memo
+fn priority_label(p: string) -> string =
+  match p {
+    | "critical" => "Critical"
+    | "high"     => "High"
+    | "medium"   => "Medium"
+    | _          => "Low"
+  }
+
+// ── Card movement ──────────────────────────────────────────────────────────────
+
+// Short-form fn returning a spread object — codegen wraps in parens automatically
+fn card_moved(c: any, new_col: string) = { ...c, col: new_col }
+
+fn updated_col(c: any, id: int, dir: int) -> any {
+  if c.id == id {
+    let ni = clamp(col_index(c.col) + dir, 0, 3)
+    card_moved(c, COLS[ni])
+  } else {
+    c
+  }
+}
+
+fn move_card(id: int, dir: int) {
+  Board.set({ cards: Board.cards.map(c => updated_col(c, id, dir)) })
+}
+
+fn set_filter(f: string) {
+  Board.set({ filter: f })
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────────
+
+// Separate helper avoids the and/or precedence issue when compiling to JS &&/||
+fn type_matches(c: any) -> bool =
+  Board.filter == "All" or c.type == Board.filter
+
+fn col_cards(col: string) -> any[] =
+  Board.cards.filter(c => c.col == col and type_matches(c))
+
+// ── HTML renderer ──────────────────────────────────────────────────────────────
+
+fn render_card(c: any) -> string {
+  let icon  = type_icon(c.type)
+  let pcls  = priority_cls(c.priority)
+  let plbl  = priority_label(c.priority)
+  let ci    = col_index(c.col)
+  let btn_l = ci > 0
+    ? "<button class=\"mv-btn\" onclick=\"move_card(" + c.id + ",-1)\">‹</button>"
+    : "<span class=\"mv-ph\"></span>"
+  let btn_r = ci < 3
+    ? "<button class=\"mv-btn\" onclick=\"move_card(" + c.id + ",1)\">›</button>"
+    : "<span class=\"mv-ph\"></span>"
+  "<div class=\"kcard type-" + c.type + "\">" +
+    "<div class=\"kcard-head\">" +
+      "<span class=\"kcard-icon\">" + icon + "</span>" +
+      "<span class=\"kcard-badge " + pcls + "\">" + plbl + "</span>" +
+    "</div>" +
+    "<div class=\"kcard-title\">" + c.title + "</div>" +
+    "<div class=\"kcard-foot\">" +
+      "<span class=\"kcard-pts\">" + c.pts + " pts</span>" +
+      "<div class=\"kcard-moves\">" + btn_l + btn_r + "</div>" +
+    "</div>" +
+  "</div>"
+}
+
+fn render_col(col: string) {
+  let cards = col_cards(col)
+  let n     = cards.count()
+  let pts   = cards.sum_by(c => c.pts)
+  let parts = cards.map(c => render_card(c))
+  let html  = parts.join("")
+  document.getElementById("col-" + col).innerHTML =
+    html == "" ? "<div class=\"empty-col\">— empty —</div>" : html
+  document.getElementById("hdr-" + col).innerHTML =
+    col_label(col) + " <span class=\"col-count\">" + n + "</span>"
+  document.getElementById("pts-" + col).textContent = pts + " pts"
+}
+
+fn render() {
+  render_col("backlog")
+  render_col("progress")
+  render_col("review")
+  render_col("done")
+  let done_cards = Board.cards.filter(c => c.col == "done")
+  let done_n     = done_cards.count()
+  let total_n    = Board.cards.count()
+  let pct        = total_n > 0 ? floor(done_n * 100 / total_n) : 0
+  document.getElementById("done-pct").textContent = pct + "%"
+  document.getElementById("prog-bar-fill").style.width = pct + "%"
+}
+
+on Board.change { render() }
