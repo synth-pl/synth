@@ -1,7 +1,7 @@
 const { Lexer } = require('../dist/lexer.js');
 const { Parser } = require('../dist/parser.js');
 const { Codegen } = require('../dist/codegen.js');
-const stdlib = require('../dist/stdlib.js');
+const { AXON_STDLIB } = require('../dist/stdlib.js');
 const vm = require('vm');
 
 function test(name, src) {
@@ -11,8 +11,9 @@ function test(name, src) {
     return false;
   }
   const js = new Codegen().generate(ast);
-  const ctx = { console: { log: (...a) => {}, error: () => {}, warn: () => {} }, ...stdlib };
+  const ctx = { console: { log: (...a) => {}, error: () => {}, warn: () => {} } };
   vm.createContext(ctx);
+  vm.runInContext(AXON_STDLIB, ctx);
   try {
     vm.runInContext(js, ctx);
     console.log(`PASS [${name}]`);

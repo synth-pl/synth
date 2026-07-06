@@ -1547,9 +1547,10 @@ function runCode() {
   }
 
   try {
+    const execJs = (AxonCompiler.stdlib || '') + lastJs
     const fn = new Function('console', 'Math', 'JSON', 'Array', 'Object', 'Map', 'Set',
       'String', 'Number', 'Boolean', 'Promise', 'parseInt', 'parseFloat', 'isNaN',
-      lastJs
+      execJs
     )
     const returnVal = fn(fakeConsole, Math, JSON, Array, Object, Map, Set,
       String, Number, Boolean, Promise, parseInt, parseFloat, isNaN

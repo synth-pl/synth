@@ -109,7 +109,7 @@ const bundle = `// Axon v0.9.5 — Browser compiler bundle
     }
   }
 
-  global.AxonCompiler = { compile, check, version: "0.9.5" }
+  global.AxonCompiler = { compile, check, version: "0.9.5", stdlib: AXON_STDLIB }
 
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);
 `
@@ -117,3 +117,14 @@ const bundle = `// Axon v0.9.5 — Browser compiler bundle
 fs.writeFileSync(OUT, bundle, 'utf8')
 const lines = bundle.split('\n').length
 console.log(`✓ axon.compiler.js  ${lines} lines  →  demo/axon.compiler.js`)
+
+// ── Also write a standalone stdlib file ────────────────────────────────────
+const { AXON_STDLIB } = require('../dist/stdlib.js')
+const stdlibOut = path.join(ROOT, 'demo', 'axon.stdlib.js')
+const stdlibBundle = `// axon.stdlib.js — Axon standard library (prebuilt, load once)
+// All functions are declared in the global scope.
+// Load this before any compiled Axon output when using emitStdlib: false.
+${AXON_STDLIB}`
+fs.writeFileSync(stdlibOut, stdlibBundle, 'utf8')
+const stdlibLines = stdlibBundle.split('\n').length
+console.log(`✓ axon.stdlib.js    ${stdlibLines} lines  →  demo/axon.stdlib.js`)

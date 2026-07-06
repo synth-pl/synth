@@ -1983,7 +1983,7 @@ class Codegen {
         // v0.4: track known union variant names for tag pattern matching
         this.unionVariants = new Map();
     }
-    generate(program, emitStdlib = true) {
+    generate(program, emitStdlib = false) {
         // Pre-pass: collect constrained types and tagged union variants
         for (const decl of program.body) {
             if (decl.kind === 'TypeAlias' && decl.constraint) {
@@ -3173,6 +3173,6 @@ class Checker {
     }
   }
 
-  global.AxonCompiler = { compile, check, version: "0.9.5" }
+  global.AxonCompiler = { compile, check, version: "0.9.5", stdlib: AXON_STDLIB }
 
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);

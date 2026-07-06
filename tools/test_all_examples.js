@@ -1,7 +1,7 @@
 const { Lexer } = require('../dist/lexer.js')
 const { Parser } = require('../dist/parser.js')
 const { Codegen } = require('../dist/codegen.js')
-const stdlib = require('../dist/stdlib.js')
+const { AXON_STDLIB } = require('../dist/stdlib.js')
 const vm = require('vm')
 
 const examples = {
@@ -148,8 +148,9 @@ for (const [name, src] of Object.entries(examples)) {
       failed++; continue
     }
     const js = new Codegen().generate(ast)
-    const ctx = { console: { log: () => {}, error: () => {}, warn: () => {} }, setTimeout: () => {}, Promise, ...stdlib }
+    const ctx = { console: { log: () => {}, error: () => {}, warn: () => {} }, setTimeout: () => {}, Promise }
     vm.createContext(ctx)
+    vm.runInContext(AXON_STDLIB, ctx)
     vm.runInContext(js, ctx)
     console.log(`PASS           [${name}]`)
     passed++

@@ -25,7 +25,7 @@ export class Codegen {
   // v0.4: track known union variant names for tag pattern matching
   private unionVariants: Map<string, string[]> = new Map()
 
-  generate(program: Program, emitStdlib = true): string {
+  generate(program: Program, emitStdlib = false): string {
     // Pre-pass: collect constrained types and tagged union variants
     for (const decl of program.body) {
       if (decl.kind === 'TypeAlias' && decl.constraint) {
