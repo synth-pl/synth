@@ -428,7 +428,7 @@
 <header class="page-header">
   <div class="header-logo">⬡</div>
   <div class="header-title">Synth Playground</div>
-  <div class="header-badge">v0.9.8</div>
+  <div class="header-badge" id="compiler-badge" title="Active compiler backend">TS</div>
   <div class="header-sep"></div>
   <label class="header-example-label" for="example-select">Examples:</label>
   <select class="header-examples" id="example-select" onchange="loadExample(this.value)">
@@ -450,6 +450,7 @@
     <option value="while">While Loops</option>
     <option value="multilambda">Recipe Difficulty Ranker</option>
   </select>
+  <a class="header-nav" id="compiler-toggle" href="playground.html">self-host</a>
   <a class="header-nav" href="landing.html">← Synth</a>
 </header>
 
@@ -499,8 +500,16 @@
   </div>
 </div>
 
-<!-- ── Compiler bundle ───────────────────────────────────────────────────────── -->
-<script src="synth.compiler.js?v=1.0.0-f46cb5b"></script>
+<!-- ── Compiler bundle (TS default; ?compiler=synth for self-hosted) ─────────── -->
+<script>
+(function () {
+  const useSynth = new URLSearchParams(location.search).get('compiler') === 'synth'
+  window.__SYNTH_USE_SELF_HOST__ = useSynth
+  document.write(
+    '<script src="' + (useSynth ? 'compiler.synth.js' : 'synth.compiler.js?v=1.0.0-f46cb5b') + '"><\/script>'
+  )
+})()
+</script>
 
 <script>
 // ── Example snippets ─────────────────────────────────────────────────────────
@@ -1422,6 +1431,33 @@ const jsOutput  = document.getElementById('js-output')
 const resultOut = document.getElementById('result-output')
 const statusPill = document.getElementById('status-pill')
 const lineCol   = document.getElementById('line-col')
+const compilerBadge = document.getElementById('compiler-badge')
+
+const compilerBackend = (window.SynthCompiler && window.SynthCompiler.backend)
+  || (window.__SYNTH_USE_SELF_HOST__ ? 'synth' : 'typescript')
+if (compilerBadge) {
+  if (compilerBackend === 'synth') {
+    compilerBadge.textContent = 'self-host'
+    compilerBadge.title = 'Self-hosted Synth compiler (experimental). Remove ?compiler=synth for the TS reference compiler.'
+    compilerBadge.style.borderColor = 'rgba(0,229,160,0.5)'
+    compilerBadge.style.color = 'var(--green)'
+  } else {
+    compilerBadge.textContent = 'TS v1.0'
+    compilerBadge.title = 'TypeScript reference compiler. Add ?compiler=synth to try the self-hosted build.'
+  }
+}
+const compilerToggle = document.getElementById('compiler-toggle')
+if (compilerToggle) {
+  if (compilerBackend === 'synth') {
+    compilerToggle.textContent = '← TS compiler'
+    compilerToggle.href = 'playground.html'
+    compilerToggle.title = 'Switch back to the TypeScript reference compiler'
+  } else {
+    compilerToggle.textContent = 'self-host'
+    compilerToggle.href = 'playground.html?compiler=synth'
+    compilerToggle.title = 'Try the self-hosted Synth compiler (experimental)'
+  }
+}
 
 function updateEditorHl() {
   // Trailing newline + space ensures the last empty line has proper height

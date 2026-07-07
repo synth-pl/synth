@@ -470,6 +470,62 @@ function testSynthCheckerVsGoldens() {
   return failed
 }
 
+function testSynthDriverCompile() {
+  if (!fs.existsSync(SYNTH_BUNDLE)) {
+    console.log('skip Synth driver (no dist/compiler.synth.js — run npm run build:compiler)')
+    return false
+  }
+
+  let synth
+  try {
+    synth = loadSynthBundle(SYNTH_BUNDLE)
+  } catch (err) {
+    console.error('FAIL loading Synth compiler bundle:', err.message)
+    return true
+  }
+
+  if (typeof synth.compile !== 'function') {
+    console.error('FAIL Synth bundle: export compile not found')
+    return true
+  }
+
+  const fixtures = fs.readdirSync(FIXTURES_DIR)
+    .filter(f => f.endsWith('.syn'))
+    .sort()
+
+  let failed = false
+  for (const file of fixtures) {
+    const name = path.basename(file, '.syn')
+    const src = fs.readFileSync(path.join(FIXTURES_DIR, file), 'utf8')
+    try {
+      const result = synth.compile(src)
+      if (!result || typeof result.js !== 'string') {
+        failed = true
+        console.error(`FAIL Synth driver compile(${name}): missing js string`)
+        continue
+      }
+      if (!Array.isArray(result.warnings)) {
+        failed = true
+        console.error(`FAIL Synth driver compile(${name}): warnings is not an array`)
+        continue
+      }
+      const expected = loadJsGolden(name)
+      const diffs = diffText(expected, result.js, `driver:${name}`)
+      if (diffs.length > 0) {
+        failed = true
+        console.error(`FAIL Synth driver compile vs golden: ${name}`)
+        for (const e of diffs) console.error('  ', e)
+      } else {
+        console.log(`ok  Synth driver compile: ${name}`)
+      }
+    } catch (err) {
+      failed = true
+      console.error(`FAIL Synth driver compile(${name}):`, err.message)
+    }
+  }
+  return failed
+}
+
 function testSynthAstConstructors() {
   const { execSync } = require('child_process')
   const cli = path.join(__dirname, '..', 'dist', 'cli.js')
@@ -499,6 +555,7 @@ function main() {
   failed = testSynthCodegenVsGoldens() || failed
   failed = testTsCheckerVsGoldens() || failed
   failed = testSynthCheckerVsGoldens() || failed
+  failed = testSynthDriverCompile() || failed
   failed = testSynthAstConstructors() || failed
   if (failed) process.exit(1)
   console.log('compiler parity: all checks passed')
