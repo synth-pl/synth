@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────
-// The Bazaar — Item type system (v0.7 type system demo)
+// The Bazaar — Item type system demo
 // Demonstrates: interfaces, generic records, fn(T)->U types,
 //               generic filter/sort/map, let infer
 // ──────────────────────────────────────────────────────────────
@@ -145,8 +145,7 @@ fn search_items(items: Item[], query: string) -> Item[] {
 // ── Item describe ─────────────────────────────────────────────
 
 fn describe_item(item: Item) -> string =
-  category_icon(item.category) + " " + item.name +
-  " [" + item.rarity + "] — " + item.price + "g"
+  `${category_icon(item.category)} ${item.name} [${item.rarity}] — ${item.price}g`
 
 // ── Cart total ────────────────────────────────────────────────
 

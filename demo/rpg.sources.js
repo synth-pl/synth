@@ -1603,7 +1603,7 @@ Statistically, it could go either way.`
       rosterRow.appendChild(card);
 });
     root.appendChild(rosterRow);
-    let info = el("div", { class: "title-info" }, el("div", { class: "dim" }, "Three heroes  ·  50 battles  ·  5 chapters  ·  4 tiers of gear"), el("div", { class: "dim" }, "All game logic written in Synth v0.4, transpiled to JavaScript."));
+    let info = el("div", { class: "title-info" }, el("div", { class: "dim" }, "Three heroes  ·  50 battles  ·  5 chapters  ·  4 tiers of gear"), el("div", { class: "dim" }, "All game logic written in Synth v1.0, transpiled to JavaScript."));
     root.appendChild(info);
     let startBtn = el("button", { class: "btn-primary" }, "BEGIN ADVENTURE");
     startBtn.addEventListener("click", () => {

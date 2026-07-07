@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.5.0 — dungeon/renderer.syn
-// HTML renderer for dungeon maps.
+// dungeon/renderer.syn — HTML renderer for dungeon maps.
 // Converts a DungeonMap into HTML strings for display in the browser.
+// v1.0: template literals for all HTML fragments.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DungeonMap } from "./generator"
@@ -28,28 +28,23 @@ export fn render_map(map: DungeonMap) -> string {
   grid.forEach(row => {
     let cells = ""
     row.forEach(tile => {
-      let cls   = tile_class(tile.tag)
-      let glyph = tile_glyph(tile.tag)
-      cells = cells + "<span class=\"tile " + cls + "\">" + glyph + "</span>"
+      cells = cells + `<span class="tile ${tile_class(tile.tag)}">${tile_glyph(tile.tag)}</span>`
     })
-    lines.push("<div class=\"map-row\">" + cells + "</div>")
+    lines.push(`<div class="map-row">${cells}</div>`)
   })
 
-  "<div class=\"dungeon-map\">" + lines.join("") + "</div>"
+  `<div class="dungeon-map">${lines.join("")}</div>`
 }
 
 // Build a legend entry HTML fragment
-fn legend_entry(tag: string) -> string {
-  let cls   = tile_class(tag)
-  let glyph = tile_glyph(tag)
-  "<div class=\"legend-entry\"><span class=\"tile " + cls + "\">" + glyph + "</span><span class=\"legend-label\">" + tag + "</span></div>"
-}
+fn legend_entry(tag: string) -> string =
+  `<div class="legend-entry"><span class="tile ${tile_class(tag)}">${tile_glyph(tag)}</span><span class="legend-label">${tag}</span></div>`
 
 // Build the full legend HTML
 export fn render_legend() -> string {
   let tags    = ["Floor", "Wall", "Door", "Stairs", "Chest", "Water", "Torch"]
   let entries = tags.map(t => legend_entry(t))
-  "<div class=\"map-legend\">" + entries.join("") + "</div>"
+  `<div class="map-legend">${entries.join("")}</div>`
 }
 
 // Render a stats bar about the generated map
@@ -63,11 +58,11 @@ export fn render_stats(map: DungeonMap, seed: int) -> string {
     if cell.tag != "Floor" && cell.tag != "Wall"   { specials = specials + 1 }
   }))
 
-  "<div class=\"map-stats\">" +
-    "<span>Level <strong>" + map.level + "</strong></span>" +
-    "<span>Seed <strong>" + seed + "</strong></span>" +
-    "<span>Size <strong>" + map.cols + "×" + map.rows + "</strong></span>" +
-    "<span>Floors <strong>" + floors + "</strong></span>" +
-    "<span>Special <strong>" + specials + "</strong></span>" +
-  "</div>"
+  `<div class="map-stats">
+    <span>Level <strong>${map.level}</strong></span>
+    <span>Seed <strong>${seed}</strong></span>
+    <span>Size <strong>${map.cols}×${map.rows}</strong></span>
+    <span>Floors <strong>${floors}</strong></span>
+    <span>Special <strong>${specials}</strong></span>
+  </div>`
 }

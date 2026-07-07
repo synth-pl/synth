@@ -1,29 +1,22 @@
 /** @typedef {string} NonEmptyString */
 /** @param {string} v @returns {boolean} */
 const __validate_NonEmptyString = (v) => v.length > 0;
-
 /** @typedef {string} EmailAddress */
 /** @param {string} v @returns {boolean} */
 const __validate_EmailAddress = (v) => __synth_presets.email.test(v);
-
 /** @typedef {number} PositiveInt */
 /** @param {number} v @returns {boolean} */
 const __validate_PositiveInt = (v) => v > 0;
-
 /** @typedef {number} Score */
 /** @param {number} v @returns {boolean} */
 const __validate_Score = (v) => (v >= 0) && (v <= 100);
-
 /** @typedef {number} BoundedCount */
 /** @param {number} v @returns {boolean} */
 const __validate_BoundedCount = (v) => (v >= -10) && (v <= 10);
-
 /** @typedef {string} CSSClass */
 /** @param {string} v @returns {boolean} */
 const __validate_CSSClass = (v) => v.length > 0;
-
 /** @typedef {string} ThemeName */
-
 /** @typedef {string} SlugString */
 /** @param {string} v @returns {boolean} */
 const __validate_SlugString = (v) => __synth_presets.slug.test(v);
@@ -60,23 +53,11 @@ const ModalState = (open, title, body) => ({ open, title, body });
  */
 const Player = (name, score, active) => ({ name, score, active });
 
-const counter_make = (min, max, initial) => ({
-  count: synth_max(Math, synth_min, synth_min(Math, synth_max, initial)),
-  min: synth_min,
-  max: synth_max
-});
+const counter_make = (min, max, initial) => ({ count: $clamp(initial, $min, $max), min, max });
 
-const counter_inc = (state) => ({
-  count: synth_min(Math, state.count + 1, state.max),
-  min: state.min,
-  max: state.max
-});
+const counter_inc = (state) => ({ ...state, count: $min(Math, state.count + 1, state.max) });
 
-const counter_dec = (state) => ({
-  count: synth_max(Math, state.count - 1, state.min),
-  min: state.min,
-  max: state.max
-});
+const counter_dec = (state) => ({ ...state, count: $max(Math, state.count - 1, state.min) });
 
 const counter_can_inc = (state) => state.count < state.max;
 
@@ -126,9 +107,9 @@ const theme_next = (current, available) => available[(available.indexOf(current)
  */
 const theme_label = (name) => ((_m) => (_m === "light") ? "Light" : (_m === "dark") ? "Dark" : (_m === "synthwave") ? "Synthwave" : name)(name);
 
-const modal_open = (title, body) => ({ open: true, title: title, body: body });
+const modal_open = (title, body) => ({ open: true, title, body });
 
-const modal_close = (state) => ({ open: false, title: state.title, body: state.body });
+const modal_close = (state) => ({ ...state, open: false });
 
 /**
  * Format a welcome message — params are auto-validated at the boundary
@@ -165,7 +146,7 @@ const format_score = (label, value) => {
  * @param {CounterState[]} states
  * @returns {number}
  */
-const counter_history_total = (states) => sum(synth_map(states, __x => __x.count));
+const counter_history_total = (states) => $sum($map(states, __x => __x.count));
 
 /**
  * Get names of all active players
@@ -174,7 +155,7 @@ const counter_history_total = (states) => sum(synth_map(states, __x => __x.count
  * @param {Player[]} players
  * @returns {string}
  */
-const top_players = (players) => synth_map(synth_filter(players, __x => __x.active), __x => __x.name);
+const top_players = (players) => $map($filter(players, __x => __x.active), __x => __x.name);
 
 /**
  * Sum all player scores
@@ -183,7 +164,7 @@ const top_players = (players) => synth_map(synth_filter(players, __x => __x.acti
  * @param {Player[]} players
  * @returns {number}
  */
-const total_score = (players) => sum(synth_map(players, __x => __x.score));
+const total_score = (players) => $sum($map(players, __x => __x.score));
 
 /**
  * Classic recursive Fibonacci — automatically memoized by @memo
@@ -232,7 +213,7 @@ const triangle_number = (() => {
  * @param {string} emails
  * @returns {ValidationResult[]}
  */
-const validate_email_batch = (emails) => synth_map(emails, validate_email);
+const validate_email_batch = (emails) => $map(emails, validate_email);
 
 /**
  * Count how many emails in a list pass validation
@@ -241,7 +222,7 @@ const validate_email_batch = (emails) => synth_map(emails, validate_email);
  * @param {string} emails
  * @returns {number}
  */
-const count_valid_emails = (emails) => count(synth_filter(emails, is_valid_email));
+const count_valid_emails = (emails) => $count($filter(emails, is_valid_email));
 
 /**
  * Return the first invalid email, or empty string if all pass
@@ -250,10 +231,7 @@ const count_valid_emails = (emails) => count(synth_filter(emails, is_valid_email
  * @param {string} emails
  * @returns {string}
  */
-const first_invalid_email = (emails) => {
-  let invalid = synth_filter(emails, e => !is_valid_email(e));
-  return invalid.length > 0 ? synth_first(invalid) : "";
-};
+const first_invalid_email = (emails) => $find(emails, e => !is_valid_email(e)) ?? "";
 
 /**
  * Map theme names to their display labels
@@ -262,7 +240,7 @@ const first_invalid_email = (emails) => {
  * @param {string} themes
  * @returns {string}
  */
-const theme_options = (themes) => synth_map(themes, theme_label);
+const theme_options = (themes) => $map(themes, theme_label);
 
 /**
  * True if any counter state has reached its maximum value
@@ -271,7 +249,7 @@ const theme_options = (themes) => synth_map(themes, theme_label);
  * @param {CounterState[]} states
  * @returns {boolean}
  */
-const any_at_max = (states) => synth_any(states, s => s.count === s.max);
+const any_at_max = (states) => $any(states, s => s.count === s.max);
 
 /**
  * Validate email with debug logging — intentionally impure to demo checker
@@ -319,7 +297,7 @@ const el = (tag, attrs, ...children) => {
       return e.setAttribute(k, String(v));
     }
 });
-  synth_flat(children).forEach((child) => {
+  $flat(children).forEach((child) => {
     if (typeof child === "string") {
       return e.appendChild(document.createTextNode(child));
     } else if (child instanceof Node) {

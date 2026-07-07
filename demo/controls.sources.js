@@ -9,17 +9,9 @@ const CounterState = (count, min, max) => ({ count, min, max });
 const ValidationResult = (valid, message, value) => ({ valid, message, value });
 const ModalState = (open, title, body) => ({ open, title, body });
 const Player = (name, score, active) => ({ name, score, active });
-const counter_make = (min, max, initial) => ({ count: $max(Math, $min, $min(Math, $max, initial)), min: $min, max: $max });
-const counter_inc = (state) => ({
-  count: $min(Math, state.count + 1, state.max),
-  min: state.min,
-  max: state.max
-});
-const counter_dec = (state) => ({
-  count: $max(Math, state.count - 1, state.min),
-  min: state.min,
-  max: state.max
-});
+const counter_make = (min, max, initial) => ({ count: $clamp(initial, $min, $max), min, max });
+const counter_inc = (state) => ({ ...state, count: $min(Math, state.count + 1, state.max) });
+const counter_dec = (state) => ({ ...state, count: $max(Math, state.count - 1, state.min) });
 const counter_can_inc = (state) => state.count < state.max;
 const counter_can_dec = (state) => state.count > state.min;
 const counter_display = (state) => {
@@ -35,8 +27,8 @@ const toggle_css_class = (state, baseClass) => state ? `${baseClass} ${baseClass
 const theme_class = (name) => `theme-${name}`;
 const theme_next = (current, available) => available[(available.indexOf(current) + 1) % available.length];
 const theme_label = (name) => ((_m) => (_m === "light") ? "Light" : (_m === "dark") ? "Dark" : (_m === "synthwave") ? "Synthwave" : name)(name);
-const modal_open = (title, body) => ({ open: true, title: title, body: body });
-const modal_close = (state) => ({ open: false, title: state.title, body: state.body });
+const modal_open = (title, body) => ({ open: true, title, body });
+const modal_close = (state) => ({ ...state, open: false });
 const send_welcome = (email, name) => {
   if (!__validate_EmailAddress(email)) throw new Error(`SynthConstraintError: email violates EmailAddress constraint (got ${JSON.stringify(email)})`);
   if (!__validate_NonEmptyString(name)) throw new Error(`SynthConstraintError: name violates NonEmptyString constraint (got ${JSON.stringify(name)})`);
@@ -76,10 +68,7 @@ const triangle_number = (() => {
 })();
 const validate_email_batch = (emails) => $map(emails, validate_email);
 const count_valid_emails = (emails) => $count($filter(emails, is_valid_email));
-const first_invalid_email = (emails) => {
-  let invalid = $filter(emails, e => !is_valid_email(e));
-  return invalid.length > 0 ? $first(invalid) : "";
-};
+const first_invalid_email = (emails) => $find(emails, e => !is_valid_email(e)) ?? "";
 const theme_options = (themes) => $map(themes, theme_label);
 const any_at_max = (states) => $any(states, s => s.count === s.max);
 const debug_validate = (email) => {

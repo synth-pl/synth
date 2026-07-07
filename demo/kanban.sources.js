@@ -132,8 +132,8 @@ const Board = (() => {
 const type_icon = (t) => ((_m) => (_m === "code") ? "⚡" : (_m === "art") ? "🎨" : (_m === "design") ? "📐" : (_m === "audio") ? "🎵" : "📋")(t);
 const priority_cls = (p) => ((_m) => (_m === "critical") ? "crit" : (_m === "high") ? "high" : (_m === "medium") ? "med" : "low")(p);
 const priority_label = (p) => ((_m) => (_m === "critical") ? "Critical" : (_m === "high") ? "High" : (_m === "medium") ? "Medium" : "Low")(p);
-const add_card = (col, title, kind, priority, pts) => {
-  let new_card = { id: Board.next_id, title, col, type: kind, priority, pts };
+const add_card = (col, title, type, priority, pts) => {
+  let new_card = { id: Board.next_id, title, col, type, priority, pts };
   return Board.set({ cards: [...Board.cards, new_card], next_id: Board.next_id + 1 });
 };
 const add_col = (id, label) => {
@@ -142,8 +142,7 @@ const add_col = (id, label) => {
 };
 const remove_card = (id) => Board.set({ cards: $filter(Board.cards, c => c.id != id) });
 const set_filter = (f) => Board.set({ filter: f });
-const type_matches = (c) => Board.filter == "All" || c.type == Board.filter;
-const col_cards = (col) => $filter(Board.cards, c => c.col == col && type_matches(c));
+const col_cards = (col) => $filter(Board.cards, c => c.col == col && (Board.filter == "All" || c.type == Board.filter));
 const render_card = (c) => {
   let icon = type_icon(c.type);
   let pcls = priority_cls(c.priority);
@@ -192,8 +191,8 @@ const render = () => {
   let done_n = $count(done_cards);
   let total_n = $count(Board.cards);
   let pct = total_n > 0 ? $floor(done_n * 100 / total_n) : 0;
-  document.getElementById("done-pct").textContent = pct + "%";
-  return document.getElementById("prog-bar-fill").style.width = pct + "%";
+  document.getElementById("done-pct").textContent = `${pct}%`;
+  return document.getElementById("prog-bar-fill").style.width = `${pct}%`;
 };
 Board.subscribe(() => {
   render();

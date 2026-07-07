@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Synth v0.3.0 — Synthwave Music Library
+// Synth v1.0 — Synthwave Music Library
 //
 // Every feature from v0.1 through v0.3, demonstrated in one coherent app:
 //
@@ -232,8 +232,8 @@ fn any_featured :: (tracks: Track[]) -> bool {
 fn top_by_bpm :: (tracks: Track[], n: int) -> Track[] {
   @pure @total
   @intent "Return the top n tracks by BPM descending"
-  let sorted = tracks.slice().sort((a, b) => b.bpm - a.bpm)
-  sorted.slice(0, n)
+  // v1.0: sort_by_desc + take — copies instead of mutating, no checker warning
+  tracks |> sort_by_desc(.bpm) |> take(n)
 }
 
 // @pure checker demo: intentionally impure function warns at compile time
@@ -349,8 +349,9 @@ fn render_add_form :: (container: Element, onAdd: any) -> void {
   let _ = addBtn.addEventListener("click", () => {
     let title  = titleIn.value
     let artist = artistIn.value
-    let bpm    = parseInt(bpmIn.value)
-    let dur    = parseInt(durIn.value)
+    // v1.0: parse_int returns null on invalid input — ?? 0 makes bad input fail validation
+    let bpm    = parse_int(bpmIn.value) ?? 0
+    let dur    = parse_int(durIn.value) ?? 0
     let genre  = genreIn.value.length > 0 ? genreIn.value : "other"
     let err    = validate_track_input(title, artist, bpm, dur)
     if (err.length > 0) {
@@ -388,7 +389,7 @@ fn render_add_form :: (container: Element, onAdd: any) -> void {
 
 // ── Main library renderer ─────────────────────────────────────────────────────
 
-fn render_library :: (rootId: string, initialTracks: any[]) -> void {
+fn render_library :: (rootId: string, initialTracks: Track[]) -> void {
   @effects [dom.write, dom.events, state.mutable]
   @intent "Bootstrap and mount the full music library UI into a root container"
   let tracks      = initialTracks.slice()

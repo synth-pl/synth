@@ -59,6 +59,10 @@ const __synth_presets = {
   slug:    /^[a-z0-9-]+$/,
   hex:     /^#?[0-9a-fA-F]{3,8}$/,
 };
+const $find = (xs, pred) => xs.find(pred);
+const $find_index = (xs, pred) => xs.findIndex(pred);
+const $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };
+const $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
 const $ok = (value) => ({ tag: 'Ok', value });
 const $err = (message) => ({ tag: 'Err', message });
 const $is_ok = (r) => r != null && r.tag === 'Ok';
@@ -419,23 +423,17 @@ const render_map = (map) => {
   grid.forEach((row) => {
     let cells = "";
     row.forEach((tile) => {
-      let cls = tile_class(tile.tag);
-      let glyph = tile_glyph(tile.tag);
-      return cells = cells + "<span class=\"tile " + cls + "\">" + glyph + "</span>";
+      return cells = cells + `<span class="tile ${tile_class(tile.tag)}">${tile_glyph(tile.tag)}</span>`;
 });
-    return lines.push("<div class=\"map-row\">" + cells + "</div>");
+    return lines.push(`<div class="map-row">${cells}</div>`);
 });
-  return "<div class=\"dungeon-map\">" + lines.join("") + "</div>";
+  return `<div class="dungeon-map">${lines.join("")}</div>`;
 };
-const legend_entry = (tag) => {
-  let cls = tile_class(tag);
-  let glyph = tile_glyph(tag);
-  return "<div class=\"legend-entry\"><span class=\"tile " + cls + "\">" + glyph + "</span><span class=\"legend-label\">" + tag + "</span></div>";
-};
+const legend_entry = (tag) => `<div class="legend-entry"><span class="tile ${tile_class(tag)}">${tile_glyph(tag)}</span><span class="legend-label">${tag}</span></div>`;
 const render_legend = () => {
   let tags = ["Floor", "Wall", "Door", "Stairs", "Chest", "Water", "Torch"];
   let entries = $map(tags, t => legend_entry(t));
-  return "<div class=\"map-legend\">" + entries.join("") + "</div>";
+  return `<div class="map-legend">${entries.join("")}</div>`;
 };
 const render_stats = (map, seed) => {
   let grid = JSON.parse($map.grid);
@@ -449,28 +447,34 @@ const render_stats = (map, seed) => {
       return specials = specials + 1;
     }
 }));
-  return "<div class=\"map-stats\">" + "<span>Level <strong>" + $map.level + "</strong></span>" + "<span>Seed <strong>" + seed + "</strong></span>" + "<span>Size <strong>" + $map.cols + "×" + $map.rows + "</strong></span>" + "<span>Floors <strong>" + floors + "</strong></span>" + "<span>Special <strong>" + specials + "</strong></span>" + "</div>";
+  return `<div class="map-stats">
+    <span>Level <strong>${$map.level}</strong></span>
+    <span>Seed <strong>${seed}</strong></span>
+    <span>Size <strong>${$map.cols}×${$map.rows}</strong></span>
+    <span>Floors <strong>${floors}</strong></span>
+    <span>Special <strong>${specials}</strong></span>
+  </div>`;
 };
 
 const DungeonConfig = (level, seed) => ({ level, seed });
 const parse_level = (s) => {
-  let n = parseInt(s);
-  if (isNaN(n)) {
-    $err("Level must be a number — got: \"" + s + "\"");
+  let n = $parse_int(s);
+  if (n == null) {
+    return $err(`Level must be a number — got: "${s}"`);
   }
   if (n < 1) {
-    $err("Level must be at least 1 — got: " + n);
+    return $err(`Level must be at least 1 — got: ${n}`);
   }
   if (n > 10) {
-    $err("Level must be 10 or less — got: " + n);
+    return $err(`Level must be 10 or less — got: ${n}`);
   }
   // refine n: "a dungeon level in [1, 10]"
   return $ok(n);
 };
 const parse_seed = (s) => {
-  let n = parseInt(s);
-  if (isNaN(n)) {
-    $err("Seed must be a number — got: \"" + s + "\"");
+  let n = $parse_int(s);
+  if (n == null) {
+    return $err(`Seed must be a number — got: "${s}"`);
   }
   let seed = Math.abs(n) % 2147483648;
   // refine seed: "a non-negative dungeon seed in [0, 2^31)"
@@ -479,11 +483,11 @@ const parse_seed = (s) => {
 const parse_config = (input) => {
   let trimmed = $trim(input);
   if (trimmed.length == 0) {
-    $err("Enter a code in the format level:seed — e.g. 3:42");
+    return $err("Enter a code in the format level:seed — e.g. 3:42");
   }
   let parts = $split(trimmed, ":");
   if (parts.length < 2) {
-    $err("Format is level:seed — e.g. 3:42");
+    return $err("Format is level:seed — e.g. 3:42");
   }
   const _r0 = parse_level($trim(parts[0]));
   if (_r0.tag === 'Err') return _r0;
@@ -491,9 +495,9 @@ const parse_config = (input) => {
   const _r1 = parse_seed($trim(parts[1]));
   if (_r1.tag === 'Err') return _r1;
   let seed = _r1.value;
-  return $ok({ level: level, seed: seed });
+  return $ok({ level, seed });
 };
-const config_summary = (cfg) => "Level " + cfg.level + " · Seed " + cfg.seed;
+const config_summary = (cfg) => `Level ${cfg.level} · Seed ${cfg.seed}`;
 __synth_tests.push({ desc: "valid code parses correctly", fn: () => (() => {
   let r = parse_config("3:42");
   return $is_ok(r) && r.value.level == 3 && r.value.seed == 42;
@@ -528,18 +532,21 @@ __synth_tests.push({ desc: "whitespace is trimmed", fn: () => (() => {
 const AppState = (level, seed, rows, cols) => ({ level, seed, rows, cols });
 const init = () => ({ level: 1, seed: 7777, rows: 22, cols: 48 });
 const next_seed = (s) => (s * 6364136 + 1442695) % 9007199254740991;
-const new_map = (s) => ({ level: s.level, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
-const go_next = (s) => ({ level: s.level + 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
-const go_prev = (s) => ({ level: s.level - 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols });
+const new_map = (s) => ({ ...s, seed: next_seed(s.seed) });
+const go_next = (s) => ({ ...s, level: s.level + 1, seed: next_seed(s.seed) });
+const go_prev = (s) => ({ ...s, level: s.level - 1, seed: next_seed(s.seed) });
 const map_name = (level, seed) => {
   let adj = ["Sunken", "Flooded", "Forgotten", "Ancient", "Crumbling", "Darkened", "Shattered", "Cursed", "Hollow", "Ruined", "Scorched", "Mossy", "Twisted", "Silent", "Pale", "Burning", "Frozen", "Gilded", "Haunted", "Blighted", "Crimson", "Ashen", "Murky", "Lost", "Forsaken", "Tarnished", "Rotting", "Sealed", "Fractured", "Drowned"];
   let noun = ["Hall", "Vault", "Passage", "Chamber", "Catacombs", "Sanctum", "Tomb", "Cavern", "Lair", "Pit", "Maze", "Crypt", "Gallery", "Abyss", "Warren", "Cellar", "Archive", "Ossuary", "Barrow", "Grotto", "Keep", "Depths", "Ruin", "Antechamber", "Oubliette"];
   let h1 = (seed % adj.length + adj.length) % adj.length;
   let h2 = ((seed + level * 7) % noun.length + noun.length) % noun.length;
-  return "The " + adj[h1] + " " + noun[h2];
+  return `The ${adj[h1]} ${noun[h2]}`;
 };
 const level_description = (level) => ((_m) => (_m === 1) ? "Torch-lit corridors. Watch your step." : (_m === 2) ? "Flooded halls. Not all paths are safe." : (_m === 3) ? "Ancient vaults. Chests shimmer in the gloom." : (_m === 4) ? "The dead rest here. So might you." : (_m === 5) ? "No light reaches this deep." : (level > 5) ? "You shouldn't be here." : "Press onward.")(level);
-const render_header = (level, seed) => "<div class=\"dungeon-header\">" + "<h2 class=\"level-name\">Level " + level + " — " + map_name(level, seed) + "</h2>" + "<p class=\"level-desc\">" + level_description(level) + "</p>" + "</div>";
+const render_header = (level, seed) => `<div class="dungeon-header">
+    <h2 class="level-name">Level ${level} — ${map_name(level, seed)}</h2>
+    <p class="level-desc">${level_description(level)}</p>
+  </div>`;
 const handle_code_input = (s) => {
   let input = document.getElementById("code-input").value;
   let result = parse_config(input);
@@ -548,7 +555,7 @@ const handle_code_input = (s) => {
     let cfg = result.value;
     errEl.textContent = "";
     errEl.style.display = "none";
-    return render({ level: cfg.level, seed: cfg.seed, rows: s.rows, cols: s.cols });
+    return render({ ...s, level: cfg.level, seed: cfg.seed });
   } else {
     errEl.textContent = result.message;
     return errEl.style.display = "block";
@@ -559,7 +566,7 @@ const render = (s) => {
   let html = render_header(s.level, s.seed) + render_stats($map, s.seed) + render_map($map) + render_legend();
   document.getElementById("dungeon-output").innerHTML = html;
   document.getElementById("btn-prev").disabled = s.level <= 1;
-  document.getElementById("code-input").value = s.level + ":" + s.seed;
+  document.getElementById("code-input").value = `${s.level}:${s.seed}`;
   document.getElementById("btn-new").onclick = () => render(new_map(s));
   document.getElementById("btn-next").onclick = () => render(go_next(s));
   document.getElementById("btn-prev").onclick = () => {

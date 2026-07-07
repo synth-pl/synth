@@ -76,10 +76,7 @@ const all_artists = (tracks) => $map(tracks, __x => __x.artist);
 const total_playtime = (tracks) => $sum($map(tracks, __x => __x.duration));
 const tracks_in_genre = (tracks, genre) => $filter(tracks, t => t.genre === genre);
 const any_featured = (tracks) => $any(tracks, __x => __x.featured);
-const top_by_bpm = (tracks, n) => {
-  let sorted = tracks.slice().sort((a, b) => b.bpm - a.bpm);
-  return sorted.slice(0, n);
-};
+const top_by_bpm = (tracks, n) => $take($sort_by_desc(tracks, __x => __x.bpm), n);
 const debug_track = (track) => {
   console.log("debug_track:", track.title);
   return true;
@@ -153,8 +150,8 @@ const render_add_form = (container, onAdd) => {
   addBtn.addEventListener("click", () => {
     let title = titleIn.value;
     let artist = artistIn.value;
-    let bpm = parseInt(bpmIn.value);
-    let dur = parseInt(durIn.value);
+    let bpm = $parse_int(bpmIn.value) ?? 0;
+    let dur = $parse_int(durIn.value) ?? 0;
     let genre = genreIn.value.length > 0 ? genreIn.value : "other";
     let err = validate_track_input(title, artist, bpm, dur);
     if ($err.length > 0) {

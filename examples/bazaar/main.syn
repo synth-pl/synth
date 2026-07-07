@@ -1,7 +1,5 @@
-// ──────────────────────────────────────────────────────────────
-// The Bazaar — Main entry point
-// Renders the item shop UI; handles filter, sort, cart
-// ──────────────────────────────────────────────────────────────
+// ── The Bazaar — Synth v1.0 Demo ─────────────────────────────────────────────
+// Showcases: multi-file modules · templates · find · spread updates · records
 
 import { Item, Category, keep_if, transform, order_by, order_by_desc, by_category, by_rarity, by_max_price, search_items, describe_item, cart_total, rarity_color, rarity_rank, category_icon, category_name } from "./items"
 import { get_catalog } from "./catalog"
@@ -55,7 +53,7 @@ fn is_in_cart(state: AppState, item: Item) -> bool =
 fn el(id: string) -> any = document.getElementById(id)
 
 fn set_count(id: string, n: int) -> void =
-  el(id).textContent = n + ""
+  el(id).textContent = `${n}`
 
 // ── Render ────────────────────────────────────────────────────
 
@@ -67,9 +65,9 @@ fn render(state: AppState) -> void {
 }
 
 fn render_stats(state: AppState, visible: Item[]) -> void {
-  el("result-count").textContent  = visible.length + " items"
-  el("cart-total").textContent    = cart_total(state.cart) + "g"
-  el("cart-count").textContent    = state.cart.length + ""
+  el("result-count").textContent  = `${visible.length} items`
+  el("cart-total").textContent    = `${cart_total(state.cart)}g`
+  el("cart-count").textContent    = `${state.cart.length}`
 }
 
 fn render_grid(state: AppState, items: Item[]) -> void {
@@ -81,30 +79,29 @@ fn render_grid(state: AppState, items: Item[]) -> void {
   }
 }
 
+// v1.0 template literals — HTML reads like HTML, expressions interpolate inline
 fn item_card_html(state: AppState, item: Item) -> string {
   let color    = rarity_color(item.rarity)
-  let icon     = category_icon(item.category)
   let in_cart  = is_in_cart(state, item)
   let btn_cls  = in_cart ? "btn-in-cart" : "btn-buy"
   let btn_txt  = in_cart ? "✓ In Cart" : "Add to Cart"
-  let badge    = "<span class=\"rarity-badge\" style=\"color:" + color + ";border-color:" + color + "\">" + item.rarity + "</span>"
-  "<div class=\"item-card\">" +
-    "<div class=\"item-header\">" +
-      "<span class=\"item-icon\">" + icon + "</span>" +
-      "<div class=\"item-title\">" +
-        "<div class=\"item-name\">" + item.name + "</div>" +
-        badge +
-      "</div>" +
-    "</div>" +
-    "<div class=\"item-lore\">" + item.lore + "</div>" +
-    "<div class=\"item-footer\">" +
-      "<div class=\"item-stats\">" +
-        "<span class=\"stat-price\">💰 " + item.price + "g</span>" +
-        "<span class=\"stat-power\">⚡ " + item.power + "</span>" +
-      "</div>" +
-      "<button class=\"" + btn_cls + "\" onclick=\"bazaarBuy('" + item.name + "')\">" + btn_txt + "</button>" +
-    "</div>" +
-  "</div>"
+  `<div class="item-card">
+    <div class="item-header">
+      <span class="item-icon">${category_icon(item.category)}</span>
+      <div class="item-title">
+        <div class="item-name">${item.name}</div>
+        <span class="rarity-badge" style="color:${color};border-color:${color}">${item.rarity}</span>
+      </div>
+    </div>
+    <div class="item-lore">${item.lore}</div>
+    <div class="item-footer">
+      <div class="item-stats">
+        <span class="stat-price">💰 ${item.price}g</span>
+        <span class="stat-power">⚡ ${item.power}</span>
+      </div>
+      <button class="${btn_cls}" onclick="bazaarBuy('${item.name}')">${btn_txt}</button>
+    </div>
+  </div>`
 }
 
 fn render_cart(state: AppState) -> void {
@@ -112,11 +109,11 @@ fn render_cart(state: AppState) -> void {
     el("cart-items").innerHTML = "<div class=\"cart-empty\">Your cart is empty.</div>"
   } else {
     let infer rows = transform(state.cart, item =>
-      "<div class=\"cart-row\">" +
-        "<span class=\"cart-item-name\">" + category_icon(item.category) + " " + item.name + "</span>" +
-        "<span class=\"cart-item-price\">" + item.price + "g</span>" +
-        "<button class=\"cart-remove\" onclick=\"bazaarRemove('" + item.name + "')\">✕</button>" +
-      "</div>"
+      `<div class="cart-row">
+        <span class="cart-item-name">${category_icon(item.category)} ${item.name}</span>
+        <span class="cart-item-price">${item.price}g</span>
+        <button class="cart-remove" onclick="bazaarRemove('${item.name}')">✕</button>
+      </div>`
     )
     el("cart-items").innerHTML = rows.join("")
   }
@@ -126,35 +123,38 @@ fn render_cart(state: AppState) -> void {
 
 let state = make_state()
 
+// v1.0: find replaces filter-then-index · spread updates replace field-by-field copies
+
 fn buy_item(name: string) -> void {
-  let infer item_arr = state.all_items.filter(i => i.name == name)
-  if item_arr.length > 0 {
-    let item = item_arr[0]
+  let item = state.all_items.find(i => i.name == name)
+  if item {
     if is_in_cart(state, item) {
-      state = { all_items: state.all_items, cart: state.cart.filter(c => c.name != name), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+      state = { ...state, cart: state.cart.filter(c => c.name != name) }
     } else {
-      state = { all_items: state.all_items, cart: state.cart.concat([item]), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+      state = { ...state, cart: [...state.cart, item] }
     }
     render(state)
   }
 }
 
 fn remove_item(name: string) -> void {
-  state = { all_items: state.all_items, cart: state.cart.filter(c => c.name != name), filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+  state = { ...state, cart: state.cart.filter(c => c.name != name) }
   render(state)
 }
 
 fn on_filter_change() -> void {
-  let cat = el("filter-cat").value
-  let rar = el("filter-rar").value
-  let srt = el("sort-select").value
-  let q   = el("search-box").value
-  state = { all_items: state.all_items, cart: state.cart, filter_cat: cat, filter_rar: rar, sort_key: srt, search: q }
+  state = {
+    ...state,
+    filter_cat: el("filter-cat").value,
+    filter_rar: el("filter-rar").value,
+    sort_key:   el("sort-select").value,
+    search:     el("search-box").value
+  }
   render(state)
 }
 
 fn clear_cart() -> void {
-  state = { all_items: state.all_items, cart: [], filter_cat: state.filter_cat, filter_rar: state.filter_rar, sort_key: state.sort_key, search: state.search }
+  state = { ...state, cart: [] }
   render(state)
 }
 

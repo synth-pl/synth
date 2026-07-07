@@ -1,3 +1,4 @@
+const Building = (id, name, icon, base_cost, rate, desc) => ({ id, name, icon, base_cost, rate, desc });
 let catalog = [{
   id: 0,
   name: "Beat Box",
@@ -80,28 +81,33 @@ const tick = (dt) => {
     return Game.set({ vibes: Game.vibes + earned, total_vibes: Game.total_vibes + earned });
   }
 };
-const fmt = (v) => v >= 1000000000 ? $floor(v / 1000000000) + "B" : v >= 1000000 ? $floor(v / 1000000) + "M" : v >= 1000 ? $floor(v / 1000) + "K" : $floor(v) + "";
+const fmt = (v) => v >= 1000000000 ? `${$floor(v / 1000000000)}B` : v >= 1000000 ? `${$floor(v / 1000000)}M` : v >= 1000 ? `${$floor(v / 1000)}K` : `${$floor(v)}`;
 const milestone = () => {
   let tv = $floor(Game.total_vibes);
   return tv < 1 ? "Drop the beat..." : tv < 10 ? "Feeling the rhythm" : tv < 100 ? "Warming up the synths" : tv < 1000 ? "The groove is building" : tv < 10000 ? "Riding the wave" : tv < 100000 ? "This slaps hard" : "MAXIMUM VIBES";
 };
 const render_building = (b) => {
-  let info = (() => {
-    let owned = Game.counts[b.id];
-    let cost = building_cost(b.base_cost, owned);
-    let cls = Game.vibes >= cost ? "can-afford" : "";
-    return { owned, cost, cls };
-})();
-  return "<div class=\"bld " + info.cls + "\" onclick=\"buy(" + b.id + ")\">" + "<span class=\"bld-icon\">" + b.icon + "</span>" + "<div class=\"bld-info\">" + "<div class=\"bld-name\">" + b.name + "</div>" + "<div class=\"bld-desc\">" + b.desc + " · " + b.rate + " v/s ea</div>" + "<div class=\"bld-cost\">⚡ " + fmt(info.cost) + " vibes</div>" + "</div>" + "<span class=\"bld-count\">" + info.owned + "</span>" + "</div>";
+  let owned = Game.counts[b.id];
+  let cost = building_cost(b.base_cost, owned);
+  let cls = Game.vibes >= cost ? "can-afford" : "";
+  return `<div class="bld ${cls}" onclick="buy(${b.id})">
+    <span class="bld-icon">${b.icon}</span>
+    <div class="bld-info">
+      <div class="bld-name">${b.name}</div>
+      <div class="bld-desc">${b.desc} · ${b.rate} v/s ea</div>
+      <div class="bld-cost">⚡ ${fmt(cost)} vibes</div>
+    </div>
+    <span class="bld-count">${owned}</span>
+  </div>`;
 };
 const total_owned = () => $fold(Game.counts, 0, (acc, n) => acc + n);
 const best_building = () => $max_by($filter(catalog, b => Game.counts[b.id] > 0), b => b.rate * Game.counts[b.id]);
 const render = () => {
   document.getElementById("vibes").textContent = fmt(Game.vibes);
-  document.getElementById("vps").textContent = fmt(Game.vps) + " v/s";
-  document.getElementById("total").textContent = fmt(Game.total_vibes) + " total";
+  document.getElementById("vps").textContent = `${fmt(Game.vps)} v/s`;
+  document.getElementById("total").textContent = `${fmt(Game.total_vibes)} total`;
   document.getElementById("msg").textContent = milestone();
-  document.getElementById("owned").textContent = total_owned() + " producers";
+  document.getElementById("owned").textContent = `${total_owned()} producers`;
   return document.getElementById("blds").innerHTML = $map(catalog, b => render_building(b)).join("");
 };
 Game.subscribe(() => {

@@ -1,5 +1,10 @@
-// ── NEON LIFE — Conway's Game of Life ────────────────────────────────────────
-// Showcases: store · match · pipeline · do notation · flat_map · set_at
+// ── NEON LIFE — Synth v1.0 Demo ───────────────────────────────────────────────
+// Showcases: record · store · for loops · flat_map · set_at · do notation
+
+record Point {
+  c: int
+  r: int
+}
 
 let CANVAS_W  = 800
 let CANVAS_H  = 520
@@ -58,7 +63,7 @@ fn clear_grid() {
 }
 
 fn randomize() {
-  cells = range(0, ROWS * COLS).map(i => random() < 0.28 ? true : false)
+  cells = range(0, ROWS * COLS).map(i => random() < 0.28)
   let pop = cells.count(v => v)
   Life.set({ gen: 0, pop })
 }
@@ -85,8 +90,10 @@ fn toggle(c, r) {
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 
-fn place(pts) {
-  pts.map(p => paint(p.c, p.r, true))
+fn place(pts: Point[]) {
+  for p in pts {
+    paint(p.c, p.r, true)
+  }
 }
 
 fn load_glider() {
@@ -105,7 +112,7 @@ fn load_pulsar() {
   let cx      = COLS / 2
   let cy      = ROWS / 2
   let offsets = [2, 3, 4, 8, 9, 10]
-  offsets.map(o => do {
+  for o in offsets {
     paint(cx-o, cy-1, true)
     paint(cx+o, cy-1, true)
     paint(cx-o, cy+1, true)
@@ -114,7 +121,7 @@ fn load_pulsar() {
     paint(cx+1, cy-o, true)
     paint(cx-1, cy+o, true)
     paint(cx+1, cy+o, true)
-  })
+  }
 }
 
 fn load_glider_gun() {

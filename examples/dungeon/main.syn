@@ -1,14 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.6 — dungeon/main.syn
-// Entry point for the dungeon map toolkit demo.
+// dungeon/main.syn — Synth v1.0 multi-file bundle demo
 //
-// State pattern: AppState is an immutable record. render(s) draws the dungeon
-// AND re-wires every button so it calls render() with a fresh state value.
-// No variable is ever mutated — state flows through the call chain as data.
-//
-// v0.6: config.syn provides parse_config() which returns Result. The code
-// input in the page header chains @throws parsers via ? to produce precise
-// error messages on invalid codes.
+// Showcases: Result parsing · parse_int · template literals · spread updates
+// State flows as immutable data — render(s) redraws and re-wires every control.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Floor, Wall, Door, Stairs, Chest, Water, Torch } from "./tiles"
@@ -29,17 +23,10 @@ fn init() -> AppState {
 fn next_seed(s: int) -> int =
   (s * 6364136 + 1442695) % 9007199254740991
 
-fn new_map(s: AppState) -> AppState {
-  { level: s.level, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
-}
-
-fn go_next(s: AppState) -> AppState {
-  { level: s.level + 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
-}
-
-fn go_prev(s: AppState) -> AppState {
-  { level: s.level - 1, seed: next_seed(s.seed), rows: s.rows, cols: s.cols }
-}
+// v1.0: spread record updates — only name the fields that change
+fn new_map(s: AppState) -> AppState = { ...s, seed: next_seed(s.seed) }
+fn go_next(s: AppState) -> AppState = { ...s, level: s.level + 1, seed: next_seed(s.seed) }
+fn go_prev(s: AppState) -> AppState = { ...s, level: s.level - 1, seed: next_seed(s.seed) }
 
 // ── Map name generator ────────────────────────────────────────────────────────
 
@@ -61,7 +48,7 @@ fn map_name(level: int, seed: int) -> string {
   ]
   let h1 = (seed % adj.length  + adj.length)  % adj.length
   let h2 = ((seed + level * 7) % noun.length + noun.length) % noun.length
-  "The " + adj[h1] + " " + noun[h2]
+  `The ${adj[h1]} ${noun[h2]}`
 }
 
 fn level_description(level: int) -> string =
@@ -76,10 +63,10 @@ fn level_description(level: int) -> string =
   }
 
 fn render_header(level: int, seed: int) -> string =
-  "<div class=\"dungeon-header\">" +
-    "<h2 class=\"level-name\">Level " + level + " — " + map_name(level, seed) + "</h2>" +
-    "<p class=\"level-desc\">" + level_description(level) + "</p>" +
-  "</div>"
+  `<div class="dungeon-header">
+    <h2 class="level-name">Level ${level} — ${map_name(level, seed)}</h2>
+    <p class="level-desc">${level_description(level)}</p>
+  </div>`
 
 // ── Config input handler (v0.6) ───────────────────────────────────────────────
 
@@ -93,7 +80,7 @@ fn handle_code_input(s: AppState) {
     let cfg = result.value
     errEl.textContent = ""
     errEl.style.display = "none"
-    render({ level: cfg.level, seed: cfg.seed, rows: s.rows, cols: s.cols })
+    render({ ...s, level: cfg.level, seed: cfg.seed })
   } else {
     errEl.textContent = result.message
     errEl.style.display = "block"
@@ -113,7 +100,7 @@ fn render(s: AppState) {
   document.getElementById("btn-prev").disabled = s.level <= 1
 
   // Update the code input to reflect the current state
-  document.getElementById("code-input").value = s.level + ":" + s.seed
+  document.getElementById("code-input").value = "{s.level}:{s.seed}"
 
   document.getElementById("btn-new").onclick   = () => render(new_map(s))
   document.getElementById("btn-next").onclick  = () => render(go_next(s))

@@ -1,5 +1,5 @@
-// ── Expedition Hub — Synth Demo ───────────────────────────────────────────────
-// Showcases: record · spread · object shorthand · stdlib method syntax · do notation
+// ── Expedition Hub — Synth v1.0 Demo ────────────────────────────────────────────
+// Showcases: record · spread · templates · do notation · stdlib methods · find
 
 // ── Data types ─────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ let beta_wing = [
   { id: 13, name: "Sentinel",   sector: "Vega",    danger: 5, distance: 52, ore: 280, fuel: 15,  data: 200 },
 ]
 
-// ...merged into one fleet using spread (v0.9.9)
+// Merged fleet via spread
 let fleet = [...alpha_wing, ...beta_wing]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,9 +142,9 @@ fn render() {
   document.getElementById("stat-fuel").textContent  = s.fuel
   document.getElementById("stat-data").textContent  = s.data
   document.getElementById("stat-avgd").textContent  = s.avg_d
-  document.getElementById("stat-dist").textContent  = s.max_dist + " ly"
+  document.getElementById("stat-dist").textContent  = `${s.max_dist} ly`
   document.getElementById("stat-risk").textContent  = s.high_risk
-  document.getElementById("fleet-total").textContent = s.count + " of " + count(fleet) + " missions"
+  document.getElementById("fleet-total").textContent = `${s.count} of ${count(fleet)} missions`
 }
 
 // ── Reactive binding ──────────────────────────────────────────────────────────

@@ -1,5 +1,12 @@
-// ── DRIFT — Synthwave Road Racer ──────────────────────────────────────────────
-// Showcases: store · match · @memo · pipeline · object shorthand
+// ── DRIFT — Synth v1.0 Demo ───────────────────────────────────────────────────
+// Showcases: record · store · spread in map · object-literal lambdas · @memo
+
+record Car {
+  x:     float
+  y:     float
+  color: string
+  seed:  float
+}
 
 let CANVAS_W   = 800
 let CANVAS_H   = 520
@@ -96,15 +103,9 @@ fn tick(dt) {
       player_lane = player_target
     }
 
-    // Move traffic
+    // Move traffic — v1.0: object literal directly in lambda body, no do-block needed
     traffic = traffic
-      .map(c => do {
-        let x     = c.x
-        let y     = c.y + speed * dt
-        let color = c.color
-        let seed  = c.seed
-        { x, y, color, seed }
-      })
+      .map(c => { ...c, y: c.y + speed * dt })
       .filter(c => c.y < CANVAS_H + CAR_H + 20)
 
     // Spawn traffic
@@ -156,7 +157,7 @@ fn tick(dt) {
 // ── Accessors ─────────────────────────────────────────────────────────────────
 
 fn get_player()      = { x: player_x, y: PLAYER_Y, w: CAR_W, h: CAR_H }
-fn get_traffic()     = traffic
+fn get_traffic() -> Car[] = traffic
 fn get_road_scroll() = road_scroll
 fn get_road()        = { x: ROAD_X, w: ROAD_W, lane_w: LANE_W, lanes: LANE_COUNT }
 fn get_invuln()      = invuln_timer > 0

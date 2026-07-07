@@ -1,3 +1,4 @@
+const Car = (x, y, color, seed) => ({ x, y, color, seed });
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let LANE_COUNT = 3;
@@ -68,13 +69,7 @@ const tick = (dt) => {
       player_x = tx;
       player_lane = player_target;
     }
-    traffic = $filter($map(traffic, c => (() => {
-      let x = c.x;
-      let y = c.y + speed * dt;
-      let color = c.color;
-      let seed = c.seed;
-      return { x, y, color, seed };
-})()), c => c.y < CANVAS_H + CAR_H + 20);
+    traffic = $filter($map(traffic, c => ({ ...c, y: c.y + speed * dt })), c => c.y < CANVAS_H + CAR_H + 20);
     spawn_timer = spawn_timer + dt;
     let interval = $clamp(1.6 - speed * 0.0025, 0.35, 1.6);
     if (spawn_timer >= interval) {

@@ -1,5 +1,15 @@
-// ── NEON BREAKOUT — Synthwave Breakout Game ──────────────────────────────────
-// Showcases: store · match · @memo · do notation · object shorthand · pipeline
+// ── NEON BREAKOUT — Synth v1.0 Demo ──────────────────────────────────────────
+// Showcases: record · store · while loops · object-literal lambdas · @memo
+
+// ── Data types ─────────────────────────────────────────────────────────────────
+
+record Brick {
+  x:     float
+  y:     float
+  w:     float
+  h:     float
+  color: string
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -227,13 +237,11 @@ fn tick(dt) {
 fn get_ball()   = { x: ball_x, y: ball_y, r: BALL_R }
 fn get_paddle() = { x: paddle_x, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H }
 
-fn get_bricks() =
+// v1.0: object literal directly in lambda body — no do-block needed
+fn get_bricks() -> Brick[] =
   range(0, ROWS).flat_map(r =>
     range(0, COLS).filter(c => bricks[brick_index(r, c)]).map(c =>
-      do {
-        let color = row_color(r)
-        { x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color }
-      }
+      { x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color: row_color(r) }
     )
   )
 

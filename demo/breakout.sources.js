@@ -1,3 +1,4 @@
+const Brick = (x, y, w, h, color) => ({ x, y, w, h, color });
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let COLS = 10;
@@ -155,8 +156,5 @@ const tick = (dt) => {
 };
 const get_ball = () => ({ x: ball_x, y: ball_y, r: BALL_R });
 const get_paddle = () => ({ x: paddle_x, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H });
-const get_bricks = () => $flat_map($range(0, ROWS), r => $map($filter($range(0, COLS), c => bricks[brick_index(r, c)]), c => (() => {
-  let color = row_color(r);
-  return { x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color };
-})()));
+const get_bricks = () => $flat_map($range(0, ROWS), r => $map($filter($range(0, COLS), c => bricks[brick_index(r, c)]), c => ({ x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color: row_color(r) })));
 const status_line = () => ((_m) => (_m === "title") ? "PRESS SPACE OR CLICK TO START" : (_m === "ready") ? "BALL LOST — PRESS SPACE TO CONTINUE" : (_m === "levelup") ? "LEVEL CLEAR! PRESS SPACE FOR NEXT LEVEL" : (_m === "gameover") ? "GAME OVER — PRESS SPACE TO RETRY" : "")(Game.phase);

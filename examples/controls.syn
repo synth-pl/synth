@@ -1,12 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Synth v0.4.0 — Web Controls Demo
+// Synth v1.0 — Web Controls Demo
 //
-// New in v0.3 (all features exercised below):
+// Features exercised below:
 //
 //   • String interpolation — "Hello {name}" compiles to template literals
 //   • .field accessor shorthand — filter(.active), map(.score) in pipelines
 //   • Param validation injection — typed params with `where` get auto-guards
 //   • @memo annotation — @pure @total functions get Map-based cache wrappers
+//   • Spread record updates — { ...state, count: n } (v0.9.9)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── Constrained types ──────────────────────────────────────────────────────────
@@ -55,13 +56,11 @@ record Player {
 // ══════════════════════════════════════════════════════════════════════════════
 
 fn counter_make(min, max, initial) =
-  { count: Math.max(min, Math.min(max, initial)), min: min, max: max }
+  { count: clamp(initial, min, max), min, max }
 
-fn counter_inc(state) =
-  { count: Math.min(state.count + 1, state.max), min: state.min, max: state.max }
-
-fn counter_dec(state) =
-  { count: Math.max(state.count - 1, state.min), min: state.min, max: state.max }
+// Spread record updates — copy the state, change one field
+fn counter_inc(state) = { ...state, count: Math.min(state.count + 1, state.max) }
+fn counter_dec(state) = { ...state, count: Math.max(state.count - 1, state.min) }
 
 fn counter_can_inc(state) = state.count < state.max
 fn counter_can_dec(state) = state.count > state.min
@@ -138,9 +137,9 @@ fn theme_label :: (name: ThemeName) -> string {
 // MODAL
 // ══════════════════════════════════════════════════════════════════════════════
 
-fn modal_open(title, body) = { open: true, title: title, body: body }
+fn modal_open(title, body) = { open: true, title, body }
 
-fn modal_close(state) = { open: false, title: state.title, body: state.body }
+fn modal_close(state) = { ...state, open: false }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PARAM VALIDATION INJECTION — v0.3 feature
@@ -236,8 +235,8 @@ fn count_valid_emails :: (emails: string[]) -> int {
 fn first_invalid_email :: (emails: string[]) -> string {
   @pure @total
   @intent "Return the first invalid email, or empty string if all pass"
-  let invalid = emails |> filter(e => !is_valid_email(e))
-  invalid.length > 0 ? first(invalid) : ""
+  // v1.0: find + nullish coalescing replaces filter-then-check
+  emails.find(e => !is_valid_email(e)) ?? ""
 }
 
 fn theme_options :: (themes: string[]) -> string[] {

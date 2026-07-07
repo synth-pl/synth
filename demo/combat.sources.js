@@ -93,10 +93,7 @@ const party_power_rating = (() => {
   };
 })();
 const count_alive = (party) => $count($filter(party, __x => __x.alive));
-const strongest_hero = (party) => {
-  let sorted = party.slice().sort((a, b) => hero_power(b) - hero_power(a));
-  return $first(sorted);
-};
+const strongest_hero = (party) => $max_by(party, hero_power);
 const debug_party = (party) => {
   console.log("debug_party:", $map(party, __x => __x.name));
   return true;
@@ -135,15 +132,13 @@ const render_hero_row = (hero) => {
   let sym = class_symbol(hero.heroClass);
   let label = format_hero_card_line(hero);
   let power = hero_power(hero);
-  let pStr = `PWR:${power}`;
   let rowClass = hero.alive ? "hero-row" : "hero-row hero-dead";
-  return el("div", { class: rowClass }, el("span", { class: "hero-sym" }, sym), el("span", { class: "hero-label" }, label), el("span", { class: "hero-pwr" }, pStr));
+  return el("div", { class: rowClass }, el("span", { class: "hero-sym" }, sym), el("span", { class: "hero-label" }, label), el("span", { class: "hero-pwr" }, `PWR:${power}`));
 };
 const render_enemy_panel = (enemy) => {
   let label = format_enemy_card_line(enemy);
   let hint = class_weakness_hint(enemy.weakness);
-  let atkStr = `ATK:${enemy.attack}  DEF:${enemy.defense}`;
-  return el("div", { class: "enemy-panel" }, el("div", { class: "enemy-name" }, enemy.name), el("div", { class: "enemy-bar" }, label), el("div", { class: "enemy-hint" }, hint), el("div", { class: "enemy-stats" }, atkStr));
+  return el("div", { class: "enemy-panel" }, el("div", { class: "enemy-name" }, enemy.name), el("div", { class: "enemy-bar" }, label), el("div", { class: "enemy-hint" }, hint), el("div", { class: "enemy-stats" }, `ATK:${enemy.attack}  DEF:${enemy.defense}`));
 };
 const render_party_panel = (party) => {
   let aliveCount = count_alive(party);
@@ -158,8 +153,7 @@ const render_party_panel = (party) => {
 };
 const render_combat = (rootId) => {
   let make_party = () => [create_hero("Aria", "mage", 60, 12, 5, 8), create_hero("Theron", "knight", 80, 8, 12, 6), create_hero("Lyra", "ranger", 70, 10, 7, 7)];
-  let make_enemy = () => {
-    return {
+  let make_enemy = () => ({
   name: "Shadow Drake",
   hp: 160,
   maxHp: 160,
@@ -167,8 +161,7 @@ const render_combat = (rootId) => {
   defense: 8,
   weakness: "arcane",
   alive: true
-};
-};
+});
   let party = make_party();
   let enemy = make_enemy();
   let log_lines = [];

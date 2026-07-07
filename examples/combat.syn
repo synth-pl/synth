@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Synth v0.3.0 — Combat Engine
+// Synth v1.0 — Combat Engine
 //
 // The logic IS the demo. All game rules are expressed as pure Synth functions.
 // The DOM layer is thin — everything interesting happens in the language:
@@ -228,8 +228,8 @@ fn count_alive :: (party: Hero[]) -> int {
 fn strongest_hero :: (party: Hero[]) -> Hero {
   @pure @total
   @intent "The hero with the highest power rating"
-  let sorted = party.slice().sort((a, b) => hero_power(b) - hero_power(a))
-  first(sorted)
+  // v1.0: max_by replaces sort-then-first — no mutation, no checker warning
+  party |> max_by(hero_power)
 }
 
 // Intentionally impure — demonstrates @pure checker warning
@@ -284,12 +284,11 @@ fn render_hero_row :: (hero: Hero) -> Element {
   let sym   = class_symbol(hero.heroClass)
   let label = format_hero_card_line(hero)
   let power = hero_power(hero)
-  let pStr  = "PWR:{power}"
   let rowClass = hero.alive ? "hero-row" : "hero-row hero-dead"
   el("div", { class: rowClass },
     el("span", { class: "hero-sym" },  sym),
     el("span", { class: "hero-label"}, label),
-    el("span", { class: "hero-pwr" },  pStr)
+    el("span", { class: "hero-pwr" },  `PWR:${power}`)
   )
 }
 
@@ -298,12 +297,11 @@ fn render_enemy_panel :: (enemy: Enemy) -> Element {
   @intent "Render the enemy status panel"
   let label   = format_enemy_card_line(enemy)
   let hint    = class_weakness_hint(enemy.weakness)
-  let atkStr  = "ATK:{enemy.attack}  DEF:{enemy.defense}"
   el("div", { class: "enemy-panel" },
     el("div", { class: "enemy-name" },    enemy.name),
     el("div", { class: "enemy-bar" },     label),
     el("div", { class: "enemy-hint" },    hint),
-    el("div", { class: "enemy-stats" },   atkStr)
+    el("div", { class: "enemy-stats" },   `ATK:${enemy.attack}  DEF:${enemy.defense}`)
   )
 }
 
@@ -335,9 +333,9 @@ fn render_combat :: (rootId: string) -> void {
     create_hero("Lyra",   "ranger", 70, 10,  7, 7)
   ]
 
-  let make_enemy = () => {
+  // v1.0: object literal directly in lambda body
+  let make_enemy = () =>
     { name: "Shadow Drake", hp: 160, maxHp: 160, attack: 14, defense: 8, weakness: "arcane", alive: true }
-  }
 
   let party      = make_party()
   let enemy      = make_enemy()

@@ -1,5 +1,10 @@
-// ── SYNTH INVADERS ────────────────────────────────────────────────────────────
-// Showcases: store · match · @memo · pipeline · flat_map
+// ── SYNTH INVADERS — Synth v1.0 Demo ──────────────────────────────────────────
+// Showcases: record · store · find_index · object-literal lambdas · @memo
+
+record Bullet {
+  x: float
+  y: float
+}
 
 let CANVAS_W    = 800
 let CANVAS_H    = 520
@@ -40,9 +45,9 @@ let alien_dir = 1
 // Player
 let player_x = (CANVAS_W - PLAYER_W) / 2
 
-// Bullets
-let p_bullets = []   // {x, y}
-let a_bullets = []   // {x, y}
+// Bullets (Bullet records)
+let p_bullets = []
+let a_bullets = []
 
 let fire_cd         = 0.0
 let alien_fire_timer = 1.5
@@ -139,32 +144,24 @@ fn tick(dt) {
       }
     }
 
-    // Move player bullets up
+    // Move bullets — v1.0: object literal directly in lambda body
     p_bullets = p_bullets
-      .map(b => do { { x: b.x, y: b.y - PBULLET_SPD * dt } })
+      .map(b => { x: b.x, y: b.y - PBULLET_SPD * dt })
       .filter(b => b.y > 0)
 
-    // Move alien bullets down
     a_bullets = a_bullets
-      .map(b => do { { x: b.x, y: b.y + ABULLET_SPD * dt } })
+      .map(b => { x: b.x, y: b.y + ABULLET_SPD * dt })
       .filter(b => b.y < CANVAS_H)
 
-    // Player bullet vs alien collision
+    // Player bullet vs alien collision — v1.0: find_index replaces the manual scan
     let i = 0
     while i < p_bullets.count(x => true) {
-      let b    = p_bullets[i]
-      let j    = 0
-      let hit  = 0 - 1
-      while j < ALIEN_ROWS * ALIEN_COLS and hit < 0 {
-        if aliens[j] {
-          let ax = alien_x(j)
-          let ay = alien_y(j)
-          if b.x > ax and b.x < ax + ALIEN_W and b.y > ay and b.y < ay + ALIEN_H {
-            hit = j
-          }
-        }
-        j += 1
-      }
+      let b   = p_bullets[i]
+      let hit = range(0, ALIEN_ROWS * ALIEN_COLS).find_index(j =>
+        aliens[j]
+          and b.x > alien_x(j) and b.x < alien_x(j) + ALIEN_W
+          and b.y > alien_y(j) and b.y < alien_y(j) + ALIEN_H
+      )
       if hit >= 0 {
         aliens    = set_at(aliens, hit, false)
         let pts   = row_pts(alien_row(hit))
@@ -242,11 +239,8 @@ fn next_wave() {
 fn get_aliens() =
   range(0, ALIEN_ROWS * ALIEN_COLS)
     .filter(i => aliens[i])
-    .map(i => do {
-      let color = row_color(alien_row(i))
-      { x: alien_x(i), y: alien_y(i), w: ALIEN_W, h: ALIEN_H, color }
-    })
+    .map(i => { x: alien_x(i), y: alien_y(i), w: ALIEN_W, h: ALIEN_H, color: row_color(alien_row(i)) })
 
 fn get_player()   = { x: player_x, y: PLAYER_Y, w: PLAYER_W, h: PLAYER_H }
-fn get_pbullets() = p_bullets
-fn get_abullets() = a_bullets
+fn get_pbullets() -> Bullet[] = p_bullets
+fn get_abullets() -> Bullet[] = a_bullets

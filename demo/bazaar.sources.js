@@ -59,6 +59,10 @@ const __synth_presets = {
   slug:    /^[a-z0-9-]+$/,
   hex:     /^#?[0-9a-fA-F]{3,8}$/,
 };
+const $find = (xs, pred) => xs.find(pred);
+const $find_index = (xs, pred) => xs.findIndex(pred);
+const $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };
+const $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
 const $ok = (value) => ({ tag: 'Ok', value });
 const $err = (message) => ({ tag: 'Err', message });
 const $is_ok = (r) => r != null && r.tag === 'Ok';
@@ -151,7 +155,7 @@ const search_items = (items, query) => {
     return $filter(items, item => item.name.toLowerCase().includes(q) || item.lore.toLowerCase().includes(q));
   }
 };
-const describe_item = (item) => category_icon(item.category) + " " + item.name + " [" + item.rarity + "] — " + item.price + "g";
+const describe_item = (item) => `${category_icon(item.category)} ${item.name} [${item.rarity}] — ${item.price}g`;
 const cart_total = (items) => total(items, item => item.price);
 __synth_tests.push({ desc: "rarity_rank orders correctly", fn: () => rarity_rank("Legendary") > rarity_rank("Common") });
 __synth_tests.push({ desc: "rarity_rank unknown returns 0", fn: () => rarity_rank("Mythic") == 0 });
@@ -360,7 +364,7 @@ const apply_filters = (state) => {
 const apply_sort = (items, sort) => ((_m) => (_m === "price_asc") ? order_by(items, i => i.price) : (_m === "price_desc") ? order_by_desc(items, i => i.price) : (_m === "power_desc") ? order_by_desc(items, i => i.power) : (_m === "rarity_desc") ? order_by_desc(items, i => rarity_rank(i.rarity)) : (_m === "name_asc") ? order_by(items, i => i.name) : items)(sort);
 const is_in_cart = (state, item) => state.cart.some(c => c.name == item.name);
 const el = (id) => document.getElementById(id);
-const set_count = (id, n) => el(id).textContent = n + "";
+const set_count = (id, n) => el(id).textContent = `${n}`;
 const render = (state) => {
   let visible = apply_filters(state);
   render_grid(state, visible);
@@ -368,9 +372,9 @@ const render = (state) => {
   return render_stats(state, visible);
 };
 const render_stats = (state, visible) => {
-  el("result-count").textContent = visible.length + " items";
-  el("cart-total").textContent = cart_total(state.cart) + "g";
-  return el("cart-count").textContent = state.cart.length + "";
+  el("result-count").textContent = `${visible.length} items`;
+  el("cart-total").textContent = `${cart_total(state.cart)}g`;
+  return el("cart-count").textContent = `${state.cart.length}`;
 };
 const render_grid = (state, items) => {
   if (items.length == 0) {
@@ -382,83 +386,67 @@ const render_grid = (state, items) => {
 };
 const item_card_html = (state, item) => {
   let color = rarity_color(item.rarity);
-  let icon = category_icon(item.category);
   let in_cart = is_in_cart(state, item);
   let btn_cls = in_cart ? "btn-in-cart" : "btn-buy";
   let btn_txt = in_cart ? "✓ In Cart" : "Add to Cart";
-  let badge = "<span class=\"rarity-badge\" style=\"color:" + color + ";border-color:" + color + "\">" + item.rarity + "</span>";
-  return "<div class=\"item-card\">" + "<div class=\"item-header\">" + "<span class=\"item-icon\">" + icon + "</span>" + "<div class=\"item-title\">" + "<div class=\"item-name\">" + item.name + "</div>" + badge + "</div>" + "</div>" + "<div class=\"item-lore\">" + item.lore + "</div>" + "<div class=\"item-footer\">" + "<div class=\"item-stats\">" + "<span class=\"stat-price\">💰 " + item.price + "g</span>" + "<span class=\"stat-power\">⚡ " + item.power + "</span>" + "</div>" + "<button class=\"" + btn_cls + "\" onclick=\"bazaarBuy('" + item.name + "')\">" + btn_txt + "</button>" + "</div>" + "</div>";
+  return `<div class="item-card">
+    <div class="item-header">
+      <span class="item-icon">${category_icon(item.category)}</span>
+      <div class="item-title">
+        <div class="item-name">${item.name}</div>
+        <span class="rarity-badge" style="color:${color};border-color:${color}">${item.rarity}</span>
+      </div>
+    </div>
+    <div class="item-lore">${item.lore}</div>
+    <div class="item-footer">
+      <div class="item-stats">
+        <span class="stat-price">💰 ${item.price}g</span>
+        <span class="stat-power">⚡ ${item.power}</span>
+      </div>
+      <button class="${btn_cls}" onclick="bazaarBuy('${item.name}')">${btn_txt}</button>
+    </div>
+  </div>`;
 };
 const render_cart = (state) => {
   if (state.cart.length == 0) {
     return el("cart-items").innerHTML = "<div class=\"cart-empty\">Your cart is empty.</div>";
   } else {
-    let rows = transform(state.cart, item => "<div class=\"cart-row\">" + "<span class=\"cart-item-name\">" + category_icon(item.category) + " " + item.name + "</span>" + "<span class=\"cart-item-price\">" + item.price + "g</span>" + "<button class=\"cart-remove\" onclick=\"bazaarRemove('" + item.name + "')\">✕</button>" + "</div>");
+    let rows = transform(state.cart, item => `<div class="cart-row">
+        <span class="cart-item-name">${category_icon(item.category)} ${item.name}</span>
+        <span class="cart-item-price">${item.price}g</span>
+        <button class="cart-remove" onclick="bazaarRemove('${item.name}')">✕</button>
+      </div>`);
     return el("cart-items").innerHTML = rows.join("");
   }
 };
 let state = make_state();
 const buy_item = (name) => {
-  let item_arr = $filter(state.all_items, i => i.name == name);
-  if (item_arr.length > 0) {
-    let item = item_arr[0];
+  let item = $find(state.all_items, i => i.name == name);
+  if (item) {
     if (is_in_cart(state, item)) {
-      state = {
-  all_items: state.all_items,
-  cart: $filter(state.cart, c => c.name != name),
-  filter_cat: state.filter_cat,
-  filter_rar: state.filter_rar,
-  sort_key: state.sort_key,
-  search: state.search
-};
+      state = { ...state, cart: $filter(state.cart, c => c.name != name) };
     } else {
-      state = {
-  all_items: state.all_items,
-  cart: state.cart.concat([item]),
-  filter_cat: state.filter_cat,
-  filter_rar: state.filter_rar,
-  sort_key: state.sort_key,
-  search: state.search
-};
+      state = { ...state, cart: [...state.cart, item] };
     }
     return render(state);
   }
 };
 const remove_item = (name) => {
-  state = {
-  all_items: state.all_items,
-  cart: $filter(state.cart, c => c.name != name),
-  filter_cat: state.filter_cat,
-  filter_rar: state.filter_rar,
-  sort_key: state.sort_key,
-  search: state.search
-};
+  state = { ...state, cart: $filter(state.cart, c => c.name != name) };
   return render(state);
 };
 const on_filter_change = () => {
-  let cat = el("filter-cat").value;
-  let rar = el("filter-rar").value;
-  let srt = el("sort-select").value;
-  let q = el("search-box").value;
   state = {
-  all_items: state.all_items,
-  cart: state.cart,
-  filter_cat: cat,
-  filter_rar: rar,
-  sort_key: srt,
-  search: q
+  ...state,
+  filter_cat: el("filter-cat").value,
+  filter_rar: el("filter-rar").value,
+  sort_key: el("sort-select").value,
+  search: el("search-box").value
 };
   return render(state);
 };
 const clear_cart = () => {
-  state = {
-  all_items: state.all_items,
-  cart: [],
-  filter_cat: state.filter_cat,
-  filter_rar: state.filter_rar,
-  sort_key: state.sort_key,
-  search: state.search
-};
+  state = { ...state, cart: [] };
   return render(state);
 };
 window.bazaarBuy = buy_item;

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Synth v0.4.0 — RPG Adventure
+// Synth v1.0 — RPG Adventure
 //
 // 50-battle marathon dungeon crawl built entirely in Synth. All game rules — damage,
 // elemental bonuses, XP thresholds, stat scaling — live in pure @memo functions.
@@ -38,8 +38,8 @@ record Hero {
   level: int
   xp: int
   alive: bool
-  weapon: any
-  armor: any
+  weapon: Equipment?
+  armor: Equipment?
 }
 
 record Enemy {
@@ -1341,7 +1341,7 @@ Statistically, it could go either way."""
 
     let info = el("div", { class: "title-info" },
       el("div", { class: "dim" }, "Three heroes  ·  50 battles  ·  5 chapters  ·  4 tiers of gear"),
-      el("div", { class: "dim" }, "All game logic written in Synth v0.4, transpiled to JavaScript.")
+      el("div", { class: "dim" }, "All game logic written in Synth v1.0, transpiled to JavaScript.")
     )
     let _ = root.appendChild(info)
 

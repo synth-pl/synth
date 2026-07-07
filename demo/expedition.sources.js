@@ -184,9 +184,9 @@ const render = () => {
   document.getElementById("stat-fuel").textContent = s.fuel;
   document.getElementById("stat-data").textContent = s.data;
   document.getElementById("stat-avgd").textContent = s.avg_d;
-  document.getElementById("stat-dist").textContent = s.max_dist + " ly";
+  document.getElementById("stat-dist").textContent = `${s.max_dist} ly`;
   document.getElementById("stat-risk").textContent = s.high_risk;
-  return document.getElementById("fleet-total").textContent = s.count + " of " + $count(fleet) + " missions";
+  return document.getElementById("fleet-total").textContent = `${s.count} of ${$count(fleet)} missions`;
 };
 Fleet.subscribe(() => {
   render();

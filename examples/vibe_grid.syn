@@ -1,5 +1,16 @@
-// ── VIBE GRID — Synthwave Idle Game ──────────────────────────────────────────
-// Showcases: store · @memo · match · do notation · sum_by · object shorthand
+// ── VIBE GRID — Synth v1.0 Demo ───────────────────────────────────────────────
+// Showcases: record · store · template literals · sum_by · object shorthand · @memo
+
+// ── Data types ─────────────────────────────────────────────────────────────────
+
+record Building {
+  id:        int
+  name:      string
+  icon:      string
+  base_cost: int
+  rate:      float
+  desc:      string
+}
 
 // ── Building catalog ──────────────────────────────────────────────────────────
 
@@ -19,7 +30,7 @@ store Game {
   vibes:       float = 0
   total_vibes: float = 0
   vps:         float = 0
-  counts:      any   = [0, 0, 0, 0, 0, 0, 0]
+  counts:      int[] = [0, 0, 0, 0, 0, 0, 0]
 }
 
 // ── Core calculations ─────────────────────────────────────────────────────────
@@ -55,10 +66,10 @@ fn tick(dt) {
 // ── Display helpers ───────────────────────────────────────────────────────────
 
 fn fmt(v) =
-  v >= 1000000000 ? (floor(v / 1000000000) + "B")
-    : v >= 1000000 ? (floor(v / 1000000) + "M")
-    : v >= 1000    ? (floor(v / 1000)    + "K")
-    : floor(v) + ""
+  v >= 1_000_000_000 ? `${floor(v / 1_000_000_000)}B`
+    : v >= 1_000_000 ? `${floor(v / 1_000_000)}M`
+    : v >= 1_000     ? `${floor(v / 1_000)}K`
+    : `${floor(v)}`
 
 fn milestone() {
   let tv = floor(Game.total_vibes)
@@ -73,23 +84,20 @@ fn milestone() {
 
 // ── Building card renderer ────────────────────────────────────────────────────
 
-fn render_building(b) {
-  // do notation: compute affordability in a scoped block (v0.9.9)
-  let info = do {
-    let owned = Game.counts[b.id]
-    let cost  = building_cost(b.base_cost, owned)
-    let cls   = Game.vibes >= cost ? "can-afford" : ""
-    { owned, cost, cls }
-  }
-  "<div class=\"bld " + info.cls + "\" onclick=\"buy(" + b.id + ")\">" +
-    "<span class=\"bld-icon\">" + b.icon + "</span>" +
-    "<div class=\"bld-info\">" +
-      "<div class=\"bld-name\">" + b.name + "</div>" +
-      "<div class=\"bld-desc\">" + b.desc + " · " + b.rate + " v/s ea</div>" +
-      "<div class=\"bld-cost\">⚡ " + fmt(info.cost) + " vibes</div>" +
-    "</div>" +
-    "<span class=\"bld-count\">" + info.owned + "</span>" +
-  "</div>"
+// Template literals (v1.0) — expressions interpolate directly, no concatenation
+fn render_building(b: Building) -> string {
+  let owned = Game.counts[b.id]
+  let cost  = building_cost(b.base_cost, owned)
+  let cls   = Game.vibes >= cost ? "can-afford" : ""
+  `<div class="bld ${cls}" onclick="buy(${b.id})">
+    <span class="bld-icon">${b.icon}</span>
+    <div class="bld-info">
+      <div class="bld-name">${b.name}</div>
+      <div class="bld-desc">${b.desc} · ${b.rate} v/s ea</div>
+      <div class="bld-cost">⚡ ${fmt(cost)} vibes</div>
+    </div>
+    <span class="bld-count">${owned}</span>
+  </div>`
 }
 
 // ── Stats panel (pipeline showcase) ──────────────────────────────────────────
@@ -107,10 +115,10 @@ fn best_building() =
 
 fn render() {
   document.getElementById("vibes").textContent   = fmt(Game.vibes)
-  document.getElementById("vps").textContent     = fmt(Game.vps) + " v/s"
-  document.getElementById("total").textContent   = fmt(Game.total_vibes) + " total"
+  document.getElementById("vps").textContent     = `${fmt(Game.vps)} v/s`
+  document.getElementById("total").textContent   = `${fmt(Game.total_vibes)} total`
   document.getElementById("msg").textContent     = milestone()
-  document.getElementById("owned").textContent   = total_owned() + " producers"
+  document.getElementById("owned").textContent   = `${total_owned()} producers`
   document.getElementById("blds").innerHTML      =
     catalog.map(b => render_building(b)).join("")
 }

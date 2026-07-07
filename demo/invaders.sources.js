@@ -1,3 +1,4 @@
+const Bullet = (x, y) => ({ x, y });
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let ALIEN_COLS = 11;
@@ -92,27 +93,12 @@ const tick = (dt) => {
         alien_dy = alien_dy + 18;
       }
     }
-    p_bullets = $filter($map(p_bullets, b => (() => {
-      return { x: b.x, y: b.y - PBULLET_SPD * dt };
-})()), b => b.y > 0);
-    a_bullets = $filter($map(a_bullets, b => (() => {
-      return { x: b.x, y: b.y + ABULLET_SPD * dt };
-})()), b => b.y < CANVAS_H);
+    p_bullets = $filter($map(p_bullets, b => ({ x: b.x, y: b.y - PBULLET_SPD * dt })), b => b.y > 0);
+    a_bullets = $filter($map(a_bullets, b => ({ x: b.x, y: b.y + ABULLET_SPD * dt })), b => b.y < CANVAS_H);
     let i = 0;
     while (i < $count(p_bullets, x => true)) {
       let b = p_bullets[i];
-      let j = 0;
-      let hit = 0 - 1;
-      while (j < ALIEN_ROWS * ALIEN_COLS && hit < 0) {
-        if (aliens[j]) {
-          let ax = alien_x(j);
-          let ay = alien_y(j);
-          if (b.x > ax && b.x < ax + ALIEN_W && b.y > ay && b.y < ay + ALIEN_H) {
-            hit = j;
-          }
-        }
-        j += 1;
-      }
+      let hit = $find_index($range(0, ALIEN_ROWS * ALIEN_COLS), j => aliens[j] && b.x > alien_x(j) && b.x < alien_x(j) + ALIEN_W && b.y > alien_y(j) && b.y < alien_y(j) + ALIEN_H);
       if (hit >= 0) {
         aliens = $set_at(aliens, hit, false);
         let pts = row_pts(alien_row(hit));
@@ -167,10 +153,13 @@ const next_wave = () => {
   reset_wave(nw);
   return Game.set({ wave: nw, phase: "playing" });
 };
-const get_aliens = () => $map($filter($range(0, ALIEN_ROWS * ALIEN_COLS), i => aliens[i]), i => (() => {
-  let color = row_color(alien_row(i));
-  return { x: alien_x(i), y: alien_y(i), w: ALIEN_W, h: ALIEN_H, color };
-})());
+const get_aliens = () => $map($filter($range(0, ALIEN_ROWS * ALIEN_COLS), i => aliens[i]), i => ({
+  x: alien_x(i),
+  y: alien_y(i),
+  w: ALIEN_W,
+  h: ALIEN_H,
+  color: row_color(alien_row(i))
+}));
 const get_player = () => ({ x: player_x, y: PLAYER_Y, w: PLAYER_W, h: PLAYER_H });
 const get_pbullets = () => p_bullets;
 const get_abullets = () => a_bullets;

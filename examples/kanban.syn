@@ -1,5 +1,5 @@
-// ── Neon Kanban — Synth Demo ─────────────────────────────────────────────────
-// Game-dev task board. Showcases: record · store · match · @memo · spread · stdlib methods
+// ── Neon Kanban — Synth v1.0 Demo ─────────────────────────────────────────────
+// Showcases: record · store · templates · @memo · spread · type as param name
 
 // ── Data types ─────────────────────────────────────────────────────────────────
 
@@ -82,8 +82,8 @@ fn priority_label(p: string) -> string =
 
 // ── Mutations (called directly from HTML JS) ───────────────────────────────────
 
-fn add_card(col: string, title: string, kind: string, priority: string, pts: int) {
-  let new_card = { id: Board.next_id, title, col, type: kind, priority, pts }
+fn add_card(col: string, title: string, type: string, priority: string, pts: int) {
+  let new_card = { id: Board.next_id, title, col, type, priority, pts }
   Board.set({ cards: [...Board.cards, new_card], next_id: Board.next_id + 1 })
 }
 
@@ -102,11 +102,8 @@ fn set_filter(f: string) {
 
 // ── Views ──────────────────────────────────────────────────────────────────────
 
-fn type_matches(c: Card) -> bool =
-  Board.filter == "All" or c.type == Board.filter
-
 fn col_cards(col: string) -> Card[] =
-  Board.cards.filter(c => c.col == col and type_matches(c))
+  Board.cards.filter(c => c.col == col and (Board.filter == "All" or c.type == Board.filter))
 
 // ── HTML renderers ─────────────────────────────────────────────────────────────
 
@@ -161,8 +158,8 @@ fn render() {
   let done_n  = done_cards.count()
   let total_n = Board.cards.count()
   let pct     = total_n > 0 ? floor(done_n * 100 / total_n) : 0
-  document.getElementById("done-pct").textContent = pct + "%"
-  document.getElementById("prog-bar-fill").style.width = pct + "%"
+  document.getElementById("done-pct").textContent = `${pct}%`
+  document.getElementById("prog-bar-fill").style.width = `${pct}%`
 }
 
 on Board.change { render() }

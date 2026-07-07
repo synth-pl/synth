@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Synth v0.6 — dungeon/config.syn
+// dungeon/config.syn
 // Parses a user-supplied dungeon seed code into a validated DungeonConfig.
 // All parsing functions return Result — failures carry precise error messages.
 //
@@ -16,10 +16,11 @@ export record DungeonConfig {
 @throws
 @pure
 export fn parse_level(s: string) -> any {
-  let n = parseInt(s)
-  if isNaN(n)  { err("Level must be a number — got: \"" + s + "\"") }
-  if n < 1     { err("Level must be at least 1 — got: " + n) }
-  if n > 10    { err("Level must be 10 or less — got: " + n) }
+  // v1.0: parse_int returns null on bad input — no isNaN dance
+  let n = parse_int(s)
+  if n == null { return err(`Level must be a number — got: "${s}"`) }
+  if n < 1     { return err(`Level must be at least 1 — got: ${n}`) }
+  if n > 10    { return err(`Level must be 10 or less — got: ${n}`) }
   refine n: "a dungeon level in [1, 10]"
   ok(n)
 }
@@ -27,8 +28,8 @@ export fn parse_level(s: string) -> any {
 @throws
 @pure
 export fn parse_seed(s: string) -> any {
-  let n = parseInt(s)
-  if isNaN(n) { err("Seed must be a number — got: \"" + s + "\"") }
+  let n = parse_int(s)
+  if n == null { return err(`Seed must be a number — got: "${s}"`) }
   let seed = Math.abs(n) % 2147483648
   refine seed: "a non-negative dungeon seed in [0, 2^31)"
   ok(seed)
@@ -40,18 +41,18 @@ export fn parse_seed(s: string) -> any {
 @pure
 export fn parse_config(input: string) -> any {
   let trimmed = input.trim()
-  if trimmed.length == 0 { err("Enter a code in the format level:seed — e.g. 3:42") }
+  if trimmed.length == 0 { return err("Enter a code in the format level:seed — e.g. 3:42") }
   let parts = trimmed.split(":")
-  if parts.length < 2 { err("Format is level:seed — e.g. 3:42") }
+  if parts.length < 2 { return err("Format is level:seed — e.g. 3:42") }
   let level = parse_level(parts[0].trim())?
   let seed  = parse_seed(parts[1].trim())?
-  ok({ level: level, seed: seed })
+  ok({ level, seed })
 }
 
 // ── Describe config ───────────────────────────────────────────────────────────
 
-export fn config_summary(cfg: any) -> string =
-  "Level " + cfg.level + " · Seed " + cfg.seed
+export fn config_summary(cfg: DungeonConfig) -> string =
+  `Level ${cfg.level} · Seed ${cfg.seed}`
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

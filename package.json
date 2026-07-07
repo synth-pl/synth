@@ -42,7 +42,7 @@
     "build-combat": "node dist/cli.js examples/combat.syn demo/combat.synth.js && node tools/embed_combat.js",
     "build-rpg": "node dist/cli.js examples/rpg.syn demo/rpg.synth.js && node tools/embed_rpg.js",
     "build-rpg-standalone": "node dist/cli.js examples/rpg.syn demo/rpg.synth.js && node tools/embed_rpg.js && node tools/build_standalone_rpg.js",
-    "test": "node dist/cli.js --test examples/rpg.syn && node dist/cli.js --test examples/v04_features.syn && node dist/cli.js --test examples/v095_features.syn && node dist/cli.js --test examples/v1_features.syn"
+    "test": "node dist/cli.js --test examples/rpg.syn && node dist/cli.js --test examples/v04_features.syn && node dist/cli.js --test examples/v095_features.syn && node dist/cli.js --test examples/v1_features.syn && node dist/cli.js --test examples/dungeon/config.syn && node dist/cli.js --test examples/bazaar/items.syn"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

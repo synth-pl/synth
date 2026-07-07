@@ -1,3 +1,4 @@
+const Point = (c, r) => ({ c, r });
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let CELL_SIZE = 10;
@@ -37,7 +38,7 @@ const clear_grid = () => {
   return Life.set({ gen: 0, pop: 0 });
 };
 const randomize = () => {
-  cells = $map($range(0, ROWS * COLS), i => $random() < 0.28 ? true : false);
+  cells = $map($range(0, ROWS * COLS), i => $random() < 0.28);
   let pop = $count(cells, v => v);
   return Life.set({ gen: 0, pop });
 };
@@ -57,7 +58,11 @@ const toggle = (c, r) => {
     return Life.set({ pop });
   }
 };
-const place = (pts) => $map(pts, p => paint(p.c, p.r, true));
+const place = (pts) => {
+  for (const p of pts) {
+    paint(p.c, p.r, true);
+  }
+};
 const load_glider = () => {
   let cx = 10;
   let cy = 10;
@@ -67,7 +72,7 @@ const load_pulsar = () => {
   let cx = COLS / 2;
   let cy = ROWS / 2;
   let offsets = [2, 3, 4, 8, 9, 10];
-  return $map(offsets, o => (() => {
+  for (const o of offsets) {
     paint(cx - o, cy - 1, true);
     paint(cx + o, cy - 1, true);
     paint(cx - o, cy + 1, true);
@@ -75,8 +80,8 @@ const load_pulsar = () => {
     paint(cx - 1, cy - o, true);
     paint(cx + 1, cy - o, true);
     paint(cx - 1, cy + o, true);
-    return paint(cx + 1, cy + o, true);
-})());
+    paint(cx + 1, cy + o, true);
+  }
 };
 const load_glider_gun = () => {
   let ox = 3;
