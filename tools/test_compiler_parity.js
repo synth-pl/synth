@@ -234,6 +234,54 @@ function testTsParserVsGoldens() {
   return failed
 }
 
+function testSynthParserVsGoldens() {
+  if (!fs.existsSync(SYNTH_BUNDLE)) {
+    console.log('skip Synth parser (no dist/compiler.synth.js — run npm run build:compiler)')
+    return false
+  }
+
+  let synth
+  try {
+    synth = loadSynthBundle(SYNTH_BUNDLE)
+  } catch (err) {
+    console.error('FAIL loading Synth compiler bundle:', err.message)
+    return true
+  }
+
+  if (typeof synth.parse !== 'function') {
+    console.error('FAIL Synth bundle: export parse not found')
+    return true
+  }
+
+  const fixtures = fs.readdirSync(FIXTURES_DIR)
+    .filter(f => f.endsWith('.syn'))
+    .sort()
+
+  let failed = false
+  for (const file of fixtures) {
+    const name = path.basename(file, '.syn')
+    const src = fs.readFileSync(path.join(FIXTURES_DIR, file), 'utf8')
+    try {
+      const tokens = synth.tokenize(src)
+      const actual = serializeAst(synth.parse(tokens))
+      const expected = loadAstGolden(name)
+      const diffs = diffJson(expected, actual, `synth:${name}`)
+      if (diffs.length > 0) {
+        failed = true
+        console.error(`FAIL Synth parser vs golden: ${name}`)
+        for (const e of diffs.slice(0, 10)) console.error('  ', e)
+        if (diffs.length > 10) console.error(`  ... and ${diffs.length - 10} more`)
+      } else {
+        console.log(`ok  Synth parser vs golden: ${name}`)
+      }
+    } catch (err) {
+      failed = true
+      console.error(`FAIL Synth parse(${name}):`, err.message)
+    }
+  }
+  return failed
+}
+
 function testSynthAstConstructors() {
   const { execSync } = require('child_process')
   const cli = path.join(__dirname, '..', 'dist', 'cli.js')
@@ -258,6 +306,7 @@ function main() {
   failed = testTsLexerVsGoldens() || failed
   failed = testSynthLexerVsGoldens() || failed
   failed = testTsParserVsGoldens() || failed
+  failed = testSynthParserVsGoldens() || failed
   failed = testSynthAstConstructors() || failed
   if (failed) process.exit(1)
   console.log('compiler parity: all checks passed')
