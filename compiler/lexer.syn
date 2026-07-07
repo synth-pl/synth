@@ -1,8 +1,384 @@
 // ── Lexer — port of src/lexer.ts ─────────────────────────────────────────────
-// Phase 1: implement tokenize() against compiler/fixtures goldens.
 
-import { Token } from "./token"
+import { Token, keyword_type, single_char_token } from "./token"
+
+fn nl_char() -> string { String.fromCharCode(10) }
+fn cr_char() -> string { String.fromCharCode(13) }
+fn tab_char() -> string { String.fromCharCode(9) }
+fn bs_char() -> string { String.fromCharCode(92) }
+fn dq_char() -> string { String.fromCharCode(34) }
+fn sq_char() -> string { String.fromCharCode(39) }
+
+record LexState {
+  src:  string
+  pos:  int
+  line: int
+  col:  int
+}
+
+record LexStr {
+  st:    LexState
+  value: string
+}
+
+record LexEmit {
+  st:     LexState
+  tokens: Token[]
+}
+
+fn char_at(s: string, i: int) -> string {
+  if i < 0 or i >= s.length { "" } else { s[i] }
+}
+
+fn lx_advance(st: LexState) -> LexState {
+  let ch = char_at(st.src, st.pos)
+  if ch == nl_char() {
+    LexState(st.src, st.pos + 1, st.line + 1, 1)
+  } else {
+    LexState(st.src, st.pos + 1, st.line, st.col + 1)
+  }
+}
+
+fn lx_emit(st: LexState, tokens: Token[], tok_type: string, value: string, len: int) -> LexEmit {
+  let t = Token(tok_type, value, st.line, st.col)
+  let mut s = st
+  let mut i = 0
+  while i < len {
+    s = lx_advance(s)
+    i = i + 1
+  }
+  LexEmit(s, tokens.concat([t]))
+}
+
+fn is_digit(ch: string) -> bool {
+  ch >= "0" and ch <= "9"
+}
+
+fn is_ident_start(ch: string) -> bool {
+  (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or ch == "_" or ch == "$"
+}
+
+fn is_ident_continue(ch: string) -> bool {
+  is_ident_start(ch) or is_digit(ch)
+}
+
+fn is_hex_digit(ch: string) -> bool {
+  is_digit(ch) or (ch >= "a" and ch <= "f") or (ch >= "A" and ch <= "F") or ch == "_"
+}
+
+fn is_bin_digit(ch: string) -> bool {
+  (ch >= "0" and ch <= "1") or ch == "_"
+}
+
+fn is_regex_flag(ch: string) -> bool {
+  ch == "g" or ch == "i" or ch == "m" or ch == "s" or ch == "u" or ch == "y"
+}
+
+fn is_regex_start(tokens: Token[]) -> bool {
+  if tokens.length == 0 {
+    true
+  } else {
+    let t = tokens[tokens.length - 1].type
+    if t == "IDENT" { false }
+    else if t == "NUMBER" { false }
+    else if t == "RPAREN" { false }
+    else if t == "RBRACKET" { false }
+    else { true }
+  }
+}
+
+fn lx_skip_ws(st: LexState) -> LexState {
+  let mut s = st
+  let mut done = false
+  while s.pos < s.src.length and not done {
+    let ch = char_at(s.src, s.pos)
+    if ch == " " or ch == cr_char() or ch == tab_char() {
+      s = lx_advance(s)
+    } else if ch == "/" and char_at(s.src, s.pos + 1) == "/" {
+      while s.pos < s.src.length and char_at(s.src, s.pos) != nl_char() {
+        s = lx_advance(s)
+      }
+    } else {
+      done = true
+    }
+  }
+  s
+}
+
+fn lx_read_ident_raw(st: LexState) -> LexStr {
+  let mut s = st
+  let mut name = ""
+  while s.pos < s.src.length and is_ident_continue(char_at(s.src, s.pos)) {
+    name = name + char_at(s.src, s.pos)
+    s = lx_advance(s)
+  }
+  LexStr(s, name)
+}
+
+fn lx_escape_char(esc: string) -> string {
+  if esc == "n" { nl_char() }
+  else if esc == "t" { tab_char() }
+  else if esc == "r" { cr_char() }
+  else if esc == bs_char() { bs_char() }
+  else if esc == "'" { sq_char() }
+  else if esc == dq_char() { dq_char() }
+  else { bs_char() + esc }
+}
+
+fn lx_read_triple_quote(st: LexState, tokens: Token[]) -> LexEmit {
+  let start_line = st.line
+  let start_col  = st.col
+  let mut s = st
+  s = lx_advance(s)
+  s = lx_advance(s)
+  s = lx_advance(s)
+  let mut value = ""
+  let mut done = false
+  while s.pos < s.src.length and not done {
+    if char_at(s.src, s.pos) == "\"" and char_at(s.src, s.pos + 1) == "\"" and char_at(s.src, s.pos + 2) == "\"" {
+      s = lx_advance(s)
+      s = lx_advance(s)
+      s = lx_advance(s)
+      done = true
+    } else {
+      let ch = char_at(s.src, s.pos)
+      if ch == nl_char() {
+        value = value + nl_char()
+        s = LexState(s.src, s.pos + 1, s.line + 1, 1)
+      } else {
+        value = value + ch
+        s = lx_advance(s)
+      }
+    }
+  }
+  let v = if value.length > 0 and char_at(value, 0) == nl_char() { value.slice(1) } else { value }
+  LexEmit(s, tokens.concat([Token("STRING", v, start_line, start_col)]))
+}
+
+fn lx_read_string(st: LexState, tokens: Token[], quote: string) -> LexEmit {
+  let start_col = st.col
+  let mut s = st
+  s = lx_advance(s)
+  let mut value = ""
+  while s.pos < s.src.length and char_at(s.src, s.pos) != quote {
+    if char_at(s.src, s.pos) == bs_char() {
+      s = lx_advance(s)
+      let esc = char_at(s.src, s.pos)
+      value = value + lx_escape_char(esc)
+      s = lx_advance(s)
+    } else {
+      value = value + char_at(s.src, s.pos)
+      s = lx_advance(s)
+    }
+  }
+  s = lx_advance(s)
+  LexEmit(s, tokens.concat([Token("STRING", value, s.line, start_col)]))
+}
+
+fn lx_read_template(st: LexState, tokens: Token[]) -> LexEmit {
+  let start_col = st.col
+  let mut s = st
+  let mut raw = "`"
+  s = lx_advance(s)
+  let mut brace_depth = 0
+  while s.pos < s.src.length {
+    let ch = char_at(s.src, s.pos)
+    if ch == "`" and brace_depth == 0 { break }
+    raw = raw + ch
+    if ch == nl_char() {
+      s = LexState(s.src, s.pos + 1, s.line + 1, 1)
+    } else {
+      s = LexState(s.src, s.pos + 1, s.line, s.col + 1)
+    }
+    if ch == "{" { brace_depth = brace_depth + 1 }
+    else if ch == "}" and brace_depth > 0 { brace_depth = brace_depth - 1 }
+  }
+  raw = raw + "`"
+  s = lx_advance(s)
+  LexEmit(s, tokens.concat([Token("TEMPLATE", raw, s.line, start_col)]))
+}
+
+fn lx_read_regex(st: LexState, tokens: Token[]) -> LexEmit {
+  let start_col = st.col
+  let mut s = st
+  s = lx_advance(s)
+  let mut pattern = ""
+  let mut in_class = false
+  while s.pos < s.src.length {
+    let ch = char_at(s.src, s.pos)
+    if ch == "[" { in_class = true }
+    if ch == "]" { in_class = false }
+    if ch == "/" and not in_class { break }
+    if ch == bs_char() {
+      pattern = pattern + ch
+      s = lx_advance(s)
+    }
+    pattern = pattern + char_at(s.src, s.pos)
+    s = lx_advance(s)
+  }
+  s = lx_advance(s)
+  let mut flags = ""
+  while s.pos < s.src.length and is_regex_flag(char_at(s.src, s.pos)) {
+    flags = flags + char_at(s.src, s.pos)
+    s = lx_advance(s)
+  }
+  LexEmit(s, tokens.concat([Token("REGEX", "/" + pattern + "/" + flags, s.line, start_col)]))
+}
+
+fn lx_read_number(st: LexState, tokens: Token[]) -> LexEmit {
+  let start_col = st.col
+  let mut s = st
+  let mut raw = ""
+
+  if char_at(s.src, s.pos) == "0" {
+    let next = char_at(s.src, s.pos + 1)
+    if next == "x" or next == "X" {
+      raw = raw + char_at(s.src, s.pos)
+      s = lx_advance(s)
+      raw = raw + char_at(s.src, s.pos)
+      s = lx_advance(s)
+      while s.pos < s.src.length and is_hex_digit(char_at(s.src, s.pos)) {
+        raw = raw + char_at(s.src, s.pos)
+        s = lx_advance(s)
+      }
+      return LexEmit(s, tokens.concat([Token("NUMBER", raw.replace("_", ""), s.line, start_col)]))
+    }
+    if next == "b" or next == "B" {
+      raw = raw + char_at(s.src, s.pos)
+      s = lx_advance(s)
+      raw = raw + char_at(s.src, s.pos)
+      s = lx_advance(s)
+      while s.pos < s.src.length and is_bin_digit(char_at(s.src, s.pos)) {
+        raw = raw + char_at(s.src, s.pos)
+        s = lx_advance(s)
+      }
+      return LexEmit(s, tokens.concat([Token("NUMBER", raw.replace("_", ""), s.line, start_col)]))
+    }
+  }
+
+  let mut looping = true
+  while s.pos < s.src.length and looping {
+    let ch = char_at(s.src, s.pos)
+    if is_digit(ch) or ch == "_" {
+      raw = raw + ch
+      s = lx_advance(s)
+    } else if ch == "." and is_digit(char_at(s.src, s.pos + 1)) {
+      raw = raw + ch
+      s = lx_advance(s)
+    } else {
+      looping = false
+    }
+  }
+
+  LexEmit(s, tokens.concat([Token("NUMBER", raw.replace("_", ""), s.line, start_col)]))
+}
+
+fn lx_read_ident(st: LexState, tokens: Token[]) -> LexEmit {
+  let start_col = st.col
+  let start_line = st.line
+  let got = lx_read_ident_raw(st)
+  let kw = keyword_type(got.value)
+  let tok = if kw != "" {
+    Token(kw, got.value, start_line, start_col)
+  } else {
+    Token("IDENT", got.value, start_line, start_col)
+  }
+  LexEmit(got.st, tokens.concat([tok]))
+}
+
+fn lx_try_multi(st: LexState, tokens: Token[]) -> LexEmit {
+  let ch = char_at(st.src, st.pos)
+  let three = st.src.slice(st.pos, st.pos + 3)
+  let two   = st.src.slice(st.pos, st.pos + 2)
+
+  if three == "===" { lx_emit(st, tokens, "STRICT_EQ", "===", 3) }
+  else if three == "!==" { lx_emit(st, tokens, "STRICT_NEQ", "!==", 3) }
+  else if three == "??=" { lx_emit(st, tokens, "NULL_COALESCE_EQ", "??=", 3) }
+  else if ch == "." and char_at(st.src, st.pos + 1) == "." and char_at(st.src, st.pos + 2) == "." {
+    lx_emit(st, tokens, "SPREAD", "...", 3)
+  }
+  else if ch == "." and char_at(st.src, st.pos + 1) == "." and char_at(st.src, st.pos + 2) == "=" {
+    lx_emit(st, tokens, "DOTDOTEQ", "..=", 3)
+  }
+  else if two == "|>" { lx_emit(st, tokens, "PIPE_OP", "|>", 2) }
+  else if two == "=>" { lx_emit(st, tokens, "FAT_ARROW", "=>", 2) }
+  else if two == "->" { lx_emit(st, tokens, "THIN_ARROW", "->", 2) }
+  else if two == "::" { lx_emit(st, tokens, "DOUBLE_COLON", "::", 2) }
+  else if two == "==" { lx_emit(st, tokens, "EQ", "==", 2) }
+  else if two == "!=" { lx_emit(st, tokens, "NEQ", "!=", 2) }
+  else if two == "<=" { lx_emit(st, tokens, "LTE", "<=", 2) }
+  else if two == ">=" { lx_emit(st, tokens, "GTE", ">=", 2) }
+  else if two == "&&" { lx_emit(st, tokens, "AND", "&&", 2) }
+  else if two == "||" { lx_emit(st, tokens, "OR", "||", 2) }
+  else if two == "??" { lx_emit(st, tokens, "NULL_COALESCE", "??", 2) }
+  else if two == "?." { lx_emit(st, tokens, "OPTIONAL_CHAIN", "?.", 2) }
+  else if two == "+=" { lx_emit(st, tokens, "PLUS_EQ", "+=", 2) }
+  else if two == "-=" { lx_emit(st, tokens, "MINUS_EQ", "-=", 2) }
+  else if two == "*=" { lx_emit(st, tokens, "STAR_EQ", "*=", 2) }
+  else if two == "/=" { lx_emit(st, tokens, "SLASH_EQ", "/=", 2) }
+  else if two == "%=" { lx_emit(st, tokens, "PERCENT_EQ", "%=", 2) }
+  else if ch == "." and char_at(st.src, st.pos + 1) == "." {
+    lx_emit(st, tokens, "DOTDOT", "..", 2)
+  }
+  else {
+    let single = single_char_token(ch)
+    if single != "" {
+      lx_emit(st, tokens, single, ch, 1)
+    } else {
+      LexEmit(lx_advance(st), tokens)
+    }
+  }
+}
 
 export fn tokenize(src: string) -> Token[] {
-  []
+  let mut st = LexState(src, 0, 1, 1)
+  let mut tokens = []
+
+  while st.pos < st.src.length {
+    st = lx_skip_ws(st)
+    if st.pos >= st.src.length { break }
+
+    let ch = char_at(st.src, st.pos)
+
+    if ch == nl_char() {
+      st = lx_advance(st)
+    } else if ch == "\"" and char_at(st.src, st.pos + 1) == "\"" and char_at(st.src, st.pos + 2) == "\"" {
+      let em = lx_read_triple_quote(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    } else if ch == "`" {
+      let em = lx_read_template(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    } else if ch == "\"" or ch == "'" {
+      let em = lx_read_string(st, tokens, ch)
+      st = em.st
+      tokens = em.tokens
+    } else if ch == "/" and is_regex_start(tokens) {
+      let em = lx_read_regex(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    } else if is_digit(ch) or (ch == "." and is_digit(char_at(st.src, st.pos + 1))) {
+      let em = lx_read_number(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    } else if is_ident_start(ch) {
+      let em = lx_read_ident(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    } else if ch == "@" or ch == "#" {
+      let start_col = st.col
+      let prefix = ch
+      st = lx_advance(st)
+      let got = lx_read_ident_raw(st)
+      st = got.st
+      tokens = tokens.concat([Token("AT", prefix + got.value, st.line, start_col)])
+    } else {
+      let em = lx_try_multi(st, tokens)
+      st = em.st
+      tokens = em.tokens
+    }
+  }
+
+  tokens.concat([Token("EOF", "", st.line, st.col)])
 }

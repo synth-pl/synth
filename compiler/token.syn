@@ -1,9 +1,78 @@
 // ── Token types — port of src/types.ts (Token slice) ─────────────────────────
-// Phase 1 target: full TokenType enum / keyword table lives alongside this.
 
 export record Token {
   type:  string
   value: string
   line:  int
   col:   int
+}
+
+export fn keyword_type(name: string) -> string {
+  match name {
+    | "type"       => "KW_TYPE"
+    | "fn"         => "KW_FN"
+    | "record"     => "KW_RECORD"
+    | "module"     => "KW_MODULE"
+    | "match"      => "KW_MATCH"
+    | "let"        => "KW_LET"
+    | "where"      => "KW_WHERE"
+    | "true"       => "KW_TRUE"
+    | "false"      => "KW_FALSE"
+    | "if"         => "KW_IF"
+    | "else"       => "KW_ELSE"
+    | "return"     => "KW_RETURN"
+    | "typeof"     => "KW_TYPEOF"
+    | "instanceof" => "KW_INSTANCEOF"
+    | "new"        => "KW_NEW"
+    | "when"       => "KW_WHEN"
+    | "as"         => "KW_AS"
+    | "import"     => "KW_IMPORT"
+    | "export"     => "KW_EXPORT"
+    | "from"       => "KW_FROM"
+    | "for"        => "KW_FOR"
+    | "in"         => "KW_IN"
+    | "break"      => "KW_BREAK"
+    | "continue"   => "KW_CONTINUE"
+    | "while"      => "KW_WHILE"
+    | "mut"        => "KW_MUT"
+    | "refine"     => "KW_REFINE"
+    | "interface"  => "KW_INTERFACE"
+    | "infer"      => "KW_INFER"
+    | "async"      => "KW_ASYNC"
+    | "await"      => "KW_AWAIT"
+    | "enum"       => "KW_ENUM"
+    | "do"         => "KW_DO"
+    | "and"        => "AND"
+    | "or"         => "OR"
+    | "not"        => "BANG"
+    | _            => ""
+  }
+}
+
+export fn single_char_token(ch: string) -> string {
+  match ch {
+    | "="  => "ASSIGN"
+    | "+"  => "PLUS"
+    | "-"  => "MINUS"
+    | "*"  => "STAR"
+    | "/"  => "SLASH"
+    | "%"  => "PERCENT"
+    | "<"  => "LT"
+    | ">"  => "GT"
+    | "!"  => "BANG"
+    | "|"  => "PIPE"
+    | "."  => "DOT"
+    | "?"  => "QUESTION"
+    | "("  => "LPAREN"
+    | ")"  => "RPAREN"
+    | "["  => "LBRACKET"
+    | "]"  => "RBRACKET"
+    | "{"  => "LBRACE"
+    | "}"  => "RBRACE"
+    | ","  => "COMMA"
+    | ":"  => "COLON"
+    | ";"  => "SEMICOLON"
+    | "_"  => "UNDERSCORE"
+    | _    => ""
+  }
 }

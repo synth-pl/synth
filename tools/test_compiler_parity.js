@@ -79,8 +79,20 @@ function loadSynthBundle(bundlePath) {
   const exports = module.exports
   const body = fs.readFileSync(bundlePath, 'utf8')
     + '\nmodule.exports = { compile, tokenize, parse, generate };'
-  // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', body)(module, exports)
+  const vm = require('vm')
+  const script = new vm.Script(body, { filename: bundlePath })
+  script.runInNewContext({
+    module,
+    exports,
+    console,
+    String,
+    Array,
+    Math,
+    Object,
+    JSON,
+    Map,
+    Set,
+  })
   return module.exports
 }
 
@@ -98,13 +110,11 @@ function testSynthLexerVsGoldens() {
     return true
   }
 
-  if (typeof synth.compile !== 'function') {
-    console.error('FAIL Synth bundle: export compile not found')
+  if (typeof synth.tokenize !== 'function') {
+    console.error('FAIL Synth bundle: export tokenize not found')
     return true
   }
 
-  // Phase 1: once lexer.syn is implemented, tokenize via compile internals or
-  // a dedicated export. For now we only verify the bundle loads and runs.
   const fixtures = fs.readdirSync(FIXTURES_DIR)
     .filter(f => f.endsWith('.syn'))
     .sort()
@@ -114,16 +124,20 @@ function testSynthLexerVsGoldens() {
     const name = path.basename(file, '.syn')
     const src  = fs.readFileSync(path.join(FIXTURES_DIR, file), 'utf8')
     try {
-      const result = synth.compile(src)
-      if (!result || typeof result.js !== 'string') {
+      const actual   = serializeTokens(synth.tokenize(src))
+      const expected = loadGolden(name)
+      const errors   = diffTokens(expected, actual, `synth:${name}`)
+      if (errors.length > 0) {
         failed = true
-        console.error(`FAIL Synth compile(${name}): unexpected result shape`)
+        console.error(`FAIL Synth lexer vs golden: ${name}`)
+        for (const e of errors.slice(0, 10)) console.error('  ', e)
+        if (errors.length > 10) console.error(`  ... and ${errors.length - 10} more`)
       } else {
-        console.log(`ok  Synth compile stub: ${name}`)
+        console.log(`ok  Synth lexer vs golden: ${name} (${actual.length} tokens)`)
       }
     } catch (err) {
       failed = true
-      console.error(`FAIL Synth compile(${name}):`, err.message)
+      console.error(`FAIL Synth tokenize(${name}):`, err.message)
     }
   }
   return failed
