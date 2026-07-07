@@ -1456,7 +1456,29 @@ const regex_parts = (raw) => {
  * @param {string} s
  * @returns {string}
  */
-const json_string = (s) => "\"" + s + "\"";
+const escape_js_string = (s) => {
+  let out = "\"";
+  let i = 0;
+  while (i < s.length) {
+    let c = s.slice(i, i + 1);
+    if (c == "\\") {
+      out = out + "\\\\";
+    } else if (c == "\"") {
+      out = out + "\\\"";
+    } else if (c == `
+`) {
+      out = out + "\\n";
+    } else if (c == "\r") {
+      out = out + "\\r";
+    } else if (c == "\t") {
+      out = out + "\\t";
+    } else {
+      out = out + c;
+    }
+    i = i + 1;
+  }
+  return out + "\"";
+};
 
 /**
  * @param {string} tok_type
@@ -3607,7 +3629,11 @@ const ps_parse_primary = (st) => {
 });
   } else if (tok.type == "STRING") {
     let adv = ps_advance(st);
-    return ParseVal(adv.st, { kind: "StringLit", value: adv.value.value, raw: json_string(adv.value.value) });
+    return ParseVal(adv.st, {
+  kind: "StringLit",
+  value: adv.value.value,
+  raw: escape_js_string(adv.value.value)
+});
   } else if (tok.type == "TEMPLATE") {
     let adv = ps_advance(st);
     return ParseVal(adv.st, ps_parse_template_lit(adv.value.value));
@@ -5091,6 +5117,138 @@ const precedence = (op) => {
 };
 
 /**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const is_stdlib_name = (name) => {
+  if (name == "map") {
+    return true;
+  } else if (name == "filter") {
+    return true;
+  } else if (name == "fold") {
+    return true;
+  } else if (name == "pipe") {
+    return true;
+  } else if (name == "zip") {
+    return true;
+  } else if (name == "range") {
+    return true;
+  } else if (name == "first") {
+    return true;
+  } else if (name == "last") {
+    return true;
+  } else if (name == "sum") {
+    return true;
+  } else if (name == "count") {
+    return true;
+  } else if (name == "any") {
+    return true;
+  } else if (name == "all") {
+    return true;
+  } else if (name == "flat") {
+    return true;
+  } else if (name == "flat_map") {
+    return true;
+  } else if (name == "sort_by") {
+    return true;
+  } else if (name == "sort_by_desc") {
+    return true;
+  } else if (name == "find") {
+    return true;
+  } else if (name == "find_index") {
+    return true;
+  } else if (name == "trim") {
+    return true;
+  } else if (name == "split") {
+    return true;
+  } else if (name == "starts_with") {
+    return true;
+  } else if (name == "ends_with") {
+    return true;
+  } else if (name == "contains") {
+    return true;
+  } else if (name == "to_upper") {
+    return true;
+  } else if (name == "to_lower") {
+    return true;
+  } else if (name == "replace_all") {
+    return true;
+  } else if (name == "pad_start") {
+    return true;
+  } else if (name == "pad_end") {
+    return true;
+  } else if (name == "min") {
+    return true;
+  } else if (name == "max") {
+    return true;
+  } else if (name == "min_by") {
+    return true;
+  } else if (name == "max_by") {
+    return true;
+  } else if (name == "take") {
+    return true;
+  } else if (name == "drop") {
+    return true;
+  } else if (name == "uniq") {
+    return true;
+  } else if (name == "chunk") {
+    return true;
+  } else if (name == "set_at") {
+    return true;
+  } else if (name == "reverse") {
+    return true;
+  } else if (name == "sum_by") {
+    return true;
+  } else if (name == "clamp") {
+    return true;
+  } else if (name == "abs") {
+    return true;
+  } else if (name == "round") {
+    return true;
+  } else if (name == "floor") {
+    return true;
+  } else if (name == "ceil") {
+    return true;
+  } else if (name == "pow") {
+    return true;
+  } else if (name == "sqrt") {
+    return true;
+  } else if (name == "random") {
+    return true;
+  } else if (name == "random_int") {
+    return true;
+  } else if (name == "parse_int") {
+    return true;
+  } else if (name == "parse_float") {
+    return true;
+  } else if (name == "ok") {
+    return true;
+  } else if (name == "err") {
+    return true;
+  } else if (name == "is_ok") {
+    return true;
+  } else if (name == "is_err") {
+    return true;
+  } else if (name == "unwrap") {
+    return true;
+  } else if (name == "unwrap_or") {
+    return true;
+  } else if (name == "delay") {
+    return true;
+  } else if (name == "println") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} prop
+ * @returns {boolean}
+ */
+const is_stdlib_method = (prop) => is_stdlib_name(prop);
+
+/**
  * @param {CgState} st
  * @param {string} name
  * @returns {string}
@@ -5098,6 +5256,8 @@ const precedence = (op) => {
 const cg_emit_name = (st, name) => {
   if (cg_is_local(st, name)) {
     return name;
+  } else if (is_stdlib_name(name)) {
+    return "$" + name;
   } else {
     return name;
   }
@@ -5174,6 +5334,21 @@ const cg_pattern_condition = (pat, subj) => {
 };
 
 /**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const ident_is_binding = (name) => {
+  if (name == "_") {
+    return false;
+  } else if (name.length == 0) {
+    return false;
+  } else {
+    let c = name.slice(0, 1);
+    return c >= "a" && c <= "z";
+  }
+};
+
+/**
  * @param {CgState} st
  * @param {*} arms
  * @param {number} idx
@@ -5186,20 +5361,63 @@ const cg_match_chain = (st, arms, idx, subj_var) => {
   } else {
     let arm = arms[idx];
     let rest = cg_match_chain(st, arms, idx + 1, subj_var);
-    let cond = cg_pattern_condition(arm.pattern, subj_var);
-    if (arm.guard != null) {
-      let g = cg_emit_expr(st, arm.guard);
-      if (cond == "true") {
-        cond = g;
+    let pat = arm.pattern;
+    if (pat.kind == "IdentPat" && ident_is_binding(pat.name)) {
+      let name = pat.name;
+      let s = cg_push_scope(st);
+      s = cg_declare(s, name);
+      let raw_body = cg_emit_expr(s, arm.body);
+      s = cg_pop_scope(s);
+      if (arm.guard != null) {
+        let g = cg_emit_expr(st, arm.guard);
+        return "((" + name + ") => (" + g + ") ? " + raw_body + " : " + rest + ")(" + subj_var + ")";
       } else {
-        cond = "(" + cond + ") && (" + g + ")";
+        return "((" + name + ") => " + raw_body + ")(" + subj_var + ")";
       }
-    }
-    let body = cg_emit_expr(st, arm.body);
-    if (cond == "true") {
-      return body;
+    } else if (pat.kind == "TagPat" && pat.bindings != null && pat.bindings.length > 0) {
+      let cond = cg_pattern_condition(pat, subj_var);
+      let bind_str = "";
+      let bi = 0;
+      while (bi < pat.bindings.length) {
+        if (bi > 0) {
+          bind_str = bind_str + ", ";
+        }
+        bind_str = bind_str + pat.bindings[bi];
+        bi = bi + 1;
+      }
+      let s = cg_push_scope(st);
+      bi = 0;
+      while (bi < pat.bindings.length) {
+        s = cg_declare(s, pat.bindings[bi]);
+        bi = bi + 1;
+      }
+      let raw_body = cg_emit_expr(s, arm.body);
+      s = cg_pop_scope(s);
+      let inner = (() => {
+        if (arm.guard != null) {
+          let g = cg_emit_expr(st, arm.guard);
+          return "(({ " + bind_str + " }) => (" + g + ") ? " + raw_body + " : " + rest + ")(" + subj_var + ")";
+        } else {
+          return "(({ " + bind_str + " }) => " + raw_body + ")(" + subj_var + ")";
+        }
+})();
+      return "(" + cond + ") ? " + inner + " : " + rest;
     } else {
-      return "(" + cond + ") ? " + body + " : " + rest;
+      let cond = cg_pattern_condition(pat, subj_var);
+      if (arm.guard != null) {
+        let g = cg_emit_expr(st, arm.guard);
+        if (cond == "true") {
+          cond = g;
+        } else {
+          cond = "(" + cond + ") && (" + g + ")";
+        }
+      }
+      let body = cg_emit_expr(st, arm.body);
+      if (cond == "true") {
+        return body;
+      } else {
+        return "(" + cond + ") ? " + body + " : " + rest;
+      }
     }
   }
 };
@@ -5325,6 +5543,9 @@ const cg_emit_expr = (st, expr) => {
     }
     if (expr.callee.kind == "Identifier" && expr.callee.name == "print") {
       return "console.log(" + args + ")";
+    } else if (expr.callee.kind == "MemberExpr" && is_stdlib_method(expr.callee.property)) {
+      let obj = cg_emit_expr(st, expr.callee.object);
+      return "$" + expr.callee.property + "(" + obj + ", " + args + ")";
     } else if (expr.callee.kind == "Identifier") {
       return cg_emit_name(st, expr.callee.name) + "(" + args + ")";
     } else {
@@ -5362,7 +5583,22 @@ const cg_emit_expr = (st, expr) => {
     }
     return "[" + elems + "]";
   } else if (k == "ObjectLit") {
-    return "{}";
+    let props = "";
+    let i = 0;
+    while (i < expr.properties.length) {
+      if (i > 0) {
+        props = props + ", ";
+      }
+      props = props + expr.properties[i].key + ": " + cg_emit_expr(st, expr.properties[i].value);
+      i = i + 1;
+    }
+    return "{" + props + "}";
+  } else if (k == "AwaitExpr") {
+    return "await " + cg_emit_expr(st, expr.value);
+  } else if (k == "ResultPropagateExpr") {
+    return "$unwrap(" + cg_emit_expr(st, expr.value) + ")";
+  } else if (k == "PipelineExpr") {
+    return cg_emit_pipeline(st, expr.steps);
   } else if (k == "LambdaExpr") {
     let params = "";
     let i = 0;
@@ -5446,17 +5682,45 @@ const cg_emit_if_chain = (st, stmt) => {
 const cg_emit_stmt = (st, stmt) => {
   let k = stmt.kind;
   if (k == "LetStmt") {
-    let val = cg_emit_expr(st, stmt.value);
-    if (stmt.name == null) {
-      return cg_emit_line(st, val + ";");
+    if (stmt.value != null && stmt.value.kind == "ResultPropagateExpr") {
+      let tmp = "_r" + st.lines.length;
+      let inner = cg_emit_expr(st, stmt.value.value);
+      let s = cg_emit_line(st, "const " + tmp + " = " + inner + ";");
+      s = cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";");
+      if (stmt.name == null) {
+        return s;
+      } else {
+        let s2 = cg_declare(s, stmt.name);
+        return cg_emit_line(s2, "let " + stmt.name + " = " + tmp + ".value;");
+      }
     } else {
-      let s = cg_declare(st, stmt.name);
-      return cg_emit_line(s, "let " + stmt.name + " = " + val + ";");
+      let val = cg_emit_expr(st, stmt.value);
+      if (stmt.name == null) {
+        return cg_emit_line(st, val + ";");
+      } else {
+        let s = cg_declare(st, stmt.name);
+        return cg_emit_line(s, "let " + stmt.name + " = " + val + ";");
+      }
     }
   } else if (k == "ReturnStmt") {
-    return cg_emit_line(st, "return " + cg_emit_expr(st, stmt.value) + ";");
+    if (stmt.value != null && stmt.value.kind == "ResultPropagateExpr") {
+      let tmp = "_r" + st.lines.length;
+      let inner = cg_emit_expr(st, stmt.value.value);
+      let s = cg_emit_line(st, "const " + tmp + " = " + inner + ";");
+      s = cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";");
+      return cg_emit_line(s, "return " + tmp + ".value;");
+    } else {
+      return cg_emit_line(st, "return " + cg_emit_expr(st, stmt.value) + ";");
+    }
   } else if (k == "ExprStmt") {
-    return cg_emit_line(st, cg_emit_expr(st, stmt.value) + ";");
+    if (stmt.value != null && stmt.value.kind == "ResultPropagateExpr") {
+      let tmp = "_r" + st.lines.length;
+      let inner = cg_emit_expr(st, stmt.value.value);
+      let s = cg_emit_line(st, "const " + tmp + " = " + inner + ";");
+      return cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";");
+    } else {
+      return cg_emit_line(st, cg_emit_expr(st, stmt.value) + ";");
+    }
   } else if (k == "IfStmt") {
     return cg_emit_if_chain(st, stmt);
   } else if (k == "ForRangeStmt") {
@@ -5529,6 +5793,219 @@ const cg_emit_jsdoc = (st, params, return_type) => {
 
 /**
  * @param {CgState} st
+ * @param {*} step
+ * @param {string} acc
+ * @returns {string}
+ */
+const cg_apply_pipe_step = (st, step, acc) => {
+  if (step.kind == "Identifier") {
+    return cg_emit_name(st, step.name) + "(" + acc + ")";
+  } else if (step.kind == "CallExpr") {
+    let callee = cg_emit_expr(st, step.callee);
+    let extra = "";
+    let i = 0;
+    while (i < step.args.length) {
+      if (i > 0) {
+        extra = extra + ", ";
+      }
+      extra = extra + cg_emit_expr(st, step.args[i]);
+      i = i + 1;
+    }
+    if (extra == "") {
+      return callee + "(" + acc + ")";
+    } else {
+      return callee + "(" + acc + ", " + extra + ")";
+    }
+  } else if (step.kind == "LambdaExpr") {
+    return "(" + cg_emit_expr(st, step) + ")(" + acc + ")";
+  } else {
+    return "(" + cg_emit_expr(st, step) + ")(" + acc + ")";
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} steps
+ * @returns {string}
+ */
+const cg_emit_pipeline = (st, steps) => {
+  if (steps.length == 0) {
+    return "undefined";
+  } else {
+    let has_pipe_as = false;
+    let i = 0;
+    while (i < steps.length) {
+      if (steps[i].kind == "PipeAs") {
+        has_pipe_as = true;
+      }
+      i = i + 1;
+    }
+    if (!has_pipe_as) {
+      let acc = cg_emit_expr(st, steps[0]);
+      i = 1;
+      while (i < steps.length) {
+        acc = cg_apply_pipe_step(st, steps[i], acc);
+        i = i + 1;
+      }
+      return acc;
+    } else {
+      let block_lines = [];
+      let acc = cg_emit_expr(st, steps[0]);
+      i = 1;
+      while (i < steps.length) {
+        let step = steps[i];
+        if (step.kind == "PipeAs") {
+          block_lines = block_lines.concat(["const " + step.name + " = " + acc + ";"]);
+          acc = step.name;
+        } else {
+          acc = cg_apply_pipe_step(st, step, acc);
+        }
+        i = i + 1;
+      }
+      let inner = "";
+      let j = 0;
+      while (j < block_lines.length) {
+        inner = inner + "  " + block_lines[j] + `
+`;
+        j = j + 1;
+      }
+      return `(() => {
+` + inner + "  return " + acc + `;
+})()`;
+    }
+  }
+};
+
+/**
+ * @param {*} decl
+ * @param {string} ann_name
+ * @returns {boolean}
+ */
+const fn_has_annotation = (decl, ann_name) => {
+  let i = 0;
+  while (i < decl.annotations.length) {
+    if (decl.annotations[i].name == ann_name) {
+      return true;
+    }
+    i = i + 1;
+  }
+  return false;
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @returns {CgState}
+ */
+const cg_emit_enum = (st, decl) => {
+  let members = "";
+  let i = 0;
+  while (i < decl.variants.length) {
+    if (i > 0) {
+      members = members + ", ";
+    }
+    let v = decl.variants[i].name;
+    members = members + v + ": '" + v + "'";
+    i = i + 1;
+  }
+  return cg_emit_line(st, "const " + decl.name + " = Object.freeze({ " + members + " });");
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @returns {CgState}
+ */
+const cg_emit_tagged_union = (st, decl) => {
+  let s = st;
+  let i = 0;
+  while (i < decl.variants.length) {
+    let v = decl.variants[i];
+    if (v.fields.length == 0) {
+      s = cg_emit_line(s, "const " + v.name + " = Object.freeze({ tag: \"" + v.name + "\" });");
+    } else {
+      let params = "";
+      let fields = "";
+      let fi = 0;
+      while (fi < v.fields.length) {
+        if (fi > 0) {
+          params = params + ", ";
+          fields = fields + ", ";
+        }
+        params = params + v.fields[fi].name;
+        fields = fields + v.fields[fi].name;
+        fi = fi + 1;
+      }
+      s = cg_emit_line(s, "const " + v.name + " = (" + params + ") => Object.freeze({ tag: \"" + v.name + "\", " + fields + " });");
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @returns {CgState}
+ */
+const cg_emit_record = (st, decl) => {
+  let params = "";
+  let body = "";
+  let i = 0;
+  while (i < decl.fields.length) {
+    if (i > 0) {
+      params = params + ", ";
+      body = body + ", ";
+    }
+    params = params + decl.fields[i].name;
+    body = body + decl.fields[i].name;
+    i = i + 1;
+  }
+  return cg_emit_line(st, "const " + decl.name + " = (" + params + ") => ({ " + body + " });");
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @returns {CgState}
+ */
+const cg_emit_store = (st, decl) => {
+  let defaults = "";
+  let i = 0;
+  while (i < decl.fields.length) {
+    if (i > 0) {
+      defaults = defaults + ", ";
+    }
+    defaults = defaults + decl.fields[i].name + ": " + cg_emit_expr(st, decl.fields[i].defaultValue);
+    i = i + 1;
+  }
+  let s = cg_emit_line(st, "const " + decl.name + " = (() => {");
+  s = CgState(s.lines, s.indent + 1, s.scopes);
+  s = cg_emit_line(s, "let _state = { " + defaults + " };");
+  s = cg_emit_line(s, "const _subs = [];");
+  s = cg_emit_line(s, "return {");
+  s = CgState(s.lines, s.indent + 1, s.scopes);
+  i = 0;
+  while (i < decl.fields.length) {
+    let fname = decl.fields[i].name;
+    s = cg_emit_line(s, "get " + fname + "() { return _state." + fname + "; },");
+    i = i + 1;
+  }
+  s = cg_emit_line(s, "set(patch) {");
+  s = CgState(s.lines, s.indent + 1, s.scopes);
+  s = cg_emit_line(s, "_state = Object.assign({}, _state, patch);");
+  s = cg_emit_line(s, "for (const __fn of _subs) __fn(_state);");
+  s = CgState(s.lines, s.indent - 1, s.scopes);
+  s = cg_emit_line(s, "},");
+  s = cg_emit_line(s, "subscribe(fn) { _subs.push(fn); fn(_state); },");
+  s = CgState(s.lines, s.indent - 1, s.scopes);
+  s = cg_emit_line(s, "};");
+  s = CgState(s.lines, s.indent - 1, s.scopes);
+  return cg_emit_line(s, "})();");
+};
+
+/**
+ * @param {CgState} st
  * @param {*} decl
  * @returns {CgState}
  */
@@ -5547,7 +6024,44 @@ const cg_emit_fn = (st, decl) => {
     }
     i = i + 1;
   }
-  if (decl.shortForm) {
+  let async_kw = (() => {
+    if (decl.isAsync) {
+      return "async ";
+    } else {
+      return "";
+    }
+})();
+  if (fn_has_annotation(decl, "memo")) {
+    let s = cg_emit_line(st, "const " + decl.name + " = (() => {");
+    s = CgState(s.lines, s.indent + 1, s.scopes);
+    s = cg_emit_line(s, "const __cache = new Map();");
+    s = cg_emit_line(s, "return (" + param_str + ") => {");
+    s = CgState(s.lines, s.indent + 1, s.scopes);
+    s = cg_emit_line(s, "const __key = JSON.stringify([" + param_str + "]);");
+    s = cg_emit_line(s, "if (__cache.has(__key)) return __cache.get(__key);");
+    s = cg_emit_line(s, "const __result = (() => {");
+    s = CgState(s.lines, s.indent + 1, s.scopes);
+    s = cg_push_scope(s);
+    i = 0;
+    while (i < decl.params.length) {
+      s = cg_declare(s, decl.params[i].name);
+      i = i + 1;
+    }
+    if (decl.body.kind == "BlockExpr") {
+      s = cg_emit_block(s, decl.body);
+    } else {
+      s = cg_emit_line(s, "return " + cg_emit_expr(s, decl.body) + ";");
+    }
+    s = cg_pop_scope(s);
+    s = CgState(s.lines, s.indent - 1, s.scopes);
+    s = cg_emit_line(s, "})();");
+    s = cg_emit_line(s, "__cache.set(__key, __result);");
+    s = cg_emit_line(s, "return __result;");
+    s = CgState(s.lines, s.indent - 1, s.scopes);
+    s = cg_emit_line(s, "};");
+    s = CgState(s.lines, s.indent - 1, s.scopes);
+    return cg_emit_line(s, "})();");
+  } else if (decl.shortForm) {
     let s = cg_push_scope(st);
     i = 0;
     while (i < decl.params.length) {
@@ -5556,7 +6070,7 @@ const cg_emit_fn = (st, decl) => {
     }
     let body = cg_emit_expr(s, decl.body);
     s = cg_pop_scope(s);
-    return cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => " + body + ";");
+    return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";");
   } else {
     let s = cg_emit_jsdoc(st, decl.params, decl.returnType);
     s = cg_push_scope(s);
@@ -5568,7 +6082,7 @@ const cg_emit_fn = (st, decl) => {
     let body = cg_emit_expr(s, decl.body);
     s = cg_pop_scope(s);
     if (decl.body.kind == "BlockExpr") {
-      s = cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => {");
+      s = cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => {");
       s = CgState(s.lines, s.indent + 1, s.scopes);
       s = cg_push_scope(s);
       i = 0;
@@ -5581,7 +6095,7 @@ const cg_emit_fn = (st, decl) => {
       s = CgState(s.lines, s.indent - 1, s.scopes);
       return cg_emit_line(s, "};");
     } else {
-      return cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => " + body + ";");
+      return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";");
     }
   }
 };
@@ -5607,6 +6121,14 @@ const cg_emit_top_level = (st, decl) => {
     return cg_emit_stmt(st, decl.stmt);
   } else if (k == "FnDecl") {
     return cg_emit_fn(st, decl);
+  } else if (k == "EnumDecl") {
+    return cg_emit_enum(st, decl);
+  } else if (k == "TaggedUnionDecl") {
+    return cg_emit_tagged_union(st, decl);
+  } else if (k == "RecordDecl") {
+    return cg_emit_record(st, decl);
+  } else if (k == "StoreDecl") {
+    return cg_emit_store(st, decl);
   } else if (k == "ExportDecl") {
     return cg_emit_top_level(st, decl.decl);
   } else if (k == "ImportDecl") {
@@ -5681,9 +6203,27 @@ const check_source = (source) => check(parse(tokenize(source)));
     }))
   }
 
+  function validateJs(js) {
+    if (!js) return null
+    try {
+      new Function(js)
+      return null
+    } catch (e) {
+      return String(e.message || e)
+    }
+  }
+
   function compile(source) {
     try {
       const result = __synth_compiler.compile(source)
+      const syntaxErr = validateJs(result.js)
+      if (syntaxErr) {
+        return {
+          js: null,
+          errors: [{ message: 'Self-hosted codegen produced invalid JavaScript: ' + syntaxErr, line: 1, col: 1, kind: 'codegen' }],
+          warnings: formatWarnings(result.warnings),
+        }
+      }
       return {
         js: result.js,
         errors: [],

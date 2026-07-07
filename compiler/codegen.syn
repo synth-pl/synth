@@ -123,8 +123,38 @@ fn precedence(op: string) -> int {
   else { 10 }
 }
 
+fn is_stdlib_name(name: string) -> bool {
+  if name == "map" { true } else if name == "filter" { true } else if name == "fold" { true }
+  else if name == "pipe" { true } else if name == "zip" { true } else if name == "range" { true }
+  else if name == "first" { true } else if name == "last" { true } else if name == "sum" { true }
+  else if name == "count" { true } else if name == "any" { true } else if name == "all" { true }
+  else if name == "flat" { true } else if name == "flat_map" { true } else if name == "sort_by" { true }
+  else if name == "sort_by_desc" { true } else if name == "find" { true } else if name == "find_index" { true }
+  else if name == "trim" { true } else if name == "split" { true } else if name == "starts_with" { true }
+  else if name == "ends_with" { true } else if name == "contains" { true } else if name == "to_upper" { true }
+  else if name == "to_lower" { true } else if name == "replace_all" { true } else if name == "pad_start" { true }
+  else if name == "pad_end" { true } else if name == "min" { true } else if name == "max" { true }
+  else if name == "min_by" { true } else if name == "max_by" { true } else if name == "take" { true }
+  else if name == "drop" { true } else if name == "uniq" { true } else if name == "chunk" { true }
+  else if name == "set_at" { true } else if name == "reverse" { true } else if name == "sum_by" { true }
+  else if name == "clamp" { true } else if name == "abs" { true } else if name == "round" { true }
+  else if name == "floor" { true } else if name == "ceil" { true } else if name == "pow" { true }
+  else if name == "sqrt" { true } else if name == "random" { true } else if name == "random_int" { true }
+  else if name == "parse_int" { true } else if name == "parse_float" { true }
+  else if name == "ok" { true } else if name == "err" { true } else if name == "is_ok" { true }
+  else if name == "is_err" { true } else if name == "unwrap" { true } else if name == "unwrap_or" { true }
+  else if name == "delay" { true } else if name == "println" { true }
+  else { false }
+}
+
+fn is_stdlib_method(prop: string) -> bool {
+  is_stdlib_name(prop)
+}
+
 fn cg_emit_name(st: CgState, name: string) -> string {
-  if cg_is_local(st, name) { name } else { name }
+  if cg_is_local(st, name) { name }
+  else if is_stdlib_name(name) { "$" + name }
+  else { name }
 }
 
 fn is_string_value(v: any) -> bool {
@@ -170,26 +200,74 @@ fn cg_pattern_condition(pat: any, subj: string) -> string {
   }
 }
 
+fn ident_is_binding(name: string) -> bool {
+  if name == "_" { false }
+  else if name.length == 0 { false }
+  else {
+    let c = name.slice(0, 1)
+    c >= "a" and c <= "z"
+  }
+}
+
 fn cg_match_chain(st: CgState, arms: any[], idx: int, subj_var: string) -> string {
   if idx >= arms.length {
     "undefined"
   } else {
     let arm = arms[idx]
     let rest = cg_match_chain(st, arms, idx + 1, subj_var)
-    let cond = cg_pattern_condition(arm.pattern, subj_var)
-    if arm.guard != null {
-      let g = cg_emit_expr(st, arm.guard)
-      if cond == "true" {
-        cond = g
+    let pat = arm.pattern
+    if pat.kind == "IdentPat" and ident_is_binding(pat.name) {
+      let name = pat.name
+      let mut s = cg_push_scope(st)
+      s = cg_declare(s, name)
+      let raw_body = cg_emit_expr(s, arm.body)
+      s = cg_pop_scope(s)
+      if arm.guard != null {
+        let g = cg_emit_expr(st, arm.guard)
+        "((" + name + ") => (" + g + ") ? " + raw_body + " : " + rest + ")(" + subj_var + ")"
       } else {
-        cond = "(" + cond + ") && (" + g + ")"
+        "((" + name + ") => " + raw_body + ")(" + subj_var + ")"
       }
-    }
-    let body = cg_emit_expr(st, arm.body)
-    if cond == "true" {
-      body
+    } else if pat.kind == "TagPat" and pat.bindings != null and pat.bindings.length > 0 {
+      let cond = cg_pattern_condition(pat, subj_var)
+      let bind_str = ""
+      let mut bi = 0
+      while bi < pat.bindings.length {
+        if bi > 0 { bind_str = bind_str + ", " }
+        bind_str = bind_str + pat.bindings[bi]
+        bi = bi + 1
+      }
+      let mut s = cg_push_scope(st)
+      bi = 0
+      while bi < pat.bindings.length {
+        s = cg_declare(s, pat.bindings[bi])
+        bi = bi + 1
+      }
+      let raw_body = cg_emit_expr(s, arm.body)
+      s = cg_pop_scope(s)
+      let inner = if arm.guard != null {
+        let g = cg_emit_expr(st, arm.guard)
+        "(({ " + bind_str + " }) => (" + g + ") ? " + raw_body + " : " + rest + ")(" + subj_var + ")"
+      } else {
+        "(({ " + bind_str + " }) => " + raw_body + ")(" + subj_var + ")"
+      }
+      "(" + cond + ") ? " + inner + " : " + rest
     } else {
-      "(" + cond + ") ? " + body + " : " + rest
+      let cond = cg_pattern_condition(pat, subj_var)
+      if arm.guard != null {
+        let g = cg_emit_expr(st, arm.guard)
+        if cond == "true" {
+          cond = g
+        } else {
+          cond = "(" + cond + ") && (" + g + ")"
+        }
+      }
+      let body = cg_emit_expr(st, arm.body)
+      if cond == "true" {
+        body
+      } else {
+        "(" + cond + ") ? " + body + " : " + rest
+      }
     }
   }
 }
@@ -282,6 +360,9 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
     }
     if expr.callee.kind == "Identifier" and expr.callee.name == "print" {
       "console.log(" + args + ")"
+    } else if expr.callee.kind == "MemberExpr" and is_stdlib_method(expr.callee.property) {
+      let obj = cg_emit_expr(st, expr.callee.object)
+      "$" + expr.callee.property + "(" + obj + ", " + args + ")"
     } else if expr.callee.kind == "Identifier" {
       cg_emit_name(st, expr.callee.name) + "(" + args + ")"
     } else {
@@ -305,7 +386,20 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
     }
     "[" + elems + "]"
   } else if k == "ObjectLit" {
-    "{}"
+    let props = ""
+    let mut i = 0
+    while i < expr.properties.length {
+      if i > 0 { props = props + ", " }
+      props = props + expr.properties[i].key + ": " + cg_emit_expr(st, expr.properties[i].value)
+      i = i + 1
+    }
+    "{" + props + "}"
+  } else if k == "AwaitExpr" {
+    "await " + cg_emit_expr(st, expr.value)
+  } else if k == "ResultPropagateExpr" {
+    "$unwrap(" + cg_emit_expr(st, expr.value) + ")"
+  } else if k == "PipelineExpr" {
+    cg_emit_pipeline(st, expr.steps)
   } else if k == "LambdaExpr" {
     let params = ""
     let mut i = 0
@@ -371,17 +465,45 @@ fn cg_emit_if_chain(st: CgState, stmt: any) -> CgState {
 fn cg_emit_stmt(st: CgState, stmt: any) -> CgState {
   let k = stmt.kind
   if k == "LetStmt" {
-    let val = cg_emit_expr(st, stmt.value)
-    if stmt.name == null {
-      cg_emit_line(st, val + ";")
+    if stmt.value != null and stmt.value.kind == "ResultPropagateExpr" {
+      let tmp = "_r" + st.lines.length
+      let inner = cg_emit_expr(st, stmt.value.value)
+      let mut s = cg_emit_line(st, "const " + tmp + " = " + inner + ";")
+      s = cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";")
+      if stmt.name == null {
+        s
+      } else {
+        let s2 = cg_declare(s, stmt.name)
+        cg_emit_line(s2, "let " + stmt.name + " = " + tmp + ".value;")
+      }
     } else {
-      let s = cg_declare(st, stmt.name)
-      cg_emit_line(s, "let " + stmt.name + " = " + val + ";")
+      let val = cg_emit_expr(st, stmt.value)
+      if stmt.name == null {
+        cg_emit_line(st, val + ";")
+      } else {
+        let s = cg_declare(st, stmt.name)
+        cg_emit_line(s, "let " + stmt.name + " = " + val + ";")
+      }
     }
   } else if k == "ReturnStmt" {
-    cg_emit_line(st, "return " + cg_emit_expr(st, stmt.value) + ";")
+    if stmt.value != null and stmt.value.kind == "ResultPropagateExpr" {
+      let tmp = "_r" + st.lines.length
+      let inner = cg_emit_expr(st, stmt.value.value)
+      let mut s = cg_emit_line(st, "const " + tmp + " = " + inner + ";")
+      s = cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";")
+      cg_emit_line(s, "return " + tmp + ".value;")
+    } else {
+      cg_emit_line(st, "return " + cg_emit_expr(st, stmt.value) + ";")
+    }
   } else if k == "ExprStmt" {
-    cg_emit_line(st, cg_emit_expr(st, stmt.value) + ";")
+    if stmt.value != null and stmt.value.kind == "ResultPropagateExpr" {
+      let tmp = "_r" + st.lines.length
+      let inner = cg_emit_expr(st, stmt.value.value)
+      let mut s = cg_emit_line(st, "const " + tmp + " = " + inner + ";")
+      cg_emit_line(s, "if (" + tmp + ".tag === 'Err') return " + tmp + ";")
+    } else {
+      cg_emit_line(st, cg_emit_expr(st, stmt.value) + ";")
+    }
   } else if k == "IfStmt" {
     cg_emit_if_chain(st, stmt)
   } else if k == "ForRangeStmt" {
@@ -434,6 +556,160 @@ fn cg_emit_jsdoc(st: CgState, params: any[], return_type: any) -> CgState {
   cg_emit_line(s, " */")
 }
 
+fn cg_apply_pipe_step(st: CgState, step: any, acc: string) -> string {
+  if step.kind == "Identifier" {
+    cg_emit_name(st, step.name) + "(" + acc + ")"
+  } else if step.kind == "CallExpr" {
+    let callee = cg_emit_expr(st, step.callee)
+    let extra = ""
+    let mut i = 0
+    while i < step.args.length {
+      if i > 0 { extra = extra + ", " }
+      extra = extra + cg_emit_expr(st, step.args[i])
+      i = i + 1
+    }
+    if extra == "" { callee + "(" + acc + ")" }
+    else { callee + "(" + acc + ", " + extra + ")" }
+  } else if step.kind == "LambdaExpr" {
+    "(" + cg_emit_expr(st, step) + ")(" + acc + ")"
+  } else {
+    "(" + cg_emit_expr(st, step) + ")(" + acc + ")"
+  }
+}
+
+fn cg_emit_pipeline(st: CgState, steps: any[]) -> string {
+  if steps.length == 0 { "undefined" }
+  else {
+    let mut has_pipe_as = false
+    let mut i = 0
+    while i < steps.length {
+      if steps[i].kind == "PipeAs" { has_pipe_as = true }
+      i = i + 1
+    }
+    if not has_pipe_as {
+      let mut acc = cg_emit_expr(st, steps[0])
+      i = 1
+      while i < steps.length {
+        acc = cg_apply_pipe_step(st, steps[i], acc)
+        i = i + 1
+      }
+      acc
+    } else {
+      let mut block_lines = []
+      let mut acc = cg_emit_expr(st, steps[0])
+      i = 1
+      while i < steps.length {
+        let step = steps[i]
+        if step.kind == "PipeAs" {
+          block_lines = block_lines.concat(["const " + step.name + " = " + acc + ";"])
+          acc = step.name
+        } else {
+          acc = cg_apply_pipe_step(st, step, acc)
+        }
+        i = i + 1
+      }
+      let inner = ""
+      let mut j = 0
+      while j < block_lines.length {
+        inner = inner + "  " + block_lines[j] + "\n"
+        j = j + 1
+      }
+      "(() => {\n" + inner + "  return " + acc + ";\n})()"
+    }
+  }
+}
+
+fn fn_has_annotation(decl: any, ann_name: string) -> bool {
+  let mut i = 0
+  while i < decl.annotations.length {
+    if decl.annotations[i].name == ann_name { return true }
+    i = i + 1
+  }
+  false
+}
+
+fn cg_emit_enum(st: CgState, decl: any) -> CgState {
+  let members = ""
+  let mut i = 0
+  while i < decl.variants.length {
+    if i > 0 { members = members + ", " }
+    let v = decl.variants[i].name
+    members = members + v + ": '" + v + "'"
+    i = i + 1
+  }
+  cg_emit_line(st, "const " + decl.name + " = Object.freeze({ " + members + " });")
+}
+
+fn cg_emit_tagged_union(st: CgState, decl: any) -> CgState {
+  let mut s = st
+  let mut i = 0
+  while i < decl.variants.length {
+    let v = decl.variants[i]
+    if v.fields.length == 0 {
+      s = cg_emit_line(s, "const " + v.name + " = Object.freeze({ tag: \"" + v.name + "\" });")
+    } else {
+      let params = ""
+      let fields = ""
+      let mut fi = 0
+      while fi < v.fields.length {
+        if fi > 0 { params = params + ", "; fields = fields + ", " }
+        params = params + v.fields[fi].name
+        fields = fields + v.fields[fi].name
+        fi = fi + 1
+      }
+      s = cg_emit_line(s, "const " + v.name + " = (" + params + ") => Object.freeze({ tag: \"" + v.name + "\", " + fields + " });")
+    }
+    i = i + 1
+  }
+  s
+}
+
+fn cg_emit_record(st: CgState, decl: any) -> CgState {
+  let params = ""
+  let body = ""
+  let mut i = 0
+  while i < decl.fields.length {
+    if i > 0 { params = params + ", "; body = body + ", " }
+    params = params + decl.fields[i].name
+    body = body + decl.fields[i].name
+    i = i + 1
+  }
+  cg_emit_line(st, "const " + decl.name + " = (" + params + ") => ({ " + body + " });")
+}
+
+fn cg_emit_store(st: CgState, decl: any) -> CgState {
+  let defaults = ""
+  let mut i = 0
+  while i < decl.fields.length {
+    if i > 0 { defaults = defaults + ", " }
+    defaults = defaults + decl.fields[i].name + ": " + cg_emit_expr(st, decl.fields[i].defaultValue)
+    i = i + 1
+  }
+  let mut s = cg_emit_line(st, "const " + decl.name + " = (() => {")
+  s = CgState(s.lines, s.indent + 1, s.scopes)
+  s = cg_emit_line(s, "let _state = { " + defaults + " };")
+  s = cg_emit_line(s, "const _subs = [];")
+  s = cg_emit_line(s, "return {")
+  s = CgState(s.lines, s.indent + 1, s.scopes)
+  i = 0
+  while i < decl.fields.length {
+    let fname = decl.fields[i].name
+    s = cg_emit_line(s, "get " + fname + "() { return _state." + fname + "; },")
+    i = i + 1
+  }
+  s = cg_emit_line(s, "set(patch) {")
+  s = CgState(s.lines, s.indent + 1, s.scopes)
+  s = cg_emit_line(s, "_state = Object.assign({}, _state, patch);")
+  s = cg_emit_line(s, "for (const __fn of _subs) __fn(_state);")
+  s = CgState(s.lines, s.indent - 1, s.scopes)
+  s = cg_emit_line(s, "},")
+  s = cg_emit_line(s, "subscribe(fn) { _subs.push(fn); fn(_state); },")
+  s = CgState(s.lines, s.indent - 1, s.scopes)
+  s = cg_emit_line(s, "};")
+  s = CgState(s.lines, s.indent - 1, s.scopes)
+  cg_emit_line(s, "})();")
+}
+
 fn cg_emit_fn(st: CgState, decl: any) -> CgState {
   let param_str = ""
   let mut i = 0
@@ -444,8 +720,39 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     else { param_str = param_str + p.name }
     i = i + 1
   }
+  let async_kw = if decl.isAsync { "async " } else { "" }
 
-  if decl.shortForm {
+  if fn_has_annotation(decl, "memo") {
+    let mut s = cg_emit_line(st, "const " + decl.name + " = (() => {")
+    s = CgState(s.lines, s.indent + 1, s.scopes)
+    s = cg_emit_line(s, "const __cache = new Map();")
+    s = cg_emit_line(s, "return (" + param_str + ") => {")
+    s = CgState(s.lines, s.indent + 1, s.scopes)
+    s = cg_emit_line(s, "const __key = JSON.stringify([" + param_str + "]);")
+    s = cg_emit_line(s, "if (__cache.has(__key)) return __cache.get(__key);")
+    s = cg_emit_line(s, "const __result = (() => {")
+    s = CgState(s.lines, s.indent + 1, s.scopes)
+    s = cg_push_scope(s)
+    i = 0
+    while i < decl.params.length {
+      s = cg_declare(s, decl.params[i].name)
+      i = i + 1
+    }
+    if decl.body.kind == "BlockExpr" {
+      s = cg_emit_block(s, decl.body)
+    } else {
+      s = cg_emit_line(s, "return " + cg_emit_expr(s, decl.body) + ";")
+    }
+    s = cg_pop_scope(s)
+    s = CgState(s.lines, s.indent - 1, s.scopes)
+    s = cg_emit_line(s, "})();")
+    s = cg_emit_line(s, "__cache.set(__key, __result);")
+    s = cg_emit_line(s, "return __result;")
+    s = CgState(s.lines, s.indent - 1, s.scopes)
+    s = cg_emit_line(s, "};")
+    s = CgState(s.lines, s.indent - 1, s.scopes)
+    cg_emit_line(s, "})();")
+  } else if decl.shortForm {
     let mut s = cg_push_scope(st)
     i = 0
     while i < decl.params.length {
@@ -454,7 +761,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     }
     let body = cg_emit_expr(s, decl.body)
     s = cg_pop_scope(s)
-    cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => " + body + ";")
+    cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";")
   } else {
     let mut s = cg_emit_jsdoc(st, decl.params, decl.returnType)
     s = cg_push_scope(s)
@@ -466,7 +773,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     let body = cg_emit_expr(s, decl.body)
     s = cg_pop_scope(s)
     if decl.body.kind == "BlockExpr" {
-      s = cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => {")
+      s = cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => {")
       s = CgState(s.lines, s.indent + 1, s.scopes)
       s = cg_push_scope(s)
       i = 0
@@ -479,7 +786,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
       s = CgState(s.lines, s.indent - 1, s.scopes)
       cg_emit_line(s, "};")
     } else {
-      cg_emit_line(s, "const " + decl.name + " = (" + param_str + ") => " + body + ";")
+      cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";")
     }
   }
 }
@@ -500,6 +807,14 @@ fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
     cg_emit_stmt(st, decl.stmt)
   } else if k == "FnDecl" {
     cg_emit_fn(st, decl)
+  } else if k == "EnumDecl" {
+    cg_emit_enum(st, decl)
+  } else if k == "TaggedUnionDecl" {
+    cg_emit_tagged_union(st, decl)
+  } else if k == "RecordDecl" {
+    cg_emit_record(st, decl)
+  } else if k == "StoreDecl" {
+    cg_emit_store(st, decl)
   } else if k == "ExportDecl" {
     cg_emit_top_level(st, decl.decl)
   } else if k == "ImportDecl" {

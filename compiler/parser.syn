@@ -41,8 +41,20 @@ fn regex_parts(raw: string) -> RegexParts {
   RegexParts(raw.slice(1, slash), raw.slice(slash + 1))
 }
 
-fn json_string(s: string) -> string {
-  "\"" + s + "\""
+fn escape_js_string(s: string) -> string {
+  let mut out = "\""
+  let mut i = 0
+  while i < s.length {
+    let c = s.slice(i, i + 1)
+    if c == "\\" { out = out + "\\\\" }
+    else if c == "\"" { out = out + "\\\"" }
+    else if c == "\n" { out = out + "\\n" }
+    else if c == "\r" { out = out + "\\r" }
+    else if c == "\t" { out = out + "\\t" }
+    else { out = out + c }
+    i = i + 1
+  }
+  out + "\""
 }
 
 fn is_kw_type(tok_type: string) -> bool {
@@ -1596,7 +1608,7 @@ fn ps_parse_primary(st: ParserState) -> ParseVal {
     ParseVal(adv.st, { kind: "NumberLit", value: parse_float(adv.value.value), raw: adv.value.value })
   } else if tok.type == "STRING" {
     let adv = ps_advance(st)
-    ParseVal(adv.st, { kind: "StringLit", value: adv.value.value, raw: json_string(adv.value.value) })
+    ParseVal(adv.st, { kind: "StringLit", value: adv.value.value, raw: escape_js_string(adv.value.value) })
   } else if tok.type == "TEMPLATE" {
     let adv = ps_advance(st)
     ParseVal(adv.st, ps_parse_template_lit(adv.value.value))

@@ -296,6 +296,14 @@
       background: rgba(255,85,102,0.06);
     }
     .error-bar:empty { display: none; }
+    .selfhost-banner {
+      flex-shrink: 0;
+      background: rgba(0,229,160,0.08);
+      border-bottom: 1px solid rgba(0,229,160,0.25);
+      color: var(--green);
+      font-size: 12px;
+      padding: 6px 20px;
+    }
     .error-item {
       display: flex;
       align-items: flex-start;
@@ -453,6 +461,10 @@
   <a class="header-nav" id="compiler-toggle" href="playground.html">self-host</a>
   <a class="header-nav" href="landing.html">← Synth</a>
 </header>
+
+<div class="selfhost-banner" id="selfhost-banner" hidden>
+  Self-hosted compiler active — experimental build compiled from Synth source. Switch back via <strong>← TS compiler</strong> if anything looks off.
+</div>
 
 <div class="toolbar">
   <button class="btn btn-run" onclick="runCode()" title="Run (Ctrl+Enter)">▶ Run</button>
@@ -1447,11 +1459,13 @@ if (compilerBadge) {
   }
 }
 const compilerToggle = document.getElementById('compiler-toggle')
+const selfhostBanner = document.getElementById('selfhost-banner')
 if (compilerToggle) {
   if (compilerBackend === 'synth') {
     compilerToggle.textContent = '← TS compiler'
     compilerToggle.href = 'playground.html'
     compilerToggle.title = 'Switch back to the TypeScript reference compiler'
+    if (selfhostBanner) selfhostBanner.hidden = false
   } else {
     compilerToggle.textContent = 'self-host'
     compilerToggle.href = 'playground.html?compiler=synth'

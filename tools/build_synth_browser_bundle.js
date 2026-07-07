@@ -59,9 +59,27 @@ ${compilerBody}
     }))
   }
 
+  function validateJs(js) {
+    if (!js) return null
+    try {
+      new Function(js)
+      return null
+    } catch (e) {
+      return String(e.message || e)
+    }
+  }
+
   function compile(source) {
     try {
       const result = __synth_compiler.compile(source)
+      const syntaxErr = validateJs(result.js)
+      if (syntaxErr) {
+        return {
+          js: null,
+          errors: [{ message: 'Self-hosted codegen produced invalid JavaScript: ' + syntaxErr, line: 1, col: 1, kind: 'codegen' }],
+          warnings: formatWarnings(result.warnings),
+        }
+      }
       return {
         js: result.js,
         errors: [],
