@@ -2,12 +2,16 @@
   "name": "synth-language",
   "displayName": "Synth Language",
   "description": "Syntax highlighting, bracket matching, and language support for the Synth programming language (.syn files)",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "synth-lang",
   "license": "MIT",
   "engines": {
     "vscode": "^1.60.0"
   },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:synth"
+  ],
   "categories": [
     "Programming Languages"
   ],
@@ -30,6 +34,11 @@
         "scopeName": "source.synth",
         "path": "./syntaxes/synth.tmLanguage.json"
       }
-    ]
+    ],
+    "configurationDefaults": {
+      "[synth]": {
+        "editor.semanticHighlighting.enabled": false
+      }
+    }
   }
 }

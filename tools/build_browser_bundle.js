@@ -57,7 +57,7 @@ function stripCJS(src, removedExports) {
 // Strip the file-header comments; the result is the injectable JS string.
 const stdlibRaw = fs.readFileSync(path.join(ROOT, 'demo', 'synth.stdlib.js'), 'utf8')
 const stdlibContent = '\n' + stdlibRaw.replace(/^(\/\/[^\n]*\n)+/, '')
-const stdlib = `const SYNTH_STDLIB = \`${stdlibContent}\`;`
+const stdlib = `const SYNTH_STDLIB = ${JSON.stringify(stdlibContent)};`
 
 // ── Read & strip compiler modules ────────────────────────────────────────────
 const lexer   = stripCJS(fs.readFileSync(path.join(DIST, 'lexer.js'),   'utf8'), [])

@@ -1,7 +1,7 @@
 # install.ps1 - Installs the Synth language extension into Cursor and VS Code.
 # Run from the vscode-extension directory: .\install.ps1
 
-$version = "1.0.1"
+$version = "1.0.2"
 $extensionId = "synth-lang.synth-language-$version"
 $src = $PSScriptRoot
 
@@ -16,6 +16,7 @@ Write-Host "Installing Synth language extension v$version..." -ForegroundColor C
 $legacyIds = @(
   "synth-lang.synth-language-0.1.0",
   "synth-lang.synth-language-1.0.0",
+  "synth-lang.synth-language-1.0.1",
   "axon-lang.axon-language-0.1.0"
 )
 
@@ -40,6 +41,7 @@ foreach ($dest in $destinations) {
 
   New-Item -ItemType Directory -Force $dest | Out-Null
   Copy-Item "$src\package.json" $dest
+  Copy-Item "$src\extension.js" $dest
   Copy-Item "$src\language-configuration.json" $dest
   Copy-Item "$src\README.md" $dest -ErrorAction SilentlyContinue
   Copy-Item "$src\LICENSE" $dest -ErrorAction SilentlyContinue
