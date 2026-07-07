@@ -5117,6 +5117,19 @@ const precedence = (op) => {
 };
 
 /**
+ * @param {*} expr
+ * @param {string} s
+ * @returns {string}
+ */
+const cg_arrow_body_wrap = (expr, s) => {
+  if (expr.kind == "ObjectLit") {
+    return "(" + s + ")";
+  } else {
+    return s;
+  }
+};
+
+/**
  * @param {string} name
  * @returns {boolean}
  */
@@ -5617,7 +5630,7 @@ const cg_emit_expr = (st, expr) => {
     }
     let body = cg_emit_expr(s, expr.body);
     s = cg_pop_scope(s);
-    return "(" + params + ") => " + body;
+    return "(" + params + ") => " + cg_arrow_body_wrap(expr.body, body);
   } else if (k == "BlockExpr") {
     let inner = CgState([], st.indent + 1, st.scopes);
     inner = cg_emit_block(inner, expr);
@@ -6070,7 +6083,7 @@ const cg_emit_fn = (st, decl) => {
     }
     let body = cg_emit_expr(s, decl.body);
     s = cg_pop_scope(s);
-    return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";");
+    return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";");
   } else {
     let s = cg_emit_jsdoc(st, decl.params, decl.returnType);
     s = cg_push_scope(s);
@@ -6095,7 +6108,7 @@ const cg_emit_fn = (st, decl) => {
       s = CgState(s.lines, s.indent - 1, s.scopes);
       return cg_emit_line(s, "};");
     } else {
-      return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";");
+      return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";");
     }
   }
 };

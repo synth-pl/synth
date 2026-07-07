@@ -123,6 +123,10 @@ fn precedence(op: string) -> int {
   else { 10 }
 }
 
+fn cg_arrow_body_wrap(expr: any, s: string) -> string {
+  if expr.kind == "ObjectLit" { "(" + s + ")" } else { s }
+}
+
 fn is_stdlib_name(name: string) -> bool {
   if name == "map" { true } else if name == "filter" { true } else if name == "fold" { true }
   else if name == "pipe" { true } else if name == "zip" { true } else if name == "range" { true }
@@ -416,7 +420,7 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
     }
     let body = cg_emit_expr(s, expr.body)
     s = cg_pop_scope(s)
-    "(" + params + ") => " + body
+    "(" + params + ") => " + cg_arrow_body_wrap(expr.body, body)
   } else if k == "BlockExpr" {
     let mut inner = CgState([], st.indent + 1, st.scopes)
     inner = cg_emit_block(inner, expr)
@@ -761,7 +765,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     }
     let body = cg_emit_expr(s, decl.body)
     s = cg_pop_scope(s)
-    cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";")
+    cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";")
   } else {
     let mut s = cg_emit_jsdoc(st, decl.params, decl.returnType)
     s = cg_push_scope(s)
@@ -786,7 +790,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
       s = CgState(s.lines, s.indent - 1, s.scopes)
       cg_emit_line(s, "};")
     } else {
-      cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + body + ";")
+      cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";")
     }
   }
 }

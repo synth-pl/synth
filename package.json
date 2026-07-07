@@ -48,6 +48,9 @@
     "gen:codegen-goldens": "node tools/gen_codegen_goldens.js",
     "gen:checker-goldens": "node tools/gen_checker_goldens.js",
     "test:compiler": "node tools/test_compiler_parity.js",
+    "gen:bootstrap-goldens": "node tools/gen_bootstrap_goldens.js",
+    "build:bootstrap": "node tools/build_bootstrap_bundle.js",
+    "test:bootstrap": "node tools/test_bootstrap.js",
     "build:compiler": "node dist/cli.js --bundle compiler/driver.syn dist/compiler.synth.js && node tools/build_synth_browser_bundle.js",
     "build:synth-browser": "node tools/build_synth_browser_bundle.js"
   },
