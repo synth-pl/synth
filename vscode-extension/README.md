@@ -10,7 +10,7 @@ From this directory:
 .\install.ps1
 ```
 
-This installs v1.0.1 into **both** Cursor and VS Code extension folders, removes legacy installs, then prompts you to reload the editor window.
+This installs v1.0.3 into **both** Cursor and VS Code extension folders, removes legacy installs, then prompts you to reload the editor window.
 
 > Grammar-only extensions must not declare `activationEvents` without a `main` entry — Cursor rejects them otherwise.
 

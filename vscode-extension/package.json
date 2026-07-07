@@ -2,7 +2,7 @@
   "name": "synth-language",
   "displayName": "Synth Language",
   "description": "Syntax highlighting, bracket matching, and language support for the Synth programming language (.syn files)",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "synth-lang",
   "license": "MIT",
   "engines": {
@@ -10,6 +10,7 @@
   },
   "main": "./extension.js",
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:synth"
   ],
   "categories": [
