@@ -1,0 +1,80 @@
+[
+  {
+    "type": "KW_FOR",
+    "value": "for",
+    "line": 1,
+    "col": 1
+  },
+  {
+    "type": "IDENT",
+    "value": "i",
+    "line": 1,
+    "col": 5
+  },
+  {
+    "type": "KW_IN",
+    "value": "in",
+    "line": 1,
+    "col": 7
+  },
+  {
+    "type": "NUMBER",
+    "value": "2",
+    "line": 1,
+    "col": 10
+  },
+  {
+    "type": "DOTDOTEQ",
+    "value": "..=",
+    "line": 1,
+    "col": 11
+  },
+  {
+    "type": "NUMBER",
+    "value": "5",
+    "line": 1,
+    "col": 14
+  },
+  {
+    "type": "LBRACE",
+    "value": "{",
+    "line": 1,
+    "col": 16
+  },
+  {
+    "type": "IDENT",
+    "value": "print",
+    "line": 2,
+    "col": 3
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 2,
+    "col": 8
+  },
+  {
+    "type": "IDENT",
+    "value": "i",
+    "line": 2,
+    "col": 9
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 2,
+    "col": 10
+  },
+  {
+    "type": "RBRACE",
+    "value": "}",
+    "line": 3,
+    "col": 1
+  },
+  {
+    "type": "EOF",
+    "value": "",
+    "line": 4,
+    "col": 1
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "type": "KW_LET",
+    "value": "let",
+    "line": 1,
+    "col": 1
+  },
+  {
+    "type": "IDENT",
+    "value": "ok",
+    "line": 1,
+    "col": 5
+  },
+  {
+    "type": "ASSIGN",
+    "value": "=",
+    "line": 1,
+    "col": 8
+  },
+  {
+    "type": "KW_TRUE",
+    "value": "true",
+    "line": 1,
+    "col": 10
+  },
+  {
+    "type": "AND",
+    "value": "and",
+    "line": 1,
+    "col": 15
+  },
+  {
+    "type": "KW_FALSE",
+    "value": "false",
+    "line": 1,
+    "col": 19
+  },
+  {
+    "type": "OR",
+    "value": "or",
+    "line": 1,
+    "col": 25
+  },
+  {
+    "type": "BANG",
+    "value": "not",
+    "line": 1,
+    "col": 28
+  },
+  {
+    "type": "KW_FALSE",
+    "value": "false",
+    "line": 1,
+    "col": 32
+  },
+  {
+    "type": "IDENT",
+    "value": "print",
+    "line": 2,
+    "col": 1
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 2,
+    "col": 6
+  },
+  {
+    "type": "IDENT",
+    "value": "ok",
+    "line": 2,
+    "col": 7
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 2,
+    "col": 9
+  },
+  {
+    "type": "EOF",
+    "value": "",
+    "line": 3,
+    "col": 1
+  }
+]

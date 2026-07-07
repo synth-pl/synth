@@ -1,0 +1,6 @@
+// ── AST types — port of src/types.ts ─────────────────────────────────────────
+// Phase 2: expand into tagged unions for Expr, Stmt, Decl, Program, etc.
+
+export record Program {
+  kind: string
+}

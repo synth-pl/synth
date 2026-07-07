@@ -1,0 +1,8 @@
+// ── Codegen — port of src/codegen.ts ─────────────────────────────────────────
+// Phase 4: emit JavaScript from Program AST.
+
+import { Program } from "./ast"
+
+export fn generate(program: Program) -> string {
+  ""
+}

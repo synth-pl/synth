@@ -1,0 +1,188 @@
+[
+  {
+    "type": "KW_FN",
+    "value": "fn",
+    "line": 1,
+    "col": 1
+  },
+  {
+    "type": "IDENT",
+    "value": "label",
+    "line": 1,
+    "col": 4
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 1,
+    "col": 9
+  },
+  {
+    "type": "IDENT",
+    "value": "n",
+    "line": 1,
+    "col": 10
+  },
+  {
+    "type": "COLON",
+    "value": ":",
+    "line": 1,
+    "col": 11
+  },
+  {
+    "type": "IDENT",
+    "value": "int",
+    "line": 1,
+    "col": 13
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 1,
+    "col": 16
+  },
+  {
+    "type": "THIN_ARROW",
+    "value": "->",
+    "line": 1,
+    "col": 18
+  },
+  {
+    "type": "IDENT",
+    "value": "string",
+    "line": 1,
+    "col": 21
+  },
+  {
+    "type": "LBRACE",
+    "value": "{",
+    "line": 1,
+    "col": 28
+  },
+  {
+    "type": "KW_MATCH",
+    "value": "match",
+    "line": 2,
+    "col": 3
+  },
+  {
+    "type": "IDENT",
+    "value": "n",
+    "line": 2,
+    "col": 9
+  },
+  {
+    "type": "LBRACE",
+    "value": "{",
+    "line": 2,
+    "col": 11
+  },
+  {
+    "type": "PIPE",
+    "value": "|",
+    "line": 3,
+    "col": 5
+  },
+  {
+    "type": "NUMBER",
+    "value": "0",
+    "line": 3,
+    "col": 7
+  },
+  {
+    "type": "FAT_ARROW",
+    "value": "=>",
+    "line": 3,
+    "col": 9
+  },
+  {
+    "type": "STRING",
+    "value": "zero",
+    "line": 3,
+    "col": 12
+  },
+  {
+    "type": "PIPE",
+    "value": "|",
+    "line": 4,
+    "col": 5
+  },
+  {
+    "type": "IDENT",
+    "value": "_",
+    "line": 4,
+    "col": 7
+  },
+  {
+    "type": "FAT_ARROW",
+    "value": "=>",
+    "line": 4,
+    "col": 9
+  },
+  {
+    "type": "STRING",
+    "value": "other",
+    "line": 4,
+    "col": 12
+  },
+  {
+    "type": "RBRACE",
+    "value": "}",
+    "line": 5,
+    "col": 3
+  },
+  {
+    "type": "RBRACE",
+    "value": "}",
+    "line": 6,
+    "col": 1
+  },
+  {
+    "type": "IDENT",
+    "value": "print",
+    "line": 8,
+    "col": 1
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 8,
+    "col": 6
+  },
+  {
+    "type": "IDENT",
+    "value": "label",
+    "line": 8,
+    "col": 7
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 8,
+    "col": 12
+  },
+  {
+    "type": "NUMBER",
+    "value": "0",
+    "line": 8,
+    "col": 13
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 8,
+    "col": 14
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 8,
+    "col": 15
+  },
+  {
+    "type": "EOF",
+    "value": "",
+    "line": 9,
+    "col": 1
+  }
+]

@@ -1,0 +1,7 @@
+fn add(a: int, b: int) -> int {
+  a + b
+}
+
+let mut n = 0
+n += 1
+print(n)

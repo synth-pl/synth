@@ -1,0 +1,32 @@
+[
+  {
+    "type": "IDENT",
+    "value": "print",
+    "line": 1,
+    "col": 1
+  },
+  {
+    "type": "LPAREN",
+    "value": "(",
+    "line": 1,
+    "col": 6
+  },
+  {
+    "type": "STRING",
+    "value": "Hello",
+    "line": 1,
+    "col": 7
+  },
+  {
+    "type": "RPAREN",
+    "value": ")",
+    "line": 1,
+    "col": 14
+  },
+  {
+    "type": "EOF",
+    "value": "",
+    "line": 2,
+    "col": 1
+  }
+]

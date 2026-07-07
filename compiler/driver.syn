@@ -1,0 +1,17 @@
+// ── Compiler driver — lex → parse → codegen ──────────────────────────────────
+// Bootstrap entry: synth --bundle compiler/driver.syn dist/compiler.synth.js
+
+import { tokenize } from "./lexer"
+import { parse } from "./parser"
+import { generate } from "./codegen"
+
+export record CompileResult {
+  js: string
+}
+
+export fn compile(source: string) -> CompileResult {
+  let tokens = tokenize(source)
+  let ast    = parse(tokens)
+  let js     = generate(ast)
+  CompileResult(js)
+}

@@ -1,0 +1,8 @@
+// ── Lexer — port of src/lexer.ts ─────────────────────────────────────────────
+// Phase 1: implement tokenize() against compiler/fixtures goldens.
+
+import { Token } from "./token"
+
+export fn tokenize(src: string) -> Token[] {
+  []
+}

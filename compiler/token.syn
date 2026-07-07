@@ -1,0 +1,9 @@
+// ── Token types — port of src/types.ts (Token slice) ─────────────────────────
+// Phase 1 target: full TokenType enum / keyword table lives alongside this.
+
+export record Token {
+  type:  string
+  value: string
+  line:  int
+  col:   int
+}

@@ -1,0 +1,8 @@
+fn label(n: int) -> string {
+  match n {
+    | 0 => "zero"
+    | _ => "other"
+  }
+}
+
+print(label(0))
