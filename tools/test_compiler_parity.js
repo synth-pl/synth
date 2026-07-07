@@ -11,6 +11,8 @@ const FIXTURES_DIR = path.join(__dirname, '..', 'compiler', 'fixtures')
 const CHECKER_FIXTURES_DIR = path.join(__dirname, '..', 'compiler', 'checker_fixtures')
 const GOLDENS_DIR  = path.join(__dirname, '..', 'compiler', 'goldens')
 const SYNTH_BUNDLE = path.join(__dirname, '..', 'dist', 'compiler.synth.js')
+const BOOTSTRAP_BUNDLE = path.join(__dirname, '..', 'dist', 'compiler.bootstrap.js')
+const { runBundleParityTests, runAstConstructorTests } = require('./parity_common')
 
 function serializeTokens(tokens) {
   return tokens.map(t => ({
@@ -545,6 +547,26 @@ function testSynthAstConstructors() {
   }
 }
 
+function testBootstrapParity() {
+  if (!fs.existsSync(BOOTSTRAP_BUNDLE)) {
+    console.log('skip bootstrap parity (no dist/compiler.bootstrap.js — run npm run build:bootstrap)')
+    return false
+  }
+
+  let bootstrap
+  try {
+    bootstrap = loadSynthBundle(BOOTSTRAP_BUNDLE)
+  } catch (err) {
+    console.error('FAIL loading bootstrap bundle:', err.message)
+    return true
+  }
+
+  console.log('\n── bootstrap bundle parity ──')
+  let failed = runBundleParityTests(bootstrap, 'bootstrap')
+  failed = runAstConstructorTests(bootstrap, 'bootstrap', BOOTSTRAP_BUNDLE) || failed
+  return failed
+}
+
 function main() {
   let failed = false
   failed = testTsLexerVsGoldens() || failed
@@ -557,6 +579,7 @@ function main() {
   failed = testSynthCheckerVsGoldens() || failed
   failed = testSynthDriverCompile() || failed
   failed = testSynthAstConstructors() || failed
+  failed = testBootstrapParity() || failed
   if (failed) process.exit(1)
   console.log('compiler parity: all checks passed')
 }

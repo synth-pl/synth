@@ -6114,6 +6114,44 @@ const cg_emit_fn = (st, decl) => {
 };
 
 /**
+ * @param {string} s
+ * @returns {string}
+ */
+const cg_json_string = (s) => {
+  let out = "\"";
+  let i = 0;
+  while (i < s.length) {
+    let c = s.slice(i, i + 1);
+    if (c == "\\") {
+      out = out + "\\\\";
+    } else if (c == "\"") {
+      out = out + "\\\"";
+    } else if (c == `
+`) {
+      out = out + "\\n";
+    } else if (c == "\r") {
+      out = out + "\\r";
+    } else if (c == "\t") {
+      out = out + "\\t";
+    } else {
+      out = out + c;
+    }
+    i = i + 1;
+  }
+  return out + "\"";
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @returns {CgState}
+ */
+const cg_emit_test = (st, decl) => {
+  let body = cg_emit_expr(st, decl.body);
+  return cg_emit_line(st, "__synth_tests.push({ desc: " + cg_json_string(decl.description) + ", fn: () => " + body + " });");
+};
+
+/**
  * @param {CgState} st
  * @param {*} decl
  * @returns {CgState}
@@ -6142,6 +6180,8 @@ const cg_emit_top_level = (st, decl) => {
     return cg_emit_record(st, decl);
   } else if (k == "StoreDecl") {
     return cg_emit_store(st, decl);
+  } else if (k == "TestDecl") {
+    return cg_emit_test(st, decl);
   } else if (k == "ExportDecl") {
     return cg_emit_top_level(st, decl.decl);
   } else if (k == "ImportDecl") {

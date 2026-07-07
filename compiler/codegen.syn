@@ -795,6 +795,27 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
   }
 }
 
+fn cg_json_string(s: string) -> string {
+  let mut out = "\""
+  let mut i = 0
+  while i < s.length {
+    let c = s.slice(i, i + 1)
+    if c == "\\" { out = out + "\\\\" }
+    else if c == "\"" { out = out + "\\\"" }
+    else if c == "\n" { out = out + "\\n" }
+    else if c == "\r" { out = out + "\\r" }
+    else if c == "\t" { out = out + "\\t" }
+    else { out = out + c }
+    i = i + 1
+  }
+  out + "\""
+}
+
+fn cg_emit_test(st: CgState, decl: any) -> CgState {
+  let body = cg_emit_expr(st, decl.body)
+  cg_emit_line(st, "__synth_tests.push({ desc: " + cg_json_string(decl.description) + ", fn: () => " + body + " });")
+}
+
 fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
   let k = decl.kind
   if k == "TopLevelExpr" {
@@ -819,6 +840,8 @@ fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
     cg_emit_record(st, decl)
   } else if k == "StoreDecl" {
     cg_emit_store(st, decl)
+  } else if k == "TestDecl" {
+    cg_emit_test(st, decl)
   } else if k == "ExportDecl" {
     cg_emit_top_level(st, decl.decl)
   } else if k == "ImportDecl" {

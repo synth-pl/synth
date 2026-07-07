@@ -50,8 +50,10 @@
     "test:compiler": "node tools/test_compiler_parity.js",
     "gen:bootstrap-goldens": "node tools/gen_bootstrap_goldens.js",
     "build:bootstrap": "node tools/build_bootstrap_bundle.js",
+    "build:bootstrap2": "node tools/build_bootstrap_bundle.js --compiler dist/compiler.bootstrap.js --out dist/compiler.bootstrap2.js",
     "test:bootstrap": "node tools/test_bootstrap.js",
-    "build:compiler": "node dist/cli.js --bundle compiler/driver.syn dist/compiler.synth.js && node tools/build_synth_browser_bundle.js",
+    "test:double-bootstrap": "node tools/test_double_bootstrap.js",
+    "build:compiler": "node dist/cli.js --bundle compiler/driver.syn dist/compiler.synth.js && node tools/build_synth_browser_bundle.js && node tools/build_bootstrap_bundle.js",
     "build:synth-browser": "node tools/build_synth_browser_bundle.js"
   },
   "devDependencies": {
