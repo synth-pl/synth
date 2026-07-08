@@ -1,7 +1,7 @@
 # install.ps1 - Installs the Synth language extension into Cursor and VS Code.
 # Run from the vscode-extension directory: .\install.ps1
 
-$version = "1.0.3"
+$version = "1.0.4"
 $extensionId = "synth-lang.synth-language-$version"
 $src = $PSScriptRoot
 
@@ -46,7 +46,7 @@ $legacyIds = @(
   "synth-lang.synth-language-0.1.0",
   "synth-lang.synth-language-1.0.0",
   "synth-lang.synth-language-1.0.1",
-  "synth-lang.synth-language-1.0.2",
+  "synth-lang.synth-language-1.0.3",
   "axon-lang.axon-language-0.1.0"
 )
 

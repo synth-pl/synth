@@ -2,11 +2,16 @@
 
 const vscode = require('vscode');
 
+function isSynDocument(doc) {
+  if (!doc || doc.uri.scheme !== 'file') return false;
+  const filePath = (doc.uri.fsPath || doc.fileName || '').toLowerCase();
+  return filePath.endsWith('.syn');
+}
+
 /** Force .syn files onto the synth language id so TextMate grammar loads. */
 function ensureSynthLanguage(doc) {
-  if (!doc || doc.uri.scheme !== 'file') return;
-  const path = doc.uri.fsPath || doc.fileName || '';
-  if (path.endsWith('.syn') && doc.languageId !== 'synth') {
+  if (!isSynDocument(doc)) return;
+  if (doc.languageId !== 'synth') {
     vscode.languages.setTextDocumentLanguage(doc, 'synth');
   }
 }
@@ -17,7 +22,10 @@ function activate(context) {
   }
 
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(ensureSynthLanguage)
+    vscode.workspace.onDidOpenTextDocument(ensureSynthLanguage),
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) ensureSynthLanguage(editor.document);
+    })
   );
 }
 
