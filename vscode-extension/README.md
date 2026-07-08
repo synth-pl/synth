@@ -4,22 +4,41 @@ Syntax highlighting and language support for [Synth](https://github.com/synth-pl
 
 ## Install
 
+### From Open VSX (recommended)
+
+Works in **Cursor**, **VS Code**, and **VSCodium** — installs globally for your user account:
+
+```bash
+cursor --install-extension synth-lang.synth-language
+```
+
+```bash
+code --install-extension synth-lang.synth-language
+```
+
+Or search **Synth Language** in the Extensions panel (`synth-lang.synth-language`).
+
+After installing, reload the window once. Open any `.syn` file — the status bar should show **Synth** with syntax colors.
+
+### Local install (development)
+
 From this directory:
 
 ```powershell
 .\install.ps1
 ```
 
-This installs v1.0.3 into **both** Cursor and VS Code extension folders, removes legacy installs, then prompts you to reload the editor window.
+Builds a VSIX, installs globally, and caches a copy at `%USERPROFILE%\.synth\synth-language.vsix`.
 
-> Grammar-only extensions must not declare `activationEvents` without a `main` entry — Cursor rejects them otherwise.
+> Grammar-only extension — no `main` script or activation race. The TextMate grammar loads declaratively and survives restarts reliably.
+
+See [PUBLISHING.md](./PUBLISHING.md) for maintainer release steps.
 
 ## Features
 
-- Syntax highlighting for `.syn` files (v1.0: template literals, triple-quoted strings, `store`/`on`, `async`/`await`, `and`/`or`/`not`, `??`/`?.`, hex/binary numbers)
+- Syntax highlighting for `.syn` files (template literals, triple-quoted strings, `store`/`on`, `async`/`await`, `and`/`or`/`not`, `??`/`?.`, hex/binary numbers)
 - Bracket matching and auto-closing
 - Comment toggling (`//` line comments)
-- Language icons
 
 ## About Synth
 
@@ -49,6 +68,7 @@ fn status(hp) =
 
 ## Links
 
+- [Open VSX](https://open-vsx.org/extension/synth-lang/synth-language)
 - [GitHub](https://github.com/synth-pl/synth)
 - [Live Playground](https://synth-pl.github.io/synth/playground.html)
 - [Language Demos](https://synth-pl.github.io/synth/landing.html)

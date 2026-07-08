@@ -1,3 +1,4 @@
 install.ps1
 .vscodeignore
+extension.js
 *.vsix

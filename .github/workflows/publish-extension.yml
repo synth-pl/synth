@@ -1,0 +1,46 @@
+name: Publish VS Code Extension
+
+# Push tag vscode-extension-v1.0.6 (version must match vscode-extension/package.json)
+on:
+  push:
+    tags:
+      - 'vscode-extension-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish-openvsx:
+    name: Open VSX
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#vscode-extension-v}"
+          VER=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$VER" ]; then
+            echo "Tag version ($TAG) != package.json version ($VER)"
+            exit 1
+          fi
+
+      - name: Grammar smoke test
+        working-directory: ${{ github.workspace }}
+        run: node tools/test_grammar.js
+
+      - name: Package VSIX
+        run: npx @vscode/vsce package --no-dependencies
+
+      - name: Publish to Open VSX
+        run: npx ovsx publish --no-dependencies
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

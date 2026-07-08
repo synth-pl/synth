@@ -31,3 +31,10 @@ jobs:
 
       - name: Run Synth example tests
         run: npm test
+
+      - name: VS Code extension grammar test
+        run: node tools/test_grammar.js
+
+      - name: Package VS Code extension
+        run: npx @vscode/vsce package --no-dependencies
+        working-directory: vscode-extension
