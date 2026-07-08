@@ -1,6 +1,6 @@
 {
   "name": "synth-lang",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Synth — AI-native programming language that transpiles to JavaScript",
   "main": "tools/synth_bootstrap_cli.js",
   "bin": {
@@ -24,7 +24,7 @@
     "javascript",
     "compiler"
   ],
-  "homepage": "https://synth-lang.dev",
+  "homepage": "https://synth-pl.github.io/synth/",
   "repository": {
     "type": "git",
     "url": "https://github.com/synth-pl/synth.git"
