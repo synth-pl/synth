@@ -53,8 +53,15 @@
     "build:bootstrap2": "node tools/build_bootstrap_bundle.js --compiler dist/compiler.bootstrap.js --out dist/compiler.bootstrap2.js",
     "test:bootstrap": "node tools/test_bootstrap.js",
     "test:double-bootstrap": "node tools/test_double_bootstrap.js",
-    "build:compiler": "node dist/cli.js --bundle compiler/driver.syn dist/compiler.synth.js && node tools/build_synth_browser_bundle.js && node tools/build_bootstrap_bundle.js",
-    "build:synth-browser": "node tools/build_synth_browser_bundle.js"
+    "test:playground-bootstrap": "node tools/test_playground_bootstrap.js",
+    "test:toolchain": "npm run test:double-bootstrap && npm run test:playground-bootstrap && node tools/synth_bootstrap_cli.js --test compiler/ast_test.syn",
+    "synth:bootstrap": "node tools/synth_bootstrap_cli.js",
+    "build:stage1": "node dist/cli.js --bundle compiler/driver.syn dist/compiler.synth.js",
+    "build:browser-bootstrap": "node tools/build_browser_bundle.js --input dist/compiler.bootstrap.js --out demo/compiler.bootstrap.js --backend bootstrap --version 1.0.0-bootstrap",
+    "build:browser-stage1": "node tools/build_browser_bundle.js --input dist/compiler.synth.js --out demo/compiler.synth.js --backend synth --version 1.0.0-selfhost",
+    "build:toolchain": "npm run build:stage1 && npm run build:bootstrap && npm run build:browser-bootstrap && npm run build:browser-stage1",
+    "build:compiler": "npm run build:toolchain",
+    "build:synth-browser": "node tools/build_browser_bundle.js --input dist/compiler.synth.js --out demo/compiler.synth.js --backend synth --version 1.0.0-selfhost"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

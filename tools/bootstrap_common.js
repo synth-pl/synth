@@ -89,15 +89,17 @@ function extractStdlib(bundleSource) {
   return bundleSource.slice(start, end).trim()
 }
 
-function buildBootstrapBundle(compilerPath, outPath) {
+function bundleSynProject(compilerPath, entryPath, options = {}) {
+  const headerComments = options.headerComments !== false
   if (!fs.existsSync(compilerPath)) {
     throw new Error(`missing compiler bundle: ${compilerPath}`)
   }
   const bundleSource = fs.readFileSync(compilerPath, 'utf8')
   const stdlib = extractStdlib(bundleSource)
   const compiler = loadBundle(compilerPath)
-  const modules = resolveModuleOrder(ENTRY)
+  const modules = resolveModuleOrder(entryPath)
   const parts = [stdlib, '']
+  const warnings = []
 
   for (const mod of modules) {
     const result = compiler.compile(mod.source)
@@ -108,16 +110,32 @@ function buildBootstrapBundle(compilerPath, outPath) {
     if (syntaxErr) {
       throw new Error(`invalid JS from ${mod.name}: ${syntaxErr}`)
     }
-    const pad = Math.max(0, 50 - mod.name.length)
-    parts.push(`// ─── ${mod.name} ${'─'.repeat(pad)}`)
+    for (const w of (result.warnings || [])) {
+      warnings.push(`  ${(w.severity || 'warning').toUpperCase()} [${mod.name} line ${w.line}]: ${w.message}`)
+    }
+    if (headerComments) {
+      const pad = Math.max(0, 50 - mod.name.length)
+      parts.push(`// ─── ${mod.name} ${'─'.repeat(pad)}`)
+    }
     parts.push(result.js)
   }
 
-  fs.writeFileSync(outPath, parts.join('\n\n'))
   return {
-    modules: modules.map(m => m.name),
+    js: parts.join('\n\n'),
+    warnings,
+    files: modules.map(m => m.name),
     lines: parts.join('\n').split('\n').length,
-    bytes: fs.statSync(outPath).size,
+    bytes: Buffer.byteLength(parts.join('\n\n'), 'utf8'),
+  }
+}
+
+function buildBootstrapBundle(compilerPath, outPath) {
+  const info = bundleSynProject(compilerPath, ENTRY)
+  fs.writeFileSync(outPath, info.js)
+  return {
+    modules: info.files,
+    lines: info.lines,
+    bytes: info.bytes,
   }
 }
 
@@ -130,5 +148,6 @@ module.exports = {
   resolveModuleOrder,
   validateJs,
   extractStdlib,
+  bundleSynProject,
   buildBootstrapBundle,
 }

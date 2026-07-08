@@ -463,7 +463,7 @@
 </header>
 
 <div class="selfhost-banner" id="selfhost-banner" hidden>
-  Self-hosted compiler active — experimental build compiled from Synth source. Switch back via <strong>← TS compiler</strong> if anything looks off.
+  Bootstrap compiler active — Synth compiling Synth. Switch back via <strong>← TS compiler</strong> if anything looks off.
 </div>
 
 <div class="toolbar">
@@ -512,14 +512,15 @@
   </div>
 </div>
 
-<!-- ── Compiler bundle (TS default; ?compiler=synth for self-hosted) ─────────── -->
+<!-- ── Compiler bundle (TS default; ?compiler=bootstrap for Synth-on-Synth) ─── -->
 <script>
 (function () {
-  const useSynth = new URLSearchParams(location.search).get('compiler') === 'synth'
-  window.__SYNTH_USE_SELF_HOST__ = useSynth
-  document.write(
-    '<script src="' + (useSynth ? 'compiler.synth.js' : 'synth.compiler.js?v=1.0.0-f46cb5b') + '"><\/script>'
-  )
+  const mode = new URLSearchParams(location.search).get('compiler')
+  let script = 'synth.compiler.js?v=1.0.0-f46cb5b'
+  if (mode === 'bootstrap') script = 'compiler.bootstrap.js'
+  else if (mode === 'synth') script = 'compiler.synth.js'
+  window.__SYNTH_COMPILER_MODE__ = mode || 'typescript'
+  document.write('<script src="' + script + '"><\/script>')
 })()
 </script>
 
@@ -1446,30 +1447,36 @@ const lineCol   = document.getElementById('line-col')
 const compilerBadge = document.getElementById('compiler-badge')
 
 const compilerBackend = (window.SynthCompiler && window.SynthCompiler.backend)
-  || (window.__SYNTH_USE_SELF_HOST__ ? 'synth' : 'typescript')
+  || (window.__SYNTH_COMPILER_MODE__ === 'bootstrap' ? 'bootstrap'
+    : window.__SYNTH_COMPILER_MODE__ === 'synth' ? 'synth' : 'typescript')
 if (compilerBadge) {
-  if (compilerBackend === 'synth') {
-    compilerBadge.textContent = 'self-host'
-    compilerBadge.title = 'Self-hosted Synth compiler (experimental). Remove ?compiler=synth for the TS reference compiler.'
+  if (compilerBackend === 'bootstrap') {
+    compilerBadge.textContent = 'bootstrap'
+    compilerBadge.title = 'Bootstrap compiler — Synth source compiled by Synth. TS is oracle-only.'
     compilerBadge.style.borderColor = 'rgba(0,229,160,0.5)'
     compilerBadge.style.color = 'var(--green)'
+  } else if (compilerBackend === 'synth') {
+    compilerBadge.textContent = 'stage-1'
+    compilerBadge.title = 'Stage-1 self-host (TS-built compiler). Prefer ?compiler=bootstrap for the full loop.'
+    compilerBadge.style.borderColor = 'rgba(255,176,32,0.5)'
+    compilerBadge.style.color = 'var(--amber)'
   } else {
     compilerBadge.textContent = 'TS v1.0'
-    compilerBadge.title = 'TypeScript reference compiler. Add ?compiler=synth to try the self-hosted build.'
+    compilerBadge.title = 'TypeScript reference compiler. Add ?compiler=bootstrap for the bootstrap build.'
   }
 }
 const compilerToggle = document.getElementById('compiler-toggle')
 const selfhostBanner = document.getElementById('selfhost-banner')
 if (compilerToggle) {
-  if (compilerBackend === 'synth') {
+  if (compilerBackend === 'bootstrap' || compilerBackend === 'synth') {
     compilerToggle.textContent = '← TS compiler'
     compilerToggle.href = 'playground.html'
     compilerToggle.title = 'Switch back to the TypeScript reference compiler'
-    if (selfhostBanner) selfhostBanner.hidden = false
+    if (selfhostBanner) selfhostBanner.hidden = compilerBackend !== 'bootstrap'
   } else {
-    compilerToggle.textContent = 'self-host'
-    compilerToggle.href = 'playground.html?compiler=synth'
-    compilerToggle.title = 'Try the self-hosted Synth compiler (experimental)'
+    compilerToggle.textContent = 'bootstrap'
+    compilerToggle.href = 'playground.html?compiler=bootstrap'
+    compilerToggle.title = 'Run the bootstrap compiler (Synth compiling Synth)'
   }
 }
 
