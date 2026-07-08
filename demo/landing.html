@@ -430,13 +430,16 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     .self-host-stats li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: 11.5rem 1fr;
+      column-gap: 10px;
+      align-items: start;
+      position: relative;
+      padding-left: 22px;
       font-size: 15px;
       color: var(--text-muted);
       line-height: 1.55;
@@ -444,10 +447,35 @@
 
     .self-host-stats li::before {
       content: '✦';
+      position: absolute;
+      left: 0;
+      top: 0.45em;
       color: var(--green);
       font-size: 12px;
-      margin-top: 4px;
-      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .self-host-stats .sh-stat-key {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .self-host-stats .sh-stat-key.synthwave-text {
+      white-space: nowrap;
+    }
+
+    .self-host-stats .sh-stat-val {
+      min-width: 0;
+    }
+
+    .self-host-stats .sh-stat-val code {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      background: rgba(176,96,255,0.1);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: var(--purple);
     }
 
     .synthwave-text {
@@ -462,7 +490,8 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-top: auto;
+      align-self: flex-start;
+      margin-left: 22px;
       font-size: 15px;
       font-weight: 700;
       color: var(--green);
@@ -1109,6 +1138,12 @@
       .self-host { padding: 0 16px 48px; }
       .self-host-grid { grid-template-columns: 1fr; }
       .self-host-lead { margin-top: -20px; padding: 0 4px; }
+      .self-host-stats li {
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }
+      .self-host-stats .sh-stat-val { padding-left: 0; }
+      .self-host-cta { margin-left: 22px; }
 
       /* Demos */
       .demos { padding: 0 16px 48px; }
@@ -1371,10 +1406,22 @@
           recompiles them again — byte-for-byte identical, three generations deep. That's the fixed point.
         </p>
         <ul class="self-host-stats">
-          <li><strong>8 modules</strong> — token, lexer, ast, parser, checker, codegen, formatter, driver</li>
-          <li><strong class="synthwave-text">Pure Synth</strong> — compiler source and CLI written in the language they implement; JavaScript is emitted output, not hand-written source</li>
-          <li><strong>Fixed-point proof</strong> — v1 → v2 → v3 bootstrap chain is byte-identical; further self-compilation changes nothing</li>
-          <li><strong>Runs in the browser</strong> — the playground loads the same bootstrap bundle client-side via <code>SynthCompiler.compile()</code></li>
+          <li>
+            <span class="sh-stat-key">8 modules</span>
+            <span class="sh-stat-val">— token, lexer, ast, parser, checker, codegen, formatter, driver</span>
+          </li>
+          <li>
+            <span class="sh-stat-key synthwave-text">Pure Synth</span>
+            <span class="sh-stat-val">— compiler source and CLI written in the language they implement; JavaScript is emitted output, not hand-written source</span>
+          </li>
+          <li>
+            <span class="sh-stat-key">Fixed-point proof</span>
+            <span class="sh-stat-val">— v1 → v2 → v3 bootstrap chain is byte-identical; further self-compilation changes nothing</span>
+          </li>
+          <li>
+            <span class="sh-stat-key">Runs in the browser</span>
+            <span class="sh-stat-val">— the playground loads the same bootstrap bundle client-side via <code>SynthCompiler.compile()</code></span>
+          </li>
         </ul>
         <a class="self-host-cta" href="playground.html">Open the bootstrap playground →</a>
       </div>
