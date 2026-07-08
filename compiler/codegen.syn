@@ -194,7 +194,11 @@ fn cg_pattern_condition(pat: any, subj: string) -> string {
       subj + " " + pat.op + " " + pat.value
     }
   } else if k == "IdentPat" {
-    "true"
+    if ident_is_binding(pat.name) {
+      "true"
+    } else {
+      "(" + subj + " != null && " + subj + ".tag === \"" + pat.name + "\") || " + subj + " === \"" + pat.name + "\""
+    }
   } else if k == "TagPat" {
     subj + ".tag === \"" + pat.name + "\""
   } else if k == "EnumPat" {
@@ -367,8 +371,13 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
     if expr.callee.kind == "Identifier" and expr.callee.name == "print" {
       "console.log(" + args + ")"
     } else if expr.callee.kind == "MemberExpr" and is_stdlib_method(expr.callee.property) {
-      let obj = cg_emit_expr(st, expr.callee.object)
-      "$" + expr.callee.property + "(" + obj + ", " + args + ")"
+      let mem = expr.callee
+      if mem.object.kind == "Identifier" and mem.object.name == "Math" {
+        cg_emit_expr(st, mem) + "(" + args + ")"
+      } else {
+        let obj = cg_emit_expr(st, mem.object)
+        "$" + mem.property + "(" + obj + ", " + args + ")"
+      }
     } else if expr.callee.kind == "Identifier" {
       cg_emit_name(st, expr.callee.name) + "(" + args + ")"
     } else {
@@ -468,6 +477,44 @@ fn cg_emit_if_chain(st: CgState, stmt: any) -> CgState {
   cg_emit_line(s, "}")
 }
 
+fn cg_index_from(s: string, sub: string, start: int) -> int {
+  let mut i = start
+  while i <= s.length - sub.length {
+    if s.slice(i, i + sub.length) == sub { return i }
+    i = i + 1
+  }
+  -1
+}
+
+fn cg_destructure_pattern(style: string, names: any[]) -> string {
+  let mut parts = ""
+  let mut i = 0
+  while i < names.length {
+    if i > 0 { parts = parts + ", " }
+    parts = parts + names[i]
+    i = i + 1
+  }
+  if style == "object" { "{ " + parts + " }" } else { "[ " + parts + " ]" }
+}
+
+fn cg_destructure_bind_names(names: any[]) -> any[] {
+  let mut result = []
+  let mut i = 0
+  while i < names.length {
+    let n = names[i]
+    if n != "_" {
+      let colon = cg_index_from(n, ": ", 0)
+      if colon >= 0 {
+        result = result.concat([n.slice(colon + 2)])
+      } else {
+        result = result.concat([n])
+      }
+    }
+    i = i + 1
+  }
+  result
+}
+
 fn cg_emit_stmt(st: CgState, stmt: any) -> CgState {
   let k = stmt.kind
   if k == "LetStmt" {
@@ -491,6 +538,17 @@ fn cg_emit_stmt(st: CgState, stmt: any) -> CgState {
         cg_emit_line(s, "let " + stmt.name + " = " + val + ";")
       }
     }
+  } else if k == "DestructureStmt" {
+    let val = cg_emit_expr(st, stmt.value)
+    let pattern = cg_destructure_pattern(stmt.style, stmt.names)
+    let mut s = st
+    let binds = cg_destructure_bind_names(stmt.names)
+    let mut i = 0
+    while i < binds.length {
+      s = cg_declare(s, binds[i])
+      i = i + 1
+    }
+    cg_emit_line(s, "let " + pattern + " = " + val + ";")
   } else if k == "ReturnStmt" {
     if stmt.value != null and stmt.value.kind == "ResultPropagateExpr" {
       let tmp = "_r" + st.lines.length
@@ -639,8 +697,8 @@ fn cg_emit_enum(st: CgState, decl: any) -> CgState {
   let mut i = 0
   while i < decl.variants.length {
     if i > 0 { members = members + ", " }
-    let v = decl.variants[i].name
-    members = members + v + ": '" + v + "'"
+    let vname = decl.variants[i]
+    members = members + vname + ": '" + vname + "'"
     i = i + 1
   }
   cg_emit_line(st, "const " + decl.name + " = Object.freeze({ " + members + " });")

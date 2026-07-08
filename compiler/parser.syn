@@ -1601,6 +1601,61 @@ fn ps_parse_template_lit(raw: string) -> any {
   { kind: "TemplateLit", raw: raw, quasis: quasis, exprs: exprs }
 }
 
+fn ps_is_simple_interp_expr(s: string) -> bool {
+  if s.length == 0 { false }
+  else {
+    let mut i = 0
+    while i < s.length {
+      let c = s.slice(i, i + 1)
+      let ok = (c >= "a" and c <= "z") or (c >= "A" and c <= "Z") or (c >= "0" and c <= "9") or c == "_" or c == "."
+      if not ok { return false }
+      i = i + 1
+    }
+    true
+  }
+}
+
+fn ps_parse_string_interp(value: string, simple_only: bool) -> any {
+  let open = index_from(value, "{", 0)
+  if open == -1 {
+    { kind: "StringLit", value: value, raw: escape_js_string(value) }
+  } else {
+    let mut quasis = []
+    let mut exprs = []
+    let mut i = 0
+    while i < value.length {
+      let brace = index_from(value, "{", i)
+      if brace == -1 {
+        quasis = quasis.concat([value.slice(i)])
+        i = value.length
+      } else {
+        quasis = quasis.concat([value.slice(i, brace)])
+        let close = index_from(value, "}", brace + 1)
+        if close == -1 {
+          return { kind: "StringLit", value: value, raw: escape_js_string(value) }
+        }
+        let expr_str = value.slice(brace + 1, close)
+        if expr_str == "" or (simple_only and not ps_is_simple_interp_expr(expr_str)) {
+          quasis = quasis.concat([value.slice(i, close + 1)])
+          i = close + 1
+        } else {
+          let sub_expr = parse_template_subexpr(expr_str)
+          exprs = exprs.concat([sub_expr])
+          i = close + 1
+        }
+      }
+    }
+    if quasis.length == exprs.length {
+      quasis = quasis.concat([""])
+    }
+    if exprs.length == 0 {
+      { kind: "StringLit", value: value, raw: escape_js_string(value) }
+    } else {
+      { kind: "TemplateLit", raw: "`" + value + "`", quasis: quasis, exprs: exprs }
+    }
+  }
+}
+
 fn ps_parse_primary(st: ParserState) -> ParseVal {
   let tok = ps_peek(st)
   if tok.type == "NUMBER" {
@@ -1608,7 +1663,10 @@ fn ps_parse_primary(st: ParserState) -> ParseVal {
     ParseVal(adv.st, { kind: "NumberLit", value: parse_float(adv.value.value), raw: adv.value.value })
   } else if tok.type == "STRING" {
     let adv = ps_advance(st)
-    ParseVal(adv.st, { kind: "StringLit", value: adv.value.value, raw: escape_js_string(adv.value.value) })
+    ParseVal(adv.st, ps_parse_string_interp(adv.value.value, true))
+  } else if tok.type == "TRIPLE_STRING" {
+    let adv = ps_advance(st)
+    ParseVal(adv.st, ps_parse_string_interp(adv.value.value, false))
   } else if tok.type == "TEMPLATE" {
     let adv = ps_advance(st)
     ParseVal(adv.st, ps_parse_template_lit(adv.value.value))
@@ -1665,6 +1723,9 @@ fn ps_parse_primary(st: ParserState) -> ParseVal {
     let adv = ps_advance(st)
     let arg_got = ps_parse_expr(adv.st)
     ParseVal(arg_got.st, { kind: "SpreadExpr", argument: arg_got.value })
+  } else if is_kw_type(tok.type) {
+    let adv = ps_advance(st)
+    ParseVal(adv.st, { kind: "Identifier", name: adv.value.value })
   } else {
     let err = { severity: "error", message: "Unexpected token: " + tok.type, line: tok.line, col: tok.col }
     ParseVal(ParserState(st.tokens, st.pos, st.in_match_guard, st.errors.concat([err])), { kind: "Identifier", name: "undefined" })

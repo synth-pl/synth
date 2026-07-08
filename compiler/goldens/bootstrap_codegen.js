@@ -429,7 +429,11 @@ const cg_pattern_condition = (pat, subj) => {
       return subj + " " + pat.op + " " + pat.value;
     }
   } else if (k == "IdentPat") {
-    return "true";
+    if (ident_is_binding(pat.name)) {
+      return "true";
+    } else {
+      return "(" + subj + " != null && " + subj + ".tag === \"" + pat.name + "\") || " + subj + " === \"" + pat.name + "\"";
+    }
   } else if (k == "TagPat") {
     return subj + ".tag === \"" + pat.name + "\"";
   } else if (k == "EnumPat") {
@@ -652,8 +656,13 @@ const cg_emit_expr = (st, expr) => {
     if (expr.callee.kind == "Identifier" && expr.callee.name == "print") {
       return "console.log(" + args + ")";
     } else if (expr.callee.kind == "MemberExpr" && is_stdlib_method(expr.callee.property)) {
-      let obj = cg_emit_expr(st, expr.callee.object);
-      return "$" + expr.callee.property + "(" + obj + ", " + args + ")";
+      let mem = expr.callee;
+      if (mem.object.kind == "Identifier" && mem.object.name == "Math") {
+        return cg_emit_expr(st, mem) + "(" + args + ")";
+      } else {
+        let obj = cg_emit_expr(st, mem.object);
+        return "$" + mem.property + "(" + obj + ", " + args + ")";
+      }
     } else if (expr.callee.kind == "Identifier") {
       return cg_emit_name(st, expr.callee.name) + "(" + args + ")";
     } else {
@@ -782,6 +791,67 @@ const cg_emit_if_chain = (st, stmt) => {
 };
 
 /**
+ * @param {string} s
+ * @param {string} sub
+ * @param {number} start
+ * @returns {number}
+ */
+const cg_index_from = (s, sub, start) => {
+  let i = start;
+  while (i <= s.length - sub.length) {
+    if (s.slice(i, i + sub.length) == sub) {
+      return i;
+    }
+    i = i + 1;
+  }
+  return -1;
+};
+
+/**
+ * @param {string} style
+ * @param {*} names
+ * @returns {string}
+ */
+const cg_destructure_pattern = (style, names) => {
+  let parts = "";
+  let i = 0;
+  while (i < names.length) {
+    if (i > 0) {
+      parts = parts + ", ";
+    }
+    parts = parts + names[i];
+    i = i + 1;
+  }
+  if (style == "object") {
+    return "{ " + parts + " }";
+  } else {
+    return "[ " + parts + " ]";
+  }
+};
+
+/**
+ * @param {*} names
+ * @returns {*}
+ */
+const cg_destructure_bind_names = (names) => {
+  let result = [];
+  let i = 0;
+  while (i < names.length) {
+    let n = names[i];
+    if (n != "_") {
+      let colon = cg_index_from(n, ": ", 0);
+      if (colon >= 0) {
+        result = result.concat([n.slice(colon + 2)]);
+      } else {
+        result = result.concat([n]);
+      }
+    }
+    i = i + 1;
+  }
+  return result;
+};
+
+/**
  * @param {CgState} st
  * @param {*} stmt
  * @returns {CgState}
@@ -809,6 +879,17 @@ const cg_emit_stmt = (st, stmt) => {
         return cg_emit_line(s, "let " + stmt.name + " = " + val + ";");
       }
     }
+  } else if (k == "DestructureStmt") {
+    let val = cg_emit_expr(st, stmt.value);
+    let pattern = cg_destructure_pattern(stmt.style, stmt.names);
+    let s = st;
+    let binds = cg_destructure_bind_names(stmt.names);
+    let i = 0;
+    while (i < binds.length) {
+      s = cg_declare(s, binds[i]);
+      i = i + 1;
+    }
+    return cg_emit_line(s, "let " + pattern + " = " + val + ";");
   } else if (k == "ReturnStmt") {
     if (stmt.value != null && stmt.value.kind == "ResultPropagateExpr") {
       let tmp = "_r" + st.lines.length;
@@ -1008,8 +1089,8 @@ const cg_emit_enum = (st, decl) => {
     if (i > 0) {
       members = members + ", ";
     }
-    let v = decl.variants[i].name;
-    members = members + v + ": '" + v + "'";
+    let vname = decl.variants[i];
+    members = members + vname + ": '" + vname + "'";
     i = i + 1;
   }
   return cg_emit_line(st, "const " + decl.name + " = Object.freeze({ " + members + " });");

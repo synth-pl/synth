@@ -152,7 +152,7 @@ fn lx_read_triple_quote(st: LexState, tokens: Token[]) -> LexEmit {
     }
   }
   let v = if value.length > 0 and char_at(value, 0) == nl_char() { value.slice(1) } else { value }
-  LexEmit(s, tokens.concat([Token("STRING", v, start_line, start_col)]))
+  LexEmit(s, tokens.concat([Token("TRIPLE_STRING", v, start_line, start_col)]))
 }
 
 fn lx_read_string(st: LexState, tokens: Token[], quote: string) -> LexEmit {

@@ -343,7 +343,7 @@ const lx_read_triple_quote = (st, tokens) => {
       return value;
     }
 })();
-  return LexEmit(s, tokens.concat([Token("STRING", v, start_line, start_col)]));
+  return LexEmit(s, tokens.concat([Token("TRIPLE_STRING", v, start_line, start_col)]));
 };
 
 /**
@@ -2932,6 +2932,73 @@ const ps_parse_template_lit = (raw) => {
 };
 
 /**
+ * @param {string} s
+ * @returns {boolean}
+ */
+const ps_is_simple_interp_expr = (s) => {
+  if (s.length == 0) {
+    return false;
+  } else {
+    let i = 0;
+    while (i < s.length) {
+      let c = s.slice(i, i + 1);
+      let ok = c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c >= "0" && c <= "9" || c == "_" || c == ".";
+      if (!ok) {
+        return false;
+      }
+      i = i + 1;
+    }
+    return true;
+  }
+};
+
+/**
+ * @param {string} value
+ * @param {boolean} simple_only
+ * @returns {*}
+ */
+const ps_parse_string_interp = (value, simple_only) => {
+  let open = index_from(value, "{", 0);
+  if (open == -1) {
+    return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+  } else {
+    let quasis = [];
+    let exprs = [];
+    let i = 0;
+    while (i < value.length) {
+      let brace = index_from(value, "{", i);
+      if (brace == -1) {
+        quasis = quasis.concat([value.slice(i)]);
+        i = value.length;
+      } else {
+        quasis = quasis.concat([value.slice(i, brace)]);
+        let close = index_from(value, "}", brace + 1);
+        if (close == -1) {
+          return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+        }
+        let expr_str = value.slice(brace + 1, close);
+        if (expr_str == "" || simple_only && !ps_is_simple_interp_expr(expr_str)) {
+          quasis = quasis.concat([value.slice(i, close + 1)]);
+          i = close + 1;
+        } else {
+          let sub_expr = parse_template_subexpr(expr_str);
+          exprs = exprs.concat([sub_expr]);
+          i = close + 1;
+        }
+      }
+    }
+    if (quasis.length == exprs.length) {
+      quasis = quasis.concat([""]);
+    }
+    if (exprs.length == 0) {
+      return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+    } else {
+      return {kind: "TemplateLit", raw: "`" + value + "`", quasis: quasis, exprs: exprs};
+    }
+  }
+};
+
+/**
  * @param {ParserState} st
  * @returns {ParseVal}
  */
@@ -2942,7 +3009,10 @@ const ps_parse_primary = (st) => {
     return ParseVal(adv.st, {kind: "NumberLit", value: $parse_float(adv.value.value), raw: adv.value.value});
   } else if (tok.type == "STRING") {
     let adv = ps_advance(st);
-    return ParseVal(adv.st, {kind: "StringLit", value: adv.value.value, raw: escape_js_string(adv.value.value)});
+    return ParseVal(adv.st, ps_parse_string_interp(adv.value.value, true));
+  } else if (tok.type == "TRIPLE_STRING") {
+    let adv = ps_advance(st);
+    return ParseVal(adv.st, ps_parse_string_interp(adv.value.value, false));
   } else if (tok.type == "TEMPLATE") {
     let adv = ps_advance(st);
     return ParseVal(adv.st, ps_parse_template_lit(adv.value.value));
@@ -2999,6 +3069,9 @@ const ps_parse_primary = (st) => {
     let adv = ps_advance(st);
     let arg_got = ps_parse_expr(adv.st);
     return ParseVal(arg_got.st, {kind: "SpreadExpr", argument: arg_got.value});
+  } else if (is_kw_type(tok.type)) {
+    let adv = ps_advance(st);
+    return ParseVal(adv.st, {kind: "Identifier", name: adv.value.value});
   } else {
     let err = {severity: "error", message: "Unexpected token: " + tok.type, line: tok.line, col: tok.col};
     return ParseVal(ParserState(st.tokens, st.pos, st.in_match_guard, st.errors.concat([err])), {kind: "Identifier", name: "undefined"});
@@ -4601,7 +4674,11 @@ const cg_pattern_condition = (pat, subj) => {
       return subj + " " + pat.op + " " + pat.value;
     }
   } else if (k == "IdentPat") {
-    return "true";
+    if (ident_is_binding(pat.name)) {
+      return "true";
+    } else {
+      return "(" + subj + " != null && " + subj + ".tag === \"" + pat.name + "\") || " + subj + " === \"" + pat.name + "\"";
+    }
   } else if (k == "TagPat") {
     return subj + ".tag === \"" + pat.name + "\"";
   } else if (k == "EnumPat") {
@@ -4824,8 +4901,13 @@ const cg_emit_expr = (st, expr) => {
     if (expr.callee.kind == "Identifier" && expr.callee.name == "print") {
       return "console.log(" + args + ")";
     } else if (expr.callee.kind == "MemberExpr" && is_stdlib_method(expr.callee.property)) {
-      let obj = cg_emit_expr(st, expr.callee.object);
-      return "$" + expr.callee.property + "(" + obj + ", " + args + ")";
+      let mem = expr.callee;
+      if (mem.object.kind == "Identifier" && mem.object.name == "Math") {
+        return cg_emit_expr(st, mem) + "(" + args + ")";
+      } else {
+        let obj = cg_emit_expr(st, mem.object);
+        return "$" + mem.property + "(" + obj + ", " + args + ")";
+      }
     } else if (expr.callee.kind == "Identifier") {
       return cg_emit_name(st, expr.callee.name) + "(" + args + ")";
     } else {
@@ -4954,6 +5036,67 @@ const cg_emit_if_chain = (st, stmt) => {
 };
 
 /**
+ * @param {string} s
+ * @param {string} sub
+ * @param {number} start
+ * @returns {number}
+ */
+const cg_index_from = (s, sub, start) => {
+  let i = start;
+  while (i <= s.length - sub.length) {
+    if (s.slice(i, i + sub.length) == sub) {
+      return i;
+    }
+    i = i + 1;
+  }
+  return -1;
+};
+
+/**
+ * @param {string} style
+ * @param {*} names
+ * @returns {string}
+ */
+const cg_destructure_pattern = (style, names) => {
+  let parts = "";
+  let i = 0;
+  while (i < names.length) {
+    if (i > 0) {
+      parts = parts + ", ";
+    }
+    parts = parts + names[i];
+    i = i + 1;
+  }
+  if (style == "object") {
+    return "{ " + parts + " }";
+  } else {
+    return "[ " + parts + " ]";
+  }
+};
+
+/**
+ * @param {*} names
+ * @returns {*}
+ */
+const cg_destructure_bind_names = (names) => {
+  let result = [];
+  let i = 0;
+  while (i < names.length) {
+    let n = names[i];
+    if (n != "_") {
+      let colon = cg_index_from(n, ": ", 0);
+      if (colon >= 0) {
+        result = result.concat([n.slice(colon + 2)]);
+      } else {
+        result = result.concat([n]);
+      }
+    }
+    i = i + 1;
+  }
+  return result;
+};
+
+/**
  * @param {CgState} st
  * @param {*} stmt
  * @returns {CgState}
@@ -4981,6 +5124,17 @@ const cg_emit_stmt = (st, stmt) => {
         return cg_emit_line(s, "let " + stmt.name + " = " + val + ";");
       }
     }
+  } else if (k == "DestructureStmt") {
+    let val = cg_emit_expr(st, stmt.value);
+    let pattern = cg_destructure_pattern(stmt.style, stmt.names);
+    let s = st;
+    let binds = cg_destructure_bind_names(stmt.names);
+    let i = 0;
+    while (i < binds.length) {
+      s = cg_declare(s, binds[i]);
+      i = i + 1;
+    }
+    return cg_emit_line(s, "let " + pattern + " = " + val + ";");
   } else if (k == "ReturnStmt") {
     if (stmt.value != null && stmt.value.kind == "ResultPropagateExpr") {
       let tmp = "_r" + st.lines.length;
@@ -5180,8 +5334,8 @@ const cg_emit_enum = (st, decl) => {
     if (i > 0) {
       members = members + ", ";
     }
-    let v = decl.variants[i].name;
-    members = members + v + ": '" + v + "'";
+    let vname = decl.variants[i];
+    members = members + vname + ": '" + vname + "'";
     i = i + 1;
   }
   return cg_emit_line(st, "const " + decl.name + " = Object.freeze({ " + members + " });");

@@ -235,7 +235,7 @@ const lx_read_triple_quote = (st, tokens) => {
       return value;
     }
 })();
-  return LexEmit(s, tokens.concat([Token("STRING", v, start_line, start_col)]));
+  return LexEmit(s, tokens.concat([Token("TRIPLE_STRING", v, start_line, start_col)]));
 };
 
 /**

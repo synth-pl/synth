@@ -2034,6 +2034,73 @@ const ps_parse_template_lit = (raw) => {
 };
 
 /**
+ * @param {string} s
+ * @returns {boolean}
+ */
+const ps_is_simple_interp_expr = (s) => {
+  if (s.length == 0) {
+    return false;
+  } else {
+    let i = 0;
+    while (i < s.length) {
+      let c = s.slice(i, i + 1);
+      let ok = c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c >= "0" && c <= "9" || c == "_" || c == ".";
+      if (!ok) {
+        return false;
+      }
+      i = i + 1;
+    }
+    return true;
+  }
+};
+
+/**
+ * @param {string} value
+ * @param {boolean} simple_only
+ * @returns {*}
+ */
+const ps_parse_string_interp = (value, simple_only) => {
+  let open = index_from(value, "{", 0);
+  if (open == -1) {
+    return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+  } else {
+    let quasis = [];
+    let exprs = [];
+    let i = 0;
+    while (i < value.length) {
+      let brace = index_from(value, "{", i);
+      if (brace == -1) {
+        quasis = quasis.concat([value.slice(i)]);
+        i = value.length;
+      } else {
+        quasis = quasis.concat([value.slice(i, brace)]);
+        let close = index_from(value, "}", brace + 1);
+        if (close == -1) {
+          return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+        }
+        let expr_str = value.slice(brace + 1, close);
+        if (expr_str == "" || simple_only && !ps_is_simple_interp_expr(expr_str)) {
+          quasis = quasis.concat([value.slice(i, close + 1)]);
+          i = close + 1;
+        } else {
+          let sub_expr = parse_template_subexpr(expr_str);
+          exprs = exprs.concat([sub_expr]);
+          i = close + 1;
+        }
+      }
+    }
+    if (quasis.length == exprs.length) {
+      quasis = quasis.concat([""]);
+    }
+    if (exprs.length == 0) {
+      return {kind: "StringLit", value: value, raw: escape_js_string(value)};
+    } else {
+      return {kind: "TemplateLit", raw: "`" + value + "`", quasis: quasis, exprs: exprs};
+    }
+  }
+};
+
+/**
  * @param {ParserState} st
  * @returns {ParseVal}
  */
@@ -2044,7 +2111,10 @@ const ps_parse_primary = (st) => {
     return ParseVal(adv.st, {kind: "NumberLit", value: $parse_float(adv.value.value), raw: adv.value.value});
   } else if (tok.type == "STRING") {
     let adv = ps_advance(st);
-    return ParseVal(adv.st, {kind: "StringLit", value: adv.value.value, raw: escape_js_string(adv.value.value)});
+    return ParseVal(adv.st, ps_parse_string_interp(adv.value.value, true));
+  } else if (tok.type == "TRIPLE_STRING") {
+    let adv = ps_advance(st);
+    return ParseVal(adv.st, ps_parse_string_interp(adv.value.value, false));
   } else if (tok.type == "TEMPLATE") {
     let adv = ps_advance(st);
     return ParseVal(adv.st, ps_parse_template_lit(adv.value.value));
@@ -2101,6 +2171,9 @@ const ps_parse_primary = (st) => {
     let adv = ps_advance(st);
     let arg_got = ps_parse_expr(adv.st);
     return ParseVal(arg_got.st, {kind: "SpreadExpr", argument: arg_got.value});
+  } else if (is_kw_type(tok.type)) {
+    let adv = ps_advance(st);
+    return ParseVal(adv.st, {kind: "Identifier", name: adv.value.value});
   } else {
     let err = {severity: "error", message: "Unexpected token: " + tok.type, line: tok.line, col: tok.col};
     return ParseVal(ParserState(st.tokens, st.pos, st.in_match_guard, st.errors.concat([err])), {kind: "Identifier", name: "undefined"});
