@@ -1549,32 +1549,12 @@ $ synth --check src/main.syn
 
         <div class="code-block">
           <div class="code-label"><span class="dot dot-axn"></span>tiles.syn</div>
-          <pre>export type Tile = | Floor | Wall | Door | Stairs | Chest
-
-export fn tile_glyph(tag: string) -> string =
-  match tag {
-    | "Floor"  =&gt; "&middot;"
-    | "Wall"   =&gt; "&#9608;"
-    | "Door"   =&gt; "&#9647;"
-    | _        =&gt; "?"
-  }
-
-@test "wall glyph" { tile_glyph("Wall") == "&#9608;" }</pre>
+          <pre id="modules-tiles-code"></pre>
         </div>
 
         <div class="code-block">
           <div class="code-label"><span class="dot dot-axn"></span>main.syn</div>
-          <pre>import { tile_glyph } from "./tiles"
-import { generate }   from "./generator"
-import { render_map } from "./renderer"
-
-fn main() {
-  let map  = generate(20, 40, 1, 7777)
-  let html = render_map(map)
-  document.getElementById("output").innerHTML = html
-}
-
-main()</pre>
+          <pre id="modules-main-code"></pre>
         </div>
 
         <div class="doc-table-wrap"><table class="doc-table">
@@ -2847,6 +2827,34 @@ fn opposite :: (d: Direction) -> Direction =
   ✓ element bonus — no match
   ─────────────────────────────────────
   5 passed, 0 failed, 5 total
+`);
+
+    setCode('modules-tiles-code', `
+export type Tile = | Floor | Wall | Door | Stairs | Chest
+
+export fn tile_glyph(tag: string) -> string =
+  match tag {
+    | "Floor"  => "·"
+    | "Wall"   => "█"
+    | "Door"   => "▯"
+    | _        => "?"
+  }
+
+@test "wall glyph" { tile_glyph("Wall") == "█" }
+`);
+
+    setCode('modules-main-code', `
+import { tile_glyph } from "./tiles"
+import { generate }   from "./generator"
+import { render_map } from "./renderer"
+
+fn main() {
+  let map  = generate(20, 40, 1, 7777)
+  let html = render_map(map)
+  document.getElementById("output").innerHTML = html
+}
+
+main()
 `);
 
     setCode('cli-code', `
