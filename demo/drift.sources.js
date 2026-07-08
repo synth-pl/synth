@@ -1,4 +1,5 @@
 const Car = (x, y, color, seed) => ({ x, y, color, seed });
+
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let LANE_COUNT = 3;
@@ -9,6 +10,7 @@ let CAR_W = 54;
 let CAR_H = 90;
 let PLAYER_Y = CANVAS_H - 130;
 let SPAWN_Y = 0 - CAR_H;
+
 const Game = (() => {
   let _state = { score: 0, hi: 0, lives: 3, phase: "title", speed: 220.0 };
   const _subs = [];
@@ -25,6 +27,7 @@ const Game = (() => {
     subscribe(fn) { _subs.push(fn); fn(_state); },
   };
 })();
+
 let player_lane = 1;
 let player_target = 1;
 let player_x = ROAD_X + LANE_W + (LANE_W - CAR_W) / 2;
@@ -32,9 +35,27 @@ let traffic = [];
 let road_scroll = 0.0;
 let spawn_timer = 0.0;
 let invuln_timer = 0.0;
-const lane_x = (lane) => ROAD_X + lane * LANE_W + (LANE_W - CAR_W) / 2;
+
+const lane_x = (() => {
+  const __cache = new Map();
+  return (lane) => {
+    const __key = JSON.stringify([lane]);
+    if (__cache.has(__key)) return __cache.get(__key);
+    const __result = (() => {
+      return ROAD_X + lane * LANE_W + (LANE_W - CAR_W) / 2;
+    })();
+    __cache.set(__key, __result);
+    return __result;
+  };
+})();
+
 const car_color = (seed) => ((_m) => (_m === 0) ? "#ff2d78" : (_m === 1) ? "#ff6e3a" : (_m === 2) ? "#ffd166" : "#b84fff")($floor(seed * 4));
+
 const car_label = (seed) => ((_m) => (_m === 0) ? "SEDAN" : (_m === 1) ? "COUPE" : "TRUCK")($floor(seed * 3));
+
+/**
+ * @returns {*}
+ */
 const start_game = () => {
   player_lane = 1;
   player_target = 1;
@@ -43,18 +64,31 @@ const start_game = () => {
   road_scroll = 0.0;
   spawn_timer = 0.0;
   invuln_timer = 0.0;
-  return Game.set({ score: 0, lives: 3, phase: "playing", speed: 220.0 });
+  return Game.set({score: 0, lives: 3, phase: "playing", speed: 220.0});
 };
+
+/**
+ * @returns {*}
+ */
 const move_left = () => {
   if (player_target > 0) {
     return player_target = player_target - 1;
   }
 };
+
+/**
+ * @returns {*}
+ */
 const move_right = () => {
   if (player_target < LANE_COUNT - 1) {
     return player_target = player_target + 1;
   }
 };
+
+/**
+ * @param {*} dt
+ * @returns {*}
+ */
 const tick = (dt) => {
   if (Game.phase != "playing") {
     return 0;
@@ -69,7 +103,7 @@ const tick = (dt) => {
       player_x = tx;
       player_lane = player_target;
     }
-    traffic = $filter($map(traffic, c => ({ ...c, y: c.y + speed * dt })), c => c.y < CANVAS_H + CAR_H + 20);
+    traffic = $filter($map(traffic, (c) => ({_spread_: c, y: c.y + speed * dt})), (c) => c.y < CANVAS_H + CAR_H + 20);
     spawn_timer = spawn_timer + dt;
     let interval = $clamp(1.6 - speed * 0.0025, 0.35, 1.6);
     if (spawn_timer >= interval) {
@@ -77,21 +111,21 @@ const tick = (dt) => {
       let lane = $floor($random() * LANE_COUNT);
       let seed = $random();
       let color = car_color(seed);
-      traffic = [...traffic, { x: lane_x(lane), y: SPAWN_Y, color, seed }];
+      traffic = [...traffic, {x: lane_x(lane), y: SPAWN_Y, color: color, seed: seed}];
     }
     invuln_timer = invuln_timer - dt;
     if (invuln_timer <= 0) {
       let px = player_x;
       let py = PLAYER_Y;
-      let hit = $any(traffic, c => $abs(c.x - px) < CAR_W - 8 && $abs(c.y - py) < CAR_H - 16);
+      let hit = $any(traffic, (c) => $abs(c.x - px) < CAR_W - 8 && $abs(c.y - py) < CAR_H - 16);
       if (hit) {
         let nl = Game.lives - 1;
         invuln_timer = 1.8;
-        traffic = $filter(traffic, c => $abs(c.x - px) >= CAR_W - 8 || $abs(c.y - py) >= CAR_H - 16);
+        traffic = $filter(traffic, (c) => $abs(c.x - px) >= CAR_W - 8 || $abs(c.y - py) >= CAR_H - 16);
         if (nl <= 0) {
-          Game.set({ lives: 0, phase: "gameover" });
+          Game.set({lives: 0, phase: "gameover"});
         } else {
-          Game.set({ lives: nl });
+          Game.set({lives: nl});
         }
       }
     }
@@ -100,11 +134,17 @@ const tick = (dt) => {
     let pts = $floor(speed * dt * 0.08);
     let new_score = Game.score + pts;
     let new_hi = new_score > Game.hi ? new_score : Game.hi;
-    return Game.set({ speed: cap_speed, score: new_score, hi: new_hi });
+    return Game.set({speed: cap_speed, score: new_score, hi: new_hi});
   }
 };
-const get_player = () => ({ x: player_x, y: PLAYER_Y, w: CAR_W, h: CAR_H });
+
+const get_player = () => ({x: player_x, y: PLAYER_Y, w: CAR_W, h: CAR_H});
+
 const get_traffic = () => traffic;
+
 const get_road_scroll = () => road_scroll;
-const get_road = () => ({ x: ROAD_X, w: ROAD_W, lane_w: LANE_W, lanes: LANE_COUNT });
+
+const get_road = () => ({x: ROAD_X, w: ROAD_W, lane_w: LANE_W, lanes: LANE_COUNT});
+
 const get_invuln = () => invuln_timer > 0;
+

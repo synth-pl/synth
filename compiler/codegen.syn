@@ -436,9 +436,96 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
     let mut inner = CgState([], st.indent + 1, st.scopes)
     inner = cg_emit_block(inner, expr)
     "(() => {\n" + cg_join_strings(inner.lines, "") + "})()"
+  } else if k == "SpreadExpr" {
+    "..." + cg_emit_expr(st, expr.argument)
+  } else if k == "DoExpr" {
+    let mut inner = CgState([], st.indent + 1, st.scopes)
+    inner = cg_emit_do_block(inner, expr.body)
+    let async_kw = if cg_block_has_await(expr.body) { "async " } else { "" }
+    "(" + async_kw + "() => {\n" + cg_join_strings(inner.lines, "") + "})()"
   } else {
     ""
   }
+}
+
+fn cg_emit_do_block(st: CgState, block: any) -> CgState {
+  let mut s = st
+  let n = block.stmts.length
+  let mut i = 0
+  while i < n {
+    let stmt = block.stmts[i]
+    if i == n - 1 and stmt.kind == "ExprStmt" {
+      s = cg_emit_line(s, "return " + cg_emit_expr(s, stmt.value) + ";")
+    } else {
+      s = cg_emit_stmt(s, stmt)
+    }
+    i = i + 1
+  }
+  s
+}
+
+fn cg_expr_has_await(expr: any) -> bool {
+  if expr == null { false }
+  else if expr.kind == "AwaitExpr" { true }
+  else if expr.kind == "UnaryExpr" { cg_expr_has_await(expr.operand) }
+  else if expr.kind == "BinaryExpr" { cg_expr_has_await(expr.left) or cg_expr_has_await(expr.right) }
+  else if expr.kind == "TernaryExpr" {
+    cg_expr_has_await(expr.test) or cg_expr_has_await(expr.consequent) or cg_expr_has_await(expr.alternate)
+  } else if expr.kind == "CallExpr" {
+    if cg_expr_has_await(expr.callee) { true }
+    else {
+      let mut i = 0
+      let mut found = false
+      while i < expr.args.length and not found {
+        if cg_expr_has_await(expr.args[i]) { found = true }
+        i = i + 1
+      }
+      found
+    }
+  } else if expr.kind == "MemberExpr" or expr.kind == "IndexExpr" {
+    cg_expr_has_await(expr.object)
+  } else if expr.kind == "LambdaExpr" { cg_expr_has_await(expr.body) }
+  else if expr.kind == "MatchExpr" {
+    if cg_expr_has_await(expr.subject) { true }
+    else {
+      let mut i = 0
+      let mut found = false
+      while i < expr.arms.length and not found {
+        let arm = expr.arms[i]
+        if arm.guard != null and cg_expr_has_await(arm.guard) { found = true }
+        else if cg_expr_has_await(arm.body) { found = true }
+        i = i + 1
+      }
+      found
+    }
+  } else if expr.kind == "BlockExpr" or expr.kind == "DoExpr" { cg_block_has_await(expr) }
+  else if expr.kind == "PipelineExpr" {
+    let mut i = 0
+    let mut found = false
+    while i < expr.steps.length and not found {
+      if expr.steps[i].kind != "PipeAs" and cg_expr_has_await(expr.steps[i]) { found = true }
+      i = i + 1
+    }
+    found
+  } else { false }
+}
+
+fn cg_block_has_await(block: any) -> bool {
+  let mut i = 0
+  while i < block.stmts.length {
+    let stmt = block.stmts[i]
+    if stmt.kind == "LetStmt" and cg_expr_has_await(stmt.value) { return true }
+    else if stmt.kind == "ReturnStmt" and cg_expr_has_await(stmt.value) { return true }
+    else if stmt.kind == "ExprStmt" and cg_expr_has_await(stmt.value) { return true }
+    else if stmt.kind == "IfStmt" {
+      if cg_block_has_await(stmt.then) { return true }
+      else if stmt.else_ != null and cg_block_has_await(stmt.else_) { return true }
+    } else if stmt.kind == "ForRangeStmt" or stmt.kind == "ForInStmt" or stmt.kind == "WhileStmt" {
+      if cg_block_has_await(stmt.body) { return true }
+    }
+    i = i + 1
+  }
+  false
 }
 
 fn cg_emit_block(st: CgState, block: any) -> CgState {

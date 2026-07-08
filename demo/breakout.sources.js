@@ -1,4 +1,5 @@
 const Brick = (x, y, w, h, color) => ({ x, y, w, h, color });
+
 let CANVAS_W = 800;
 let CANVAS_H = 520;
 let COLS = 10;
@@ -11,8 +12,11 @@ let PADDLE_H = 12;
 let BALL_R = 8;
 let PADDLE_Y = CANVAS_H - 40;
 let BALL_SPEED = 630;
+
 const row_color = (row) => ((_m) => (_m === 0) ? "#ff2d78" : (_m === 1) ? "#ff6e3a" : (_m === 2) ? "#ffd166" : (_m === 3) ? "#06d6a0" : (_m === 4) ? "#00e5ff" : "#b84fff")(row);
+
 const row_points = (row) => ((_m) => (_m === 0) ? 60 : (_m === 1) ? 50 : (_m === 2) ? 40 : (_m === 3) ? 30 : (_m === 4) ? 20 : 10)(row);
+
 const Game = (() => {
   let _state = { score: 0, lives: 3, phase: "title", level: 1, hi: 0 };
   const _subs = [];
@@ -29,37 +33,89 @@ const Game = (() => {
     subscribe(fn) { _subs.push(fn); fn(_state); },
   };
 })();
+
 let ball_x = CANVAS_W / 2;
 let ball_y = CANVAS_H / 2;
 let ball_vx = BALL_SPEED * 0.6;
 let ball_vy = 0 - BALL_SPEED * 0.8;
 let paddle_x = (CANVAS_W - PADDLE_W) / 2;
-let bricks = $map($range(0, ROWS * COLS), i => true);
-const brick_x = (col) => col * (BRICK_W + BRICK_GAP);
-const brick_y = (row) => 60 + row * (BRICK_H + BRICK_GAP);
+let bricks = $map($range(0, ROWS * COLS), (i) => true);
+
+const brick_x = (() => {
+  const __cache = new Map();
+  return (col) => {
+    const __key = JSON.stringify([col]);
+    if (__cache.has(__key)) return __cache.get(__key);
+    const __result = (() => {
+      return col * (BRICK_W + BRICK_GAP);
+    })();
+    __cache.set(__key, __result);
+    return __result;
+  };
+})();
+
+const brick_y = (() => {
+  const __cache = new Map();
+  return (row) => {
+    const __key = JSON.stringify([row]);
+    if (__cache.has(__key)) return __cache.get(__key);
+    const __result = (() => {
+      return 60 + row * (BRICK_H + BRICK_GAP);
+    })();
+    __cache.set(__key, __result);
+    return __result;
+  };
+})();
+
 const brick_index = (row, col) => row * COLS + col;
-const alive_count = () => $count(bricks, alive => alive);
+
+const alive_count = () => $count(bricks, (alive) => alive);
+
+/**
+ * @returns {*}
+ */
 const reset_ball = () => {
   ball_x = CANVAS_W / 2;
   ball_y = CANVAS_H - 120;
   ball_vx = BALL_SPEED * ($random() > 0.5 ? 0.6 : 0 - 0.6);
   return ball_vy = 0 - BALL_SPEED * 0.8;
 };
-const reset_bricks = () => bricks = $map($range(0, ROWS * COLS), i => true);
+
+/**
+ * @returns {*}
+ */
+const reset_bricks = () => bricks = $map($range(0, ROWS * COLS), (i) => true);
+
+/**
+ * @returns {*}
+ */
 const start_game = () => {
   reset_ball();
   reset_bricks();
   paddle_x = (CANVAS_W - PADDLE_W) / 2;
-  return Game.set({ score: 0, lives: 3, phase: "playing", level: 1 });
+  return Game.set({score: 0, lives: 3, phase: "playing", level: 1});
 };
+
+/**
+ * @returns {*}
+ */
 const next_level = () => {
   reset_ball();
   reset_bricks();
   paddle_x = (CANVAS_W - PADDLE_W) / 2;
   let new_level = Game.level + 1;
-  return Game.set({ phase: "playing", level: new_level });
+  return Game.set({phase: "playing", level: new_level});
 };
+
+/**
+ * @param {*} x
+ * @returns {*}
+ */
 const move_paddle = (x) => paddle_x = $clamp(x - PADDLE_W / 2, 0, CANVAS_W - PADDLE_W);
+
+/**
+ * @returns {*}
+ */
 const check_brick_collisions = () => {
   let hit_row = 0 - 1;
   let hit_col = 0 - 1;
@@ -92,12 +148,17 @@ const check_brick_collisions = () => {
     let pts = row_points(hit_row);
     let new_score = Game.score + pts;
     let new_hi = new_score > Game.hi ? new_score : Game.hi;
-    Game.set({ score: new_score, hi: new_hi });
+    Game.set({score: new_score, hi: new_hi});
     return true;
   } else {
     return false;
   }
 };
+
+/**
+ * @param {*} dt
+ * @returns {*}
+ */
 const tick = (dt) => {
   if (Game.phase != "playing") {
     return 0;
@@ -143,18 +204,23 @@ const tick = (dt) => {
     if (ball_y - BALL_R > CANVAS_H) {
       let new_lives = Game.lives - 1;
       if (new_lives <= 0) {
-        Game.set({ lives: 0, phase: "gameover" });
+        Game.set({lives: 0, phase: "gameover"});
       } else {
-        Game.set({ lives: new_lives, phase: "ready" });
+        Game.set({lives: new_lives, phase: "ready"});
         reset_ball();
       }
     }
     if (alive_count() == 0) {
-      return Game.set({ phase: "levelup" });
+      return Game.set({phase: "levelup"});
     }
   }
 };
-const get_ball = () => ({ x: ball_x, y: ball_y, r: BALL_R });
-const get_paddle = () => ({ x: paddle_x, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H });
-const get_bricks = () => $flat_map($range(0, ROWS), r => $map($filter($range(0, COLS), c => bricks[brick_index(r, c)]), c => ({ x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color: row_color(r) })));
+
+const get_ball = () => ({x: ball_x, y: ball_y, r: BALL_R});
+
+const get_paddle = () => ({x: paddle_x, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H});
+
+const get_bricks = () => $flat_map($range(0, ROWS), (r) => $map($filter($range(0, COLS), (c) => bricks[brick_index(r, c)]), (c) => ({x: brick_x(c), y: brick_y(r), w: BRICK_W, h: BRICK_H, color: row_color(r)})));
+
 const status_line = () => ((_m) => (_m === "title") ? "PRESS SPACE OR CLICK TO START" : (_m === "ready") ? "BALL LOST — PRESS SPACE TO CONTINUE" : (_m === "levelup") ? "LEVEL CLEAR! PRESS SPACE FOR NEXT LEVEL" : (_m === "gameover") ? "GAME OVER — PRESS SPACE TO RETRY" : "")(Game.phase);
+

@@ -1,5 +1,3 @@
-
-
 const $map = (xs, fn) => xs.map(fn);
 const $filter = (xs, pred) => xs.filter(pred);
 const $fold = (xs, init, fn) => xs.reduce(fn, init);
@@ -85,15 +83,24 @@ const __runSynthTests = () => {
   return { passed, failed, total: passed + failed, results };
 };
 if (typeof globalThis !== 'undefined') { globalThis.__synth_tests = __synth_tests; globalThis.__runSynthTests = __runSynthTests; }
+
+
+
+
+
 const Weapon = Object.freeze({ tag: "Weapon" });
 const Armor = Object.freeze({ tag: "Armor" });
 const Potion = Object.freeze({ tag: "Potion" });
 const Relic = Object.freeze({ tag: "Relic" });
 const Scroll = Object.freeze({ tag: "Scroll" });
+
 const Item = (name, category, rarity, price, power, lore) => ({ name, category, rarity, price, power, lore });
+
 const keep_if = (items, pred) => $filter(items, pred);
+
 const transform = (items, f) => $map(items, f);
-const order_by = (items, key) => items.slice().sort((a, b) => {
+
+const order_by = (items, key) => items.slice().sort((a, b) => (() => {
   let ka = key(a);
   let kb = key(b);
   if (ka < kb) {
@@ -103,8 +110,9 @@ const order_by = (items, key) => items.slice().sort((a, b) => {
   } else {
     return 0;
   }
-});
-const order_by_desc = (items, key) => items.slice().sort((a, b) => {
+})());
+
+const order_by_desc = (items, key) => items.slice().sort((a, b) => (() => {
   let ka = key(a);
   let kb = key(b);
   if (ka > kb) {
@@ -114,7 +122,13 @@ const order_by_desc = (items, key) => items.slice().sort((a, b) => {
   } else {
     return 0;
   }
-});
+})());
+
+/**
+ * @param {T} items
+ * @param {fn} value_of
+ * @returns {number}
+ */
 const total = (items, value_of) => {
   let acc = 0;
   for (const item of items) {
@@ -122,237 +136,125 @@ const total = (items, value_of) => {
   }
   return acc;
 };
+
 const rarity_rank = (r) => ((_m) => (_m === "Common") ? 1 : (_m === "Uncommon") ? 2 : (_m === "Rare") ? 3 : (_m === "Epic") ? 4 : (_m === "Legendary") ? 5 : 0)(r);
+
 const rarity_color = (r) => ((_m) => (_m === "Common") ? "#aaaaaa" : (_m === "Uncommon") ? "#1eff00" : (_m === "Rare") ? "#0070dd" : (_m === "Epic") ? "#a335ee" : (_m === "Legendary") ? "#ff8000" : "#ffffff")(r);
-const category_icon = (c) => ((_m) => (_m.tag === "Weapon") ? "⚔️" : (_m.tag === "Armor") ? "🛡️" : (_m.tag === "Potion") ? "⚗️" : (_m.tag === "Relic") ? "💎" : (_m.tag === "Scroll") ? "📜" : undefined)(c);
-const category_name = (c) => ((_m) => (_m.tag === "Weapon") ? "Weapon" : (_m.tag === "Armor") ? "Armor" : (_m.tag === "Potion") ? "Potion" : (_m.tag === "Relic") ? "Relic" : (_m.tag === "Scroll") ? "Scroll" : undefined)(c);
+
+const category_icon = (c) => ((_m) => ((_m != null && _m.tag === "Weapon") || _m === "Weapon") ? "⚔️" : ((_m != null && _m.tag === "Armor") || _m === "Armor") ? "🛡️" : ((_m != null && _m.tag === "Potion") || _m === "Potion") ? "⚗️" : ((_m != null && _m.tag === "Relic") || _m === "Relic") ? "💎" : ((_m != null && _m.tag === "Scroll") || _m === "Scroll") ? "📜" : undefined)(c);
+
+const category_name = (c) => ((_m) => ((_m != null && _m.tag === "Weapon") || _m === "Weapon") ? "Weapon" : ((_m != null && _m.tag === "Armor") || _m === "Armor") ? "Armor" : ((_m != null && _m.tag === "Potion") || _m === "Potion") ? "Potion" : ((_m != null && _m.tag === "Relic") || _m === "Relic") ? "Relic" : ((_m != null && _m.tag === "Scroll") || _m === "Scroll") ? "Scroll" : undefined)(c);
+
+/**
+ * @param {Item} items
+ * @param {string} cat
+ * @returns {Item}
+ */
 const by_category = (items, cat) => {
   if (cat == "All") {
     return items;
   } else {
-    return $filter(items, item => category_name(item.category) == cat);
+    return $filter(items, (item) => category_name(item.category) == cat);
   }
 };
+
+/**
+ * @param {Item} items
+ * @param {string} rar
+ * @returns {Item}
+ */
 const by_rarity = (items, rar) => {
   if (rar == "All") {
     return items;
   } else {
-    return $filter(items, item => item.rarity == rar);
+    return $filter(items, (item) => item.rarity == rar);
   }
 };
+
+/**
+ * @param {Item} items
+ * @param {number} max
+ * @returns {Item}
+ */
 const by_max_price = (items, max) => {
-  if ($max <= 0) {
+  if (max <= 0) {
     return items;
   } else {
-    return $filter(items, item => item.price <= $max);
+    return $filter(items, (item) => item.price <= max);
   }
 };
+
+/**
+ * @param {Item} items
+ * @param {string} query
+ * @returns {Item}
+ */
 const search_items = (items, query) => {
   if (query == "") {
     return items;
   } else {
     let q = query.toLowerCase();
-    return $filter(items, item => item.name.toLowerCase().includes(q) || item.lore.toLowerCase().includes(q));
+    return $filter(items, (item) => item.name.toLowerCase().includes(q) || item.lore.toLowerCase().includes(q));
   }
 };
+
 const describe_item = (item) => `${category_icon(item.category)} ${item.name} [${item.rarity}] — ${item.price}g`;
-const cart_total = (items) => total(items, item => item.price);
+
+const cart_total = (items) => total(items, (item) => item.price);
+
 __synth_tests.push({ desc: "rarity_rank orders correctly", fn: () => rarity_rank("Legendary") > rarity_rank("Common") });
+
 __synth_tests.push({ desc: "rarity_rank unknown returns 0", fn: () => rarity_rank("Mythic") == 0 });
+
 __synth_tests.push({ desc: "category_icon returns emoji", fn: () => category_icon(Weapon) == "⚔️" });
+
 __synth_tests.push({ desc: "category_name returns string", fn: () => category_name(Potion) == "Potion" });
-__synth_tests.push({ desc: "keep_if filters by predicate", fn: () => keep_if([1, 2, 3, 4], x => x > 2).length == 2 });
-__synth_tests.push({ desc: "transform applies function", fn: () => transform([1, 2, 3], x => x * 2)[2] == 6 });
-__synth_tests.push({ desc: "order_by sorts ascending", fn: () => order_by([3, 1, 2], x => x)[0] == 1 });
-__synth_tests.push({ desc: "order_by_desc sorts descending", fn: () => order_by_desc([3, 1, 2], x => x)[0] == 3 });
-__synth_tests.push({ desc: "total sums values", fn: () => total([1, 2, 3], x => x) == 6 });
+
+__synth_tests.push({ desc: "keep_if filters by predicate", fn: () => keep_if([1, 2, 3, 4], (x) => x > 2).length == 2 });
+
+__synth_tests.push({ desc: "transform applies function", fn: () => transform([1, 2, 3], (x) => x * 2)[2] == 6 });
+
+__synth_tests.push({ desc: "order_by sorts ascending", fn: () => order_by([3, 1, 2], (x) => x)[0] == 1 });
+
+__synth_tests.push({ desc: "order_by_desc sorts descending", fn: () => order_by_desc([3, 1, 2], (x) => x)[0] == 3 });
+
+__synth_tests.push({ desc: "total sums values", fn: () => total([1, 2, 3], (x) => x) == 6 });
+
 __synth_tests.push({ desc: "let infer on item transform", fn: () => (() => {
-  let names = transform([{ name: "Sword" }, { name: "Bow" }], i => i.name);
+  let names = transform([{name: "Sword"}, {name: "Bow"}], (i) => i.name);
   return names[0] == "Sword";
 })() });
-__synth_tests.push({ desc: "by_category All returns all", fn: () => by_category([{ name: "x", category: Weapon, rarity: "Common", price: 10, power: 5, lore: "" }], "All").length == 1 });
+
+__synth_tests.push({ desc: "by_category All returns all", fn: () => by_category([{name: "x", category: Weapon, rarity: "Common", price: 10, power: 5, lore: ""}], "All").length == 1 });
+
 __synth_tests.push({ desc: "search_items finds by name", fn: () => (() => {
-  let items = [{
-  name: "Iron Sword",
-  category: Weapon,
-  rarity: "Common",
-  price: 40,
-  power: 12,
-  lore: "reliable"
-}];
+  let items = [{name: "Iron Sword", category: Weapon, rarity: "Common", price: 40, power: 12, lore: "reliable"}];
   return search_items(items, "sword").length == 1;
 })() });
+
 __synth_tests.push({ desc: "search_items empty query returns all", fn: () => (() => {
-  let items = [{
-  name: "Iron Sword",
-  category: Weapon,
-  rarity: "Common",
-  price: 40,
-  power: 12,
-  lore: ""
-}];
+  let items = [{name: "Iron Sword", category: Weapon, rarity: "Common", price: 40, power: 12, lore: ""}];
   return search_items(items, "").length == 1;
 })() });
-__synth_tests.push({ desc: "cart_total sums item prices", fn: () => cart_total([{
-  name: "A",
-  category: Weapon,
-  rarity: "Common",
-  price: 100,
-  power: 10,
-  lore: ""
-}, { name: "B", category: Potion, rarity: "Common", price: 50, power: 5, lore: "" }]) == 150 });
 
-const get_catalog = () => [{
-  name: "Iron Sword",
-  category: Weapon,
-  rarity: "Common",
-  price: 40,
-  power: 12,
-  lore: "A standard blade, well-worn but reliable."
-}, {
-  name: "Serpent Fang",
-  category: Weapon,
-  rarity: "Uncommon",
-  price: 120,
-  power: 28,
-  lore: "Said to carry a venom that slows the mind."
-}, {
-  name: "Stormcaller Axe",
-  category: Weapon,
-  rarity: "Rare",
-  price: 380,
-  power: 55,
-  lore: "Crackling with static, it calls lightning on a crit."
-}, {
-  name: "Dawnbreaker",
-  category: Weapon,
-  rarity: "Epic",
-  price: 950,
-  power: 88,
-  lore: "Forged at first light, it burns undead on contact."
-}, {
-  name: "Worldender",
-  category: Weapon,
-  rarity: "Legendary",
-  price: 4200,
-  power: 140,
-  lore: "No chronicle speaks of who first unsheathed it."
-}, {
-  name: "Leather Vest",
-  category: Armor,
-  rarity: "Common",
-  price: 35,
-  power: 8,
-  lore: "Light and breathable. Smells faintly of mead."
-}, {
-  name: "Chain Hauberk",
-  category: Armor,
-  rarity: "Uncommon",
-  price: 110,
-  power: 22,
-  lore: "Rattles on stairs. Very effective, very loud."
-}, {
-  name: "Shadowweave Cloak",
-  category: Armor,
-  rarity: "Rare",
-  price: 420,
-  power: 40,
-  lore: "Absorbs faint light. Rogues pay triple for these."
-}, {
-  name: "Aegis of the Fallen",
-  category: Armor,
-  rarity: "Epic",
-  price: 1100,
-  power: 75,
-  lore: "Carved with the names of the seven lost kingdoms."
-}, {
-  name: "Minor Healing",
-  category: Potion,
-  rarity: "Common",
-  price: 15,
-  power: 20,
-  lore: "Tastes of copper. Works on most wounds."
-}, {
-  name: "Swiftfoot Draught",
-  category: Potion,
-  rarity: "Uncommon",
-  price: 55,
-  power: 0,
-  lore: "Doubles movement speed for one hour. Side-effects: hiccups."
-}, {
-  name: "Greater Elixir",
-  category: Potion,
-  rarity: "Rare",
-  price: 200,
-  power: 60,
-  lore: "Used by healers who have run out of spells."
-}, {
-  name: "Phoenix Tears",
-  category: Potion,
-  rarity: "Legendary",
-  price: 2800,
-  power: 999,
-  lore: "Said to pull souls back from the other shore."
-}, {
-  name: "Lucky Coin",
-  category: Relic,
-  rarity: "Common",
-  price: 60,
-  power: 5,
-  lore: "Warm to the touch. Never lands on tails."
-}, {
-  name: "Whispering Orb",
-  category: Relic,
-  rarity: "Uncommon",
-  price: 150,
-  power: 18,
-  lore: "Murmurs weather forecasts in an unknown language."
-}, {
-  name: "Eye of Eternity",
-  category: Relic,
-  rarity: "Epic",
-  price: 1500,
-  power: 65,
-  lore: "Grants true sight. The price is one real eye."
-}, {
-  name: "Shard of the Abyss",
-  category: Relic,
-  rarity: "Legendary",
-  price: 5000,
-  power: 200,
-  lore: "Cold. Always cold. Even in fire."
-}, {
-  name: "Torch Scroll",
-  category: Scroll,
-  rarity: "Common",
-  price: 20,
-  power: 10,
-  lore: "Casts a small light. Very popular in dungeons."
-}, {
-  name: "Scroll of Binding",
-  category: Scroll,
-  rarity: "Uncommon",
-  price: 90,
-  power: 30,
-  lore: "Roots an enemy in place for three breaths."
-}, {
-  name: "Tome of Unmaking",
-  category: Scroll,
-  rarity: "Rare",
-  price: 500,
-  power: 70,
-  lore: "Erases one object from history. One use only."
-}];
+__synth_tests.push({ desc: "cart_total sums item prices", fn: () => cart_total([{name: "A", category: Weapon, rarity: "Common", price: 100, power: 10, lore: ""}, {name: "B", category: Potion, rarity: "Common", price: 50, power: 5, lore: ""}]) == 150 });
+
+
+
+
+const get_catalog = () => [{name: "Iron Sword", category: Weapon, rarity: "Common", price: 40, power: 12, lore: "A standard blade, well-worn but reliable."}, {name: "Serpent Fang", category: Weapon, rarity: "Uncommon", price: 120, power: 28, lore: "Said to carry a venom that slows the mind."}, {name: "Stormcaller Axe", category: Weapon, rarity: "Rare", price: 380, power: 55, lore: "Crackling with static, it calls lightning on a crit."}, {name: "Dawnbreaker", category: Weapon, rarity: "Epic", price: 950, power: 88, lore: "Forged at first light, it burns undead on contact."}, {name: "Worldender", category: Weapon, rarity: "Legendary", price: 4200, power: 140, lore: "No chronicle speaks of who first unsheathed it."}, {name: "Leather Vest", category: Armor, rarity: "Common", price: 35, power: 8, lore: "Light and breathable. Smells faintly of mead."}, {name: "Chain Hauberk", category: Armor, rarity: "Uncommon", price: 110, power: 22, lore: "Rattles on stairs. Very effective, very loud."}, {name: "Shadowweave Cloak", category: Armor, rarity: "Rare", price: 420, power: 40, lore: "Absorbs faint light. Rogues pay triple for these."}, {name: "Aegis of the Fallen", category: Armor, rarity: "Epic", price: 1100, power: 75, lore: "Carved with the names of the seven lost kingdoms."}, {name: "Minor Healing", category: Potion, rarity: "Common", price: 15, power: 20, lore: "Tastes of copper. Works on most wounds."}, {name: "Swiftfoot Draught", category: Potion, rarity: "Uncommon", price: 55, power: 0, lore: "Doubles movement speed for one hour. Side-effects: hiccups."}, {name: "Greater Elixir", category: Potion, rarity: "Rare", price: 200, power: 60, lore: "Used by healers who have run out of spells."}, {name: "Phoenix Tears", category: Potion, rarity: "Legendary", price: 2800, power: 999, lore: "Said to pull souls back from the other shore."}, {name: "Lucky Coin", category: Relic, rarity: "Common", price: 60, power: 5, lore: "Warm to the touch. Never lands on tails."}, {name: "Whispering Orb", category: Relic, rarity: "Uncommon", price: 150, power: 18, lore: "Murmurs weather forecasts in an unknown language."}, {name: "Eye of Eternity", category: Relic, rarity: "Epic", price: 1500, power: 65, lore: "Grants true sight. The price is one real eye."}, {name: "Shard of the Abyss", category: Relic, rarity: "Legendary", price: 5000, power: 200, lore: "Cold. Always cold. Even in fire."}, {name: "Torch Scroll", category: Scroll, rarity: "Common", price: 20, power: 10, lore: "Casts a small light. Very popular in dungeons."}, {name: "Scroll of Binding", category: Scroll, rarity: "Uncommon", price: 90, power: 30, lore: "Roots an enemy in place for three breaths."}, {name: "Tome of Unmaking", category: Scroll, rarity: "Rare", price: 500, power: 70, lore: "Erases one object from history. One use only."}];
+
+
+
 
 const AppState = (all_items, cart, filter_cat, filter_rar, sort_key, search) => ({ all_items, cart, filter_cat, filter_rar, sort_key, search });
-const make_state = () => ({
-  all_items: get_catalog(),
-  cart: [],
-  filter_cat: "All",
-  filter_rar: "All",
-  sort_key: "price_asc",
-  search: ""
-});
+
+const make_state = () => ({all_items: get_catalog(), cart: [], filter_cat: "All", filter_rar: "All", sort_key: "price_asc", search: ""});
+
+/**
+ * @param {AppState} state
+ * @returns {Item}
+ */
 const apply_filters = (state) => {
   let items = state.all_items;
   let a = by_category(items, state.filter_cat);
@@ -361,29 +263,56 @@ const apply_filters = (state) => {
   let sorted = apply_sort(c, state.sort_key);
   return sorted;
 };
-const apply_sort = (items, sort) => ((_m) => (_m === "price_asc") ? order_by(items, i => i.price) : (_m === "price_desc") ? order_by_desc(items, i => i.price) : (_m === "power_desc") ? order_by_desc(items, i => i.power) : (_m === "rarity_desc") ? order_by_desc(items, i => rarity_rank(i.rarity)) : (_m === "name_asc") ? order_by(items, i => i.name) : items)(sort);
-const is_in_cart = (state, item) => state.cart.some(c => c.name == item.name);
+
+const apply_sort = (items, sort) => ((_m) => (_m === "price_asc") ? order_by(items, (i) => i.price) : (_m === "price_desc") ? order_by_desc(items, (i) => i.price) : (_m === "power_desc") ? order_by_desc(items, (i) => i.power) : (_m === "rarity_desc") ? order_by_desc(items, (i) => rarity_rank(i.rarity)) : (_m === "name_asc") ? order_by(items, (i) => i.name) : items)(sort);
+
+const is_in_cart = (state, item) => state.cart.some((c) => c.name == item.name);
+
 const el = (id) => document.getElementById(id);
+
 const set_count = (id, n) => el(id).textContent = `${n}`;
+
+/**
+ * @param {AppState} state
+ * @returns {void}
+ */
 const render = (state) => {
   let visible = apply_filters(state);
   render_grid(state, visible);
   render_cart(state);
   return render_stats(state, visible);
 };
+
+/**
+ * @param {AppState} state
+ * @param {Item} visible
+ * @returns {void}
+ */
 const render_stats = (state, visible) => {
   el("result-count").textContent = `${visible.length} items`;
   el("cart-total").textContent = `${cart_total(state.cart)}g`;
   return el("cart-count").textContent = `${state.cart.length}`;
 };
+
+/**
+ * @param {AppState} state
+ * @param {Item} items
+ * @returns {void}
+ */
 const render_grid = (state, items) => {
   if (items.length == 0) {
     return el("item-grid").innerHTML = "<div class=\"empty-state\">No items match your search.</div>";
   } else {
-    let cards = transform(items, item => item_card_html(state, item));
+    let cards = transform(items, (item) => item_card_html(state, item));
     return el("item-grid").innerHTML = cards.join("");
   }
 };
+
+/**
+ * @param {AppState} state
+ * @param {Item} item
+ * @returns {string}
+ */
 const item_card_html = (state, item) => {
   let color = rarity_color(item.rarity);
   let in_cart = is_in_cart(state, item);
@@ -407,11 +336,16 @@ const item_card_html = (state, item) => {
     </div>
   </div>`;
 };
+
+/**
+ * @param {AppState} state
+ * @returns {void}
+ */
 const render_cart = (state) => {
   if (state.cart.length == 0) {
     return el("cart-items").innerHTML = "<div class=\"cart-empty\">Your cart is empty.</div>";
   } else {
-    let rows = transform(state.cart, item => `<div class="cart-row">
+    let rows = transform(state.cart, (item) => `<div class="cart-row">
         <span class="cart-item-name">${category_icon(item.category)} ${item.name}</span>
         <span class="cart-item-price">${item.price}g</span>
         <button class="cart-remove" onclick="bazaarRemove('${item.name}')">✕</button>
@@ -419,36 +353,50 @@ const render_cart = (state) => {
     return el("cart-items").innerHTML = rows.join("");
   }
 };
+
 let state = make_state();
+
+/**
+ * @param {string} name
+ * @returns {void}
+ */
 const buy_item = (name) => {
-  let item = $find(state.all_items, i => i.name == name);
+  let item = $find(state.all_items, (i) => i.name == name);
   if (item) {
     if (is_in_cart(state, item)) {
-      state = { ...state, cart: $filter(state.cart, c => c.name != name) };
+      state = {_spread_: state, cart: $filter(state.cart, (c) => c.name != name)};
     } else {
-      state = { ...state, cart: [...state.cart, item] };
+      state = {_spread_: state, cart: [...state.cart, item]};
     }
     return render(state);
   }
 };
+
+/**
+ * @param {string} name
+ * @returns {void}
+ */
 const remove_item = (name) => {
-  state = { ...state, cart: $filter(state.cart, c => c.name != name) };
+  state = {_spread_: state, cart: $filter(state.cart, (c) => c.name != name)};
   return render(state);
 };
+
+/**
+ * @returns {void}
+ */
 const on_filter_change = () => {
-  state = {
-  ...state,
-  filter_cat: el("filter-cat").value,
-  filter_rar: el("filter-rar").value,
-  sort_key: el("sort-select").value,
-  search: el("search-box").value
-};
+  state = {_spread_: state, filter_cat: el("filter-cat").value, filter_rar: el("filter-rar").value, sort_key: el("sort-select").value, search: el("search-box").value};
   return render(state);
 };
+
+/**
+ * @returns {void}
+ */
 const clear_cart = () => {
-  state = { ...state, cart: [] };
+  state = {_spread_: state, cart: []};
   return render(state);
 };
+
 window.bazaarBuy = buy_item;
 window.bazaarRemove = remove_item;
 window.onFilterChange = on_filter_change;

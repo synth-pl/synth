@@ -1,38 +1,6 @@
-/** @typedef {number} BPM */
-/** @param {number} v @returns {boolean} */
-const __validate_BPM = (v) => (v >= 60) && (v <= 200);
-/** @typedef {number} Duration */
-/** @param {number} v @returns {boolean} */
-const __validate_Duration = (v) => v > 0;
-/** @typedef {string} TrackTitle */
-/** @param {string} v @returns {boolean} */
-const __validate_TrackTitle = (v) => v.length > 0;
-/** @typedef {string} ArtistName */
-/** @param {string} v @returns {boolean} */
-const __validate_ArtistName = (v) => v.length > 0;
-/** @typedef {number} Volume */
-/** @param {number} v @returns {boolean} */
-const __validate_Volume = (v) => (v >= 0) && (v <= 100);
 
-/** @typedef {{
- *   id: number,
- *   title: string,
- *   artist: string,
- *   bpm: number,
- *   duration: number,
- *   genre: string,
- *   featured: boolean
- * }} Track
- */
 const Track = (id, title, artist, bpm, duration, genre, featured) => ({ id, title, artist, bpm, duration, genre, featured });
 
-/** @typedef {{
- *   count: number,
- *   totalDuration: number,
- *   avgBpm: number,
- *   featuredCount: number
- * }} LibraryStats
- */
 const LibraryStats = (count, totalDuration, avgBpm, featuredCount) => ({ count, totalDuration, avgBpm, featuredCount });
 
 const track_is_featured = (t) => t.featured;
@@ -46,23 +14,16 @@ const format_bpm_tag = (bpm) => `${bpm} BPM`;
 const format_fibonacci_result = (n, result) => `fib(${n}) = ${result}`;
 
 /**
- * Format seconds as M:SS display string
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {Duration} secs
  * @returns {string}
  */
 const format_duration = (secs) => {
-  if (!__validate_Duration(secs)) throw new Error(`SynthConstraintError: secs violates Duration constraint (got ${JSON.stringify(secs)})`);
   let m = Math.floor(secs / 60);
   let s = pad2(secs % 60);
   return `${m}:${s}`;
 };
 
 /**
- * Render a compact one-line summary of library state
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {LibraryStats} stats
  * @returns {string}
  */
@@ -75,9 +36,6 @@ const format_stats_line = (stats) => {
 };
 
 /**
- * Construct a Track — BPM/Duration/TrackTitle/ArtistName guards injected at entry
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {number} id
  * @param {TrackTitle} title
  * @param {ArtistName} artist
@@ -86,30 +44,15 @@ const format_stats_line = (stats) => {
  * @param {string} genre
  * @returns {Track}
  */
-const create_track = (id, title, artist, bpm, duration, genre) => {
-  if (!__validate_TrackTitle(title)) throw new Error(`SynthConstraintError: title violates TrackTitle constraint (got ${JSON.stringify(title)})`);
-  if (!__validate_ArtistName(artist)) throw new Error(`SynthConstraintError: artist violates ArtistName constraint (got ${JSON.stringify(artist)})`);
-  if (!__validate_BPM(bpm)) throw new Error(`SynthConstraintError: bpm violates BPM constraint (got ${JSON.stringify(bpm)})`);
-  if (!__validate_Duration(duration)) throw new Error(`SynthConstraintError: duration violates Duration constraint (got ${JSON.stringify(duration)})`);
-  return ({ id, title, artist, bpm, duration, genre, featured: false });
-};
+const create_track = (id, title, artist, bpm, duration, genre) => ({id: id, title: title, artist: artist, bpm: bpm, duration: duration, genre: genre, featured: false});
 
 /**
- * Format a volume level string — Volume must be 0-100 or auto-guard throws
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {Volume} vol
  * @returns {string}
  */
-const set_volume = (vol) => {
-  if (!__validate_Volume(vol)) throw new Error(`SynthConstraintError: vol violates Volume constraint (got ${JSON.stringify(vol)})`);
-  return `Volume set to ${vol}%`;
-};
+const set_volume = (vol) => `Volume set to ${vol}%`;
 
 /**
- * Return the first validation error for new track fields, or empty string if valid
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {string} title
  * @param {string} artist
  * @param {number} bpm
@@ -119,67 +62,39 @@ const set_volume = (vol) => {
 const validate_track_input = (title, artist, bpm, duration) => title.length === 0 ? "Title cannot be empty" : artist.length === 0 ? "Artist cannot be empty" : bpm < 60 ? "BPM too low (minimum is 60)" : bpm > 200 ? "BPM too high (maximum is 200)" : duration <= 0 ? "Duration must be greater than 0" : "";
 
 /**
- * Classify BPM range as a human-readable tempo label
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {number} bpm
  * @returns {string}
  */
-const tempo_label = (bpm) => ((_m) => (_m < 90) ? "Slow" : (_m < 120) ? "Moderate" : (_m < 150) ? "Fast" : "Intense")(bpm);
+const tempo_label = (bpm) => ((_m) => (_m < "90") ? "Slow" : (_m < "120") ? "Moderate" : (_m < "150") ? "Fast" : "Intense")(bpm);
 
 /**
- * Map genre identifier to its accent color CSS class
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {string} genre
  * @returns {string}
  */
 const genre_css_class = (genre) => ((_m) => (_m === "synthwave") ? "g-sw" : (_m === "darksynth") ? "g-ds" : (_m === "ambient") ? "g-amb" : (_m === "retrowave") ? "g-rw" : (_m === "cyberpunk") ? "g-cp" : "g-default")(genre);
 
 /**
- * Abbreviated tag for a genre badge
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {string} genre
  * @returns {string}
  */
 const genre_short = (genre) => ((_m) => (_m === "synthwave") ? "SW" : (_m === "darksynth") ? "DS" : (_m === "ambient") ? "AMB" : (_m === "retrowave") ? "RW" : (_m === "cyberpunk") ? "CP" : genre)(genre);
 
-/**
- * Aggregate stats across the track collection — memoized, O(1) on repeated calls
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
- * @returns {LibraryStats}
- */
 const library_stats = (() => {
   const __cache = new Map();
   return (tracks) => {
     const __key = JSON.stringify([tracks]);
     if (__cache.has(__key)) return __cache.get(__key);
     const __result = (() => {
-      let total_dur = $sum($map(tracks, __x => __x.duration));
-      let total_bpm = $sum($map(tracks, __x => __x.bpm));
-      let n_featured = $count($filter(tracks, __x => __x.featured));
-      return {
-  count: tracks.length,
-  totalDuration: total_dur,
-  avgBpm: tracks.length > 0 ? Math.round(total_bpm / tracks.length) : 0,
-  featuredCount: n_featured
-};
+      let total_dur = $sum($map(tracks, (__x) => __x.duration));
+      let total_bpm = $sum($map(tracks, (__x) => __x.bpm));
+      let n_featured = $count($filter(tracks, (__x) => __x.featured));
+      return {count: tracks.length, totalDuration: total_dur, avgBpm: tracks.length > 0 ? Math.round(total_bpm / tracks.length) : 0, featuredCount: n_featured};
     })();
     __cache.set(__key, __result);
     return __result;
   };
 })();
 
-/**
- * Classic recursive Fibonacci — @memo turns O(2^n) into O(n) via Map cache
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {number} n
- * @returns {number}
- */
 const fibonacci = (() => {
   const __cache = new Map();
   return (n) => {
@@ -194,74 +109,50 @@ const fibonacci = (() => {
 })();
 
 /**
- * Return only featured tracks using .featured shorthand
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
- * @returns {Track[]}
+ * @param {Track} tracks
+ * @returns {Track}
  */
-const featured_tracks = (tracks) => $filter(tracks, __x => __x.featured);
+const featured_tracks = (tracks) => $filter(tracks, (__x) => __x.featured);
 
 /**
- * Extract all track titles using .title shorthand
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @returns {string}
  */
-const all_titles = (tracks) => $map(tracks, __x => __x.title);
+const all_titles = (tracks) => $map(tracks, (__x) => __x.title);
 
 /**
- * Extract all artist names using .artist shorthand
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @returns {string}
  */
-const all_artists = (tracks) => $map(tracks, __x => __x.artist);
+const all_artists = (tracks) => $map(tracks, (__x) => __x.artist);
 
 /**
- * Sum all durations using .duration shorthand
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @returns {number}
  */
-const total_playtime = (tracks) => $sum($map(tracks, __x => __x.duration));
+const total_playtime = (tracks) => $sum($map(tracks, (__x) => __x.duration));
 
 /**
- * Filter tracks to a specific genre
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @param {string} genre
- * @returns {Track[]}
+ * @returns {Track}
  */
-const tracks_in_genre = (tracks, genre) => $filter(tracks, t => t.genre === genre);
+const tracks_in_genre = (tracks, genre) => $filter(tracks, (t) => t.genre === genre);
 
 /**
- * True if the collection has at least one featured track
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @returns {boolean}
  */
-const any_featured = (tracks) => $any(tracks, __x => __x.featured);
+const any_featured = (tracks) => $any(tracks, (__x) => __x.featured);
 
 /**
- * Return the top n tracks by BPM descending
- * @pure — no side effects
- * @total — always returns, never throws
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @param {number} n
- * @returns {Track[]}
+ * @returns {Track}
  */
-const top_by_bpm = (tracks, n) => $take($sort_by_desc(tracks, __x => __x.bpm), n);
+const top_by_bpm = (tracks, n) => $take($sort_by_desc(tracks, (__x) => __x.bpm), n);
 
 /**
- * Debug-log a track — @pure is a lie, checker will warn
- * @pure — no side effects
- * @total — always returns, never throws
  * @param {Track} track
  * @returns {boolean}
  */
@@ -271,16 +162,14 @@ const debug_track = (track) => {
 };
 
 /**
- * Create a DOM element, set attributes, and append children
- * @effects dom.create, dom.attrs, dom.children
  * @param {string} tag
- * @param {Object} attrs
+ * @param {object} attrs
  * @param {*} ...children
  * @returns {Element}
  */
 const el = (tag, attrs, ...children) => {
   let e = document.createElement(tag);
-  Object.entries(attrs).forEach(([k, v]) => {
+  Object.entries(attrs).forEach(([k, v]) => (() => {
     if (k === "class") {
       return e.className = v;
     } else if (k === "id") {
@@ -300,20 +189,18 @@ const el = (tag, attrs, ...children) => {
     } else {
       return e.setAttribute(k, String(v));
     }
-});
-  $flat(children).forEach((child) => {
+})());
+  $flat(children, ).forEach((child) => (() => {
     if (typeof child === "string") {
       return e.appendChild(document.createTextNode(child));
     } else if (child instanceof Node) {
       return e.appendChild(child);
     }
-});
+})());
   return e;
 };
 
 /**
- * Append a child element into a container element directly
- * @effects dom.write
  * @param {Element} container
  * @param {Element} child
  * @returns {void}
@@ -321,8 +208,6 @@ const el = (tag, attrs, ...children) => {
 const mount_into = (container, child) => container.appendChild(child);
 
 /**
- * Render a single track as a styled card
- * @effects dom.create
  * @param {Track} track
  * @returns {Element}
  */
@@ -334,13 +219,11 @@ const render_track_card = (track) => {
   let gclass = genre_css_class(track.genre);
   let gtag = genre_short(track.genre);
   let cardClass = track.featured ? "track-card track-featured" : "track-card";
-  return el("div", { class: cardClass }, el("div", { class: "track-main" }, el("div", { class: "track-label" }, label), el("div", { class: "track-badges" }, el("span", { class: "badge genre-badge " + gclass }, gtag), el("span", { class: "badge tempo-badge" }, tempo), el("span", { class: "badge dur-badge" }, dur), el("span", { class: "badge bpm-badge" }, bpmtag))), track.featured ? el("div", { class: "featured-mark" }, "FEATURED") : el("span", {}));
+  return el("div", {class: cardClass}, el("div", {class: "track-main"}, el("div", {class: "track-label"}, label), el("div", {class: "track-badges"}, el("span", {class: "badge genre-badge " + gclass}, gtag), el("span", {class: "badge tempo-badge"}, tempo), el("span", {class: "badge dur-badge"}, dur), el("span", {class: "badge bpm-badge"}, bpmtag))), track.featured ? el("div", {class: "featured-mark"}, "FEATURED") : el("span", {}));
 };
 
 /**
- * Render the live library stats and @memo benchmark badge
- * @effects dom.create
- * @param {Track[]} tracks
+ * @param {Track} tracks
  * @returns {Element}
  */
 const render_stats_bar = (tracks) => {
@@ -348,50 +231,46 @@ const render_stats_bar = (tracks) => {
   let line = format_stats_line(stats);
   let fib35 = fibonacci(35);
   let fibLabel = format_fibonacci_result(35, fib35);
-  return el("div", { class: "stats-bar" }, el("span", { class: "stats-text" }, line), el("span", { class: "memo-badge" }, fibLabel + " (@memo)"));
+  return el("div", {class: "stats-bar"}, el("span", {class: "stats-text"}, line), el("span", {class: "memo-badge"}, fibLabel + " (@memo)"));
 };
 
 /**
- * Render genre filter pills — active genre is highlighted
- * @effects dom.create
  * @param {string} genres
  * @param {string} activeGenre
  * @param {*} onFilter
  * @returns {Element}
  */
 const render_genre_filters = (genres, activeGenre, onFilter) => {
-  let buttons = $map(genres, g => el("button", { class: g === activeGenre ? "filter-btn filter-btn--active" : "filter-btn" }, g === "all" ? "All Tracks" : g));
-  genres.forEach((g, i) => {
+  let buttons = $map(genres, (g) => el("button", {class: g === activeGenre ? "filter-btn filter-btn--active" : "filter-btn"}, g === "all" ? "All Tracks" : g));
+  genres.forEach((g, i) => (() => {
     let btn = buttons[i];
     btn.addEventListener("click", () => onFilter(g));
-});
-  return el("div", { class: "filter-row" }, ...buttons);
+})());
+  return el("div", {class: "filter-row"}, ...buttons);
 };
 
 /**
- * Render an add-track form that demonstrates param validation injection
- * @effects dom.write, dom.create, dom.events
  * @param {Element} container
  * @param {*} onAdd
  * @returns {void}
  */
 const render_add_form = (container, onAdd) => {
-  let titleIn = el("input", { type: "text", class: "form-inp", placeholder: "Title (required)" });
-  let artistIn = el("input", { type: "text", class: "form-inp", placeholder: "Artist (required)" });
-  let bpmIn = el("input", { type: "number", class: "form-inp", placeholder: "BPM 60-200" });
-  let durIn = el("input", { type: "number", class: "form-inp", placeholder: "Duration (seconds)" });
-  let genreIn = el("input", { type: "text", class: "form-inp", placeholder: "Genre (optional)" });
-  let errEl = el("div", { class: "form-err" });
-  let addBtn = el("button", { class: "add-btn" }, "Add Track");
-  addBtn.addEventListener("click", () => {
+  let titleIn = el("input", {type: "text", class: "form-inp", placeholder: "Title (required)"});
+  let artistIn = el("input", {type: "text", class: "form-inp", placeholder: "Artist (required)"});
+  let bpmIn = el("input", {type: "number", class: "form-inp", placeholder: "BPM 60-200"});
+  let durIn = el("input", {type: "number", class: "form-inp", placeholder: "Duration (seconds)"});
+  let genreIn = el("input", {type: "text", class: "form-inp", placeholder: "Genre (optional)"});
+  let errEl = el("div", {class: "form-err"});
+  let addBtn = el("button", {class: "add-btn"}, "Add Track");
+  addBtn.addEventListener("click", () => (() => {
     let title = titleIn.value;
     let artist = artistIn.value;
     let bpm = $parse_int(bpmIn.value) ?? 0;
     let dur = $parse_int(durIn.value) ?? 0;
     let genre = genreIn.value.length > 0 ? genreIn.value : "other";
     let err = validate_track_input(title, artist, bpm, dur);
-    if ($err.length > 0) {
-      return errEl.textContent = $err;
+    if (err.length > 0) {
+      return errEl.textContent = err;
     } else {
       errEl.textContent = "";
       let newId = Math.floor(Math.random() * 9000) + 1000;
@@ -403,15 +282,13 @@ const render_add_form = (container, onAdd) => {
       durIn.value = "";
       genreIn.value = "";
     }
-});
-  container.appendChild(el("div", { class: "add-form" }, el("div", { class: "form-header" }, el("h3", { class: "form-title" }, "Add Track"), el("p", { class: "form-note" }, "create_track() has auto-injected guards for BPM (60-200), Duration (> 0), " + "TrackTitle and ArtistName (non-empty). See the transpiled JS tab.")), el("div", { class: "form-fields" }, el("div", { class: "form-row" }, titleIn, artistIn), el("div", { class: "form-row" }, bpmIn, durIn, genreIn)), errEl, addBtn));
+})());
+  container.appendChild(el("div", {class: "add-form"}, el("div", {class: "form-header"}, el("h3", {class: "form-title"}, "Add Track"), el("p", {class: "form-note"}, "create_track() has auto-injected guards for BPM (60-200), Duration (> 0), " + "TrackTitle and ArtistName (non-empty). See the transpiled JS tab.")), el("div", {class: "form-fields"}, el("div", {class: "form-row"}, titleIn, artistIn), el("div", {class: "form-row"}, bpmIn, durIn, genreIn)), errEl, addBtn));
 };
 
 /**
- * Bootstrap and mount the full music library UI into a root container
- * @effects dom.write, dom.events, state.mutable
  * @param {string} rootId
- * @param {*} initialTracks
+ * @param {Track} initialTracks
  * @returns {void}
  */
 const render_library = (rootId, initialTracks) => {
@@ -420,30 +297,30 @@ const render_library = (rootId, initialTracks) => {
   let genres = ["all", "synthwave", "darksynth", "ambient", "retrowave", "cyberpunk"];
   let root = document.getElementById(rootId);
   root.innerHTML = "";
-  let statsEl = el("div", { class: "stats-section" });
-  let filtersEl = el("div", { class: "filters-section" });
-  let listEl = el("div", { class: "track-list" });
-  let formEl = el("div", { class: "form-section" });
+  let statsEl = el("div", {class: "stats-section"});
+  let filtersEl = el("div", {class: "filters-section"});
+  let listEl = el("div", {class: "track-list"});
+  let formEl = el("div", {class: "form-section"});
   root.appendChild(statsEl);
   root.appendChild(filtersEl);
   root.appendChild(listEl);
   root.appendChild(formEl);
-  let refresh = () => {
+  let refresh = () => (() => {
     statsEl.innerHTML = "";
     statsEl.appendChild(render_stats_bar(tracks));
     filtersEl.innerHTML = "";
-    filtersEl.appendChild(render_genre_filters(genres, activeGenre, (genre) => {
+    filtersEl.appendChild(render_genre_filters(genres, activeGenre, (genre) => (() => {
       activeGenre = genre;
       return refresh();
-}));
+})()));
     listEl.innerHTML = "";
     let visible = activeGenre === "all" ? tracks : tracks_in_genre(tracks, activeGenre);
-    visible.forEach(t => listEl.appendChild(render_track_card(t)));
-};
-  render_add_form(formEl, (track) => {
+    visible.forEach((t) => listEl.appendChild(render_track_card(t)));
+})();
+  render_add_form(formEl, (track) => (() => {
     tracks = [...tracks, track];
     return refresh();
-});
+})());
   return refresh();
 };
 
