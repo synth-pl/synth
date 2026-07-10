@@ -1,3 +1,17 @@
+/** @param {string} v @returns {boolean} */
+const __validate_NonEmptyString = (v) => v.length > 0;
+/** @param {string} v @returns {boolean} */
+const __validate_EmailAddress = (v) => __synth_presets.email.test(v);
+/** @param {number} v @returns {boolean} */
+const __validate_PositiveInt = (v) => v > 0;
+/** @param {number} v @returns {boolean} */
+const __validate_Score = (v) => (v >= 0) && (v <= 100);
+/** @param {number} v @returns {boolean} */
+const __validate_BoundedCount = (v) => (v >= -10) && (v <= 10);
+/** @param {string} v @returns {boolean} */
+const __validate_CSSClass = (v) => v.length > 0;
+/** @param {string} v @returns {boolean} */
+const __validate_SlugString = (v) => __synth_presets.slug.test(v);
 
 const CounterState = (count, min, max) => ({ count, min, max });
 
@@ -61,14 +75,22 @@ const modal_close = (state) => ({...state, open: false});
  * @param {NonEmptyString} name
  * @returns {string}
  */
-const send_welcome = (email, name) => `Welcome, ${name}! A confirmation has been sent to ${email}.`;
+const send_welcome = (email, name) => {
+  if (!__validate_EmailAddress(email)) throw new Error("SynthConstraintError: email violates EmailAddress constraint (got " + JSON.stringify(email) + ")");
+  if (!__validate_NonEmptyString(name)) throw new Error("SynthConstraintError: name violates NonEmptyString constraint (got " + JSON.stringify(name) + ")");
+  return `Welcome, ${name}! A confirmation has been sent to ${email}.`;
+};
 
 /**
  * @param {NonEmptyString} label
  * @param {Score} value
  * @returns {string}
  */
-const format_score = (label, value) => `${label}: ${value}/100`;
+const format_score = (label, value) => {
+  if (!__validate_NonEmptyString(label)) throw new Error("SynthConstraintError: label violates NonEmptyString constraint (got " + JSON.stringify(label) + ")");
+  if (!__validate_Score(value)) throw new Error("SynthConstraintError: value violates Score constraint (got " + JSON.stringify(value) + ")");
+  return `${label}: ${value}/100`;
+};
 
 /**
  * @param {CounterState} states

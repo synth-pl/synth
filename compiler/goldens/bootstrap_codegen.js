@@ -1336,9 +1336,10 @@ const cg_emit_store = (st, decl) => {
 /**
  * @param {CgState} st
  * @param {*} decl
+ * @param {*} validated
  * @returns {CgState}
  */
-const cg_emit_fn = (st, decl) => {
+const cg_emit_fn = (st, decl, validated) => {
   let param_str = "";
   let i = 0;
   while (i < decl.params.length) {
@@ -1360,12 +1361,14 @@ const cg_emit_fn = (st, decl) => {
       return "";
     }
 })();
+  let needs_block = cg_fn_needs_block(decl, validated);
   if (fn_has_annotation(decl, "memo")) {
     let s = cg_emit_line(st, "const " + decl.name + " = (() => {");
     s = CgState(s.lines, s.indent + 1, s.scopes);
     s = cg_emit_line(s, "const __cache = new Map();");
     s = cg_emit_line(s, "return (" + param_str + ") => {");
     s = CgState(s.lines, s.indent + 1, s.scopes);
+    s = cg_emit_param_guards(s, decl.params, validated);
     s = cg_emit_line(s, "const __key = JSON.stringify([" + param_str + "]);");
     s = cg_emit_line(s, "if (__cache.has(__key)) return __cache.get(__key);");
     s = cg_emit_line(s, "const __result = (() => {");
@@ -1390,7 +1393,7 @@ const cg_emit_fn = (st, decl) => {
     s = cg_emit_line(s, "};");
     s = CgState(s.lines, s.indent - 1, s.scopes);
     return cg_emit_line(s, "})();");
-  } else if (decl.shortForm) {
+  } else if (decl.shortForm && !needs_block) {
     let s = cg_push_scope(st);
     i = 0;
     while (i < decl.params.length) {
@@ -1400,6 +1403,25 @@ const cg_emit_fn = (st, decl) => {
     let body = cg_emit_expr(s, decl.body);
     s = cg_pop_scope(s);
     return cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";");
+  } else if (needs_block) {
+    let s = cg_emit_jsdoc(st, decl.params, decl.returnType);
+    s = cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => {");
+    s = CgState(s.lines, s.indent + 1, s.scopes);
+    s = cg_emit_param_guards(s, decl.params, validated);
+    s = cg_push_scope(s);
+    i = 0;
+    while (i < decl.params.length) {
+      s = cg_declare(s, decl.params[i].name);
+      i = i + 1;
+    }
+    if (decl.body.kind == "BlockExpr") {
+      s = cg_emit_block(s, decl.body);
+    } else {
+      s = cg_emit_line(s, "return " + cg_arrow_body_wrap(decl.body, cg_emit_expr(s, decl.body)) + ";");
+    }
+    s = cg_pop_scope(s);
+    s = CgState(s.lines, s.indent - 1, s.scopes);
+    return cg_emit_line(s, "};");
   } else {
     let s = cg_emit_jsdoc(st, decl.params, decl.returnType);
     s = cg_push_scope(s);
@@ -1468,10 +1490,153 @@ const cg_emit_test = (st, decl) => {
 
 /**
  * @param {CgState} st
- * @param {*} decl
+ * @param {*} c
+ * @param {string} v
+ * @returns {string}
+ */
+const cg_constraint_to_predicate = (st, c, v) => {
+  let k = c.kind;
+  if (k == "CompareConstraint") {
+    return v + " " + c.op + " " + JSON.stringify(c.value);
+  } else if (k == "LengthConstraint") {
+    return v + ".length " + c.op + " " + c.value;
+  } else if (k == "MatchesConstraint") {
+    return "__synth_presets." + c.preset + ".test(" + v + ")";
+  } else if (k == "RegexConstraint") {
+    return "/" + c.pattern + "/" + c.flags + ".test(" + v + ")";
+  } else if (k == "AndConstraint") {
+    return "(" + cg_constraint_to_predicate(st, c.left, v) + ") && (" + cg_constraint_to_predicate(st, c.right, v) + ")";
+  } else if (k == "OrConstraint") {
+    return "(" + cg_constraint_to_predicate(st, c.left, v) + ") || (" + cg_constraint_to_predicate(st, c.right, v) + ")";
+  } else if (k == "NotConstraint") {
+    return "!(" + cg_constraint_to_predicate(st, c.inner, v) + ")";
+  } else if (k == "CustomConstraint") {
+    return "(function(value){ return " + cg_emit_expr(st, c.expr) + "; })(" + v + ")";
+  } else {
+    return "true";
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {string} type_name
+ * @param {*} base_type
+ * @param {*} constraint
  * @returns {CgState}
  */
-const cg_emit_top_level = (st, decl) => {
+const cg_emit_constraint_validator = (st, type_name, base_type, constraint) => {
+  let pred = cg_constraint_to_predicate(st, constraint, "v");
+  let s = cg_emit_line(st, "/** @param {" + cg_type_to_js(base_type) + "} v @returns {" + "boolean" + "} */");
+  return cg_emit_line(s, "const __validate_" + type_name + " = (v) => " + pred + ";");
+};
+
+/**
+ * @param {*} body
+ * @returns {*}
+ */
+const cg_collect_validated_types = (body) => {
+  let names = [];
+  let i = 0;
+  while (i < body.length) {
+    let decl = body[i];
+    let inner = (() => {
+      if (decl.kind == "ExportDecl") {
+        return decl.decl;
+      } else {
+        return decl;
+      }
+})();
+    if (inner.kind == "TypeAlias" && inner.constraint != null) {
+      names = names.concat([inner.name]);
+    }
+    i = i + 1;
+  }
+  return names;
+};
+
+/**
+ * @param {*} validated
+ * @param {string} type_name
+ * @returns {boolean}
+ */
+const cg_type_is_validated = (validated, type_name) => {
+  let i = 0;
+  while (i < validated.length) {
+    if (validated[i] == type_name) {
+      return true;
+    }
+    i = i + 1;
+  }
+  return false;
+};
+
+/**
+ * @param {*} ty
+ * @returns {string}
+ */
+const cg_param_type_name = (ty) => {
+  if (ty == null) {
+    return "";
+  } else if (ty.name != null) {
+    return ty.name;
+  } else {
+    return "";
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} params
+ * @param {*} validated
+ * @returns {CgState}
+ */
+const cg_emit_param_guards = (st, params, validated) => {
+  let s = st;
+  let i = 0;
+  while (i < params.length) {
+    let p = params[i];
+    if (p.spread != true) {
+      let type_name = cg_param_type_name(p.type);
+      if (type_name != "" && cg_type_is_validated(validated, type_name)) {
+        s = cg_emit_line(s, "if (!__validate_" + type_name + "(" + p.name + ")) throw new Error(" + "\"SynthConstraintError: " + p.name + " violates " + type_name + " constraint (got \" + JSON.stringify(" + p.name + ") + \")\");");
+      }
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {*} decl
+ * @param {*} validated
+ * @returns {boolean}
+ */
+const cg_fn_needs_block = (decl, validated) => {
+  if (decl.body.kind == "BlockExpr") {
+    return true;
+  } else {
+    let i = 0;
+    while (i < decl.params.length) {
+      let p = decl.params[i];
+      if (p.spread != true) {
+        let type_name = cg_param_type_name(p.type);
+        if (type_name != "" && cg_type_is_validated(validated, type_name)) {
+          return true;
+        }
+      }
+      i = i + 1;
+    }
+    return false;
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} decl
+ * @param {*} validated
+ * @returns {CgState}
+ */
+const cg_emit_top_level = (st, decl, validated) => {
   let k = decl.kind;
   if (k == "TopLevelExpr") {
     return cg_emit_line(st, cg_emit_expr(st, decl.expr) + ";");
@@ -1486,7 +1651,13 @@ const cg_emit_top_level = (st, decl) => {
   } else if (k == "TopLevelStmt") {
     return cg_emit_stmt(st, decl.stmt);
   } else if (k == "FnDecl") {
-    return cg_emit_fn(st, decl);
+    return cg_emit_fn(st, decl, validated);
+  } else if (k == "TypeAlias") {
+    if (decl.constraint != null) {
+      return cg_emit_constraint_validator(st, decl.name, decl.type, decl.constraint);
+    } else {
+      return st;
+    }
   } else if (k == "EnumDecl") {
     return cg_emit_enum(st, decl);
   } else if (k == "TaggedUnionDecl") {
@@ -1498,7 +1669,7 @@ const cg_emit_top_level = (st, decl) => {
   } else if (k == "TestDecl") {
     return cg_emit_test(st, decl);
   } else if (k == "ExportDecl") {
-    return cg_emit_top_level(st, decl.decl);
+    return cg_emit_top_level(st, decl.decl, validated);
   } else if (k == "ImportDecl") {
     return st;
   } else {
@@ -1511,11 +1682,12 @@ const cg_emit_top_level = (st, decl) => {
  * @returns {string}
  */
 const generate = (program) => {
+  let validated = cg_collect_validated_types(program.body);
   let st = CgState([], 0, [[]]);
   let i = 0;
   while (i < program.body.length) {
     let decl = program.body[i];
-    st = cg_emit_top_level(st, decl);
+    st = cg_emit_top_level(st, decl, validated);
     let has_next = i + 1 < program.body.length;
     if (has_next) {
       let next = program.body[i + 1];

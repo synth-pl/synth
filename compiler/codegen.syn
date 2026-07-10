@@ -874,7 +874,7 @@ fn cg_emit_store(st: CgState, decl: any) -> CgState {
   cg_emit_line(s, "})();")
 }
 
-fn cg_emit_fn(st: CgState, decl: any) -> CgState {
+fn cg_emit_fn(st: CgState, decl: any, validated: any[]) -> CgState {
   let param_str = ""
   let mut i = 0
   while i < decl.params.length {
@@ -885,6 +885,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     i = i + 1
   }
   let async_kw = if decl.isAsync { "async " } else { "" }
+  let needs_block = cg_fn_needs_block(decl, validated)
 
   if fn_has_annotation(decl, "memo") {
     let mut s = cg_emit_line(st, "const " + decl.name + " = (() => {")
@@ -892,6 +893,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     s = cg_emit_line(s, "const __cache = new Map();")
     s = cg_emit_line(s, "return (" + param_str + ") => {")
     s = CgState(s.lines, s.indent + 1, s.scopes)
+    s = cg_emit_param_guards(s, decl.params, validated)
     s = cg_emit_line(s, "const __key = JSON.stringify([" + param_str + "]);")
     s = cg_emit_line(s, "if (__cache.has(__key)) return __cache.get(__key);")
     s = cg_emit_line(s, "const __result = (() => {")
@@ -916,7 +918,7 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     s = cg_emit_line(s, "};")
     s = CgState(s.lines, s.indent - 1, s.scopes)
     cg_emit_line(s, "})();")
-  } else if decl.shortForm {
+  } else if decl.shortForm and !needs_block {
     let mut s = cg_push_scope(st)
     i = 0
     while i < decl.params.length {
@@ -926,6 +928,25 @@ fn cg_emit_fn(st: CgState, decl: any) -> CgState {
     let body = cg_emit_expr(s, decl.body)
     s = cg_pop_scope(s)
     cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => " + cg_arrow_body_wrap(decl.body, body) + ";")
+  } else if needs_block {
+    let mut s = cg_emit_jsdoc(st, decl.params, decl.returnType)
+    s = cg_emit_line(s, "const " + decl.name + " = " + async_kw + "(" + param_str + ") => {")
+    s = CgState(s.lines, s.indent + 1, s.scopes)
+    s = cg_emit_param_guards(s, decl.params, validated)
+    s = cg_push_scope(s)
+    i = 0
+    while i < decl.params.length {
+      s = cg_declare(s, decl.params[i].name)
+      i = i + 1
+    }
+    if decl.body.kind == "BlockExpr" {
+      s = cg_emit_block(s, decl.body)
+    } else {
+      s = cg_emit_line(s, "return " + cg_arrow_body_wrap(decl.body, cg_emit_expr(s, decl.body)) + ";")
+    }
+    s = cg_pop_scope(s)
+    s = CgState(s.lines, s.indent - 1, s.scopes)
+    cg_emit_line(s, "};")
   } else {
     let mut s = cg_emit_jsdoc(st, decl.params, decl.returnType)
     s = cg_push_scope(s)
@@ -976,7 +997,100 @@ fn cg_emit_test(st: CgState, decl: any) -> CgState {
   cg_emit_line(st, "__synth_tests.push({ desc: " + cg_json_string(decl.description) + ", fn: () => " + body + " });")
 }
 
-fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
+fn cg_constraint_to_predicate(st: CgState, c: any, v: string) -> string {
+  let k = c.kind
+  if k == "CompareConstraint" {
+    // JSON.stringify quotes strings and leaves numbers bare in the emitted JS.
+    v + " " + c.op + " " + JSON.stringify(c.value)
+  } else if k == "LengthConstraint" {
+    v + ".length " + c.op + " " + c.value
+  } else if k == "MatchesConstraint" {
+    "__synth_presets." + c.preset + ".test(" + v + ")"
+  } else if k == "RegexConstraint" {
+    "/" + c.pattern + "/" + c.flags + ".test(" + v + ")"
+  } else if k == "AndConstraint" {
+    "(" + cg_constraint_to_predicate(st, c.left, v) + ") && (" + cg_constraint_to_predicate(st, c.right, v) + ")"
+  } else if k == "OrConstraint" {
+    "(" + cg_constraint_to_predicate(st, c.left, v) + ") || (" + cg_constraint_to_predicate(st, c.right, v) + ")"
+  } else if k == "NotConstraint" {
+    "!(" + cg_constraint_to_predicate(st, c.inner, v) + ")"
+  } else if k == "CustomConstraint" {
+    // Bind the free `value` identifier from the constraint expression.
+    "(function(value){ return " + cg_emit_expr(st, c.expr) + "; })(" + v + ")"
+  } else {
+    "true"
+  }
+}
+
+fn cg_emit_constraint_validator(st: CgState, type_name: string, base_type: any, constraint: any) -> CgState {
+  let pred = cg_constraint_to_predicate(st, constraint, "v")
+  // Split braces so Synth does not treat `{boolean}` as string interpolation.
+  let mut s = cg_emit_line(st, "/** @param {" + cg_type_to_js(base_type) + "} v @returns {" + "boolean" + "} */")
+  cg_emit_line(s, "const __validate_" + type_name + " = (v) => " + pred + ";")
+}
+
+fn cg_collect_validated_types(body: any[]) -> any[] {
+  let mut names = []
+  let mut i = 0
+  while i < body.length {
+    let decl = body[i]
+    let inner = if decl.kind == "ExportDecl" { decl.decl } else { decl }
+    if inner.kind == "TypeAlias" and inner.constraint != null {
+      names = names.concat([inner.name])
+    }
+    i = i + 1
+  }
+  names
+}
+
+fn cg_type_is_validated(validated: any[], type_name: string) -> bool {
+  let mut i = 0
+  while i < validated.length {
+    if validated[i] == type_name { return true }
+    i = i + 1
+  }
+  false
+}
+
+fn cg_param_type_name(ty: any) -> string {
+  if ty == null { "" }
+  else if ty.name != null { ty.name }
+  else { "" }
+}
+
+fn cg_emit_param_guards(st: CgState, params: any[], validated: any[]) -> CgState {
+  let mut s = st
+  let mut i = 0
+  while i < params.length {
+    let p = params[i]
+    if p.spread != true {
+      let type_name = cg_param_type_name(p.type)
+      if type_name != "" and cg_type_is_validated(validated, type_name) {
+        s = cg_emit_line(s, "if (!__validate_" + type_name + "(" + p.name + ")) throw new Error(" + '"SynthConstraintError: ' + p.name + " violates " + type_name + ' constraint (got " + JSON.stringify(' + p.name + ') + ")");')
+      }
+    }
+    i = i + 1
+  }
+  s
+}
+
+fn cg_fn_needs_block(decl: any, validated: any[]) -> bool {
+  if decl.body.kind == "BlockExpr" { true }
+  else {
+    let mut i = 0
+    while i < decl.params.length {
+      let p = decl.params[i]
+      if p.spread != true {
+        let type_name = cg_param_type_name(p.type)
+        if type_name != "" and cg_type_is_validated(validated, type_name) { return true }
+      }
+      i = i + 1
+    }
+    false
+  }
+}
+
+fn cg_emit_top_level(st: CgState, decl: any, validated: any[]) -> CgState {
   let k = decl.kind
   if k == "TopLevelExpr" {
     cg_emit_line(st, cg_emit_expr(st, decl.expr) + ";")
@@ -991,7 +1105,13 @@ fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
   } else if k == "TopLevelStmt" {
     cg_emit_stmt(st, decl.stmt)
   } else if k == "FnDecl" {
-    cg_emit_fn(st, decl)
+    cg_emit_fn(st, decl, validated)
+  } else if k == "TypeAlias" {
+    if decl.constraint != null {
+      cg_emit_constraint_validator(st, decl.name, decl.type, decl.constraint)
+    } else {
+      st
+    }
   } else if k == "EnumDecl" {
     cg_emit_enum(st, decl)
   } else if k == "TaggedUnionDecl" {
@@ -1003,7 +1123,7 @@ fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
   } else if k == "TestDecl" {
     cg_emit_test(st, decl)
   } else if k == "ExportDecl" {
-    cg_emit_top_level(st, decl.decl)
+    cg_emit_top_level(st, decl.decl, validated)
   } else if k == "ImportDecl" {
     st
   } else {
@@ -1012,11 +1132,12 @@ fn cg_emit_top_level(st: CgState, decl: any) -> CgState {
 }
 
 export fn generate(program: Program) -> string {
+  let validated = cg_collect_validated_types(program.body)
   let mut st = CgState([], 0, [[]])
   let mut i = 0
   while i < program.body.length {
     let decl = program.body[i]
-    st = cg_emit_top_level(st, decl)
+    st = cg_emit_top_level(st, decl, validated)
     let has_next = i + 1 < program.body.length
     if has_next {
       let next = program.body[i + 1]
