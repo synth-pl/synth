@@ -185,7 +185,7 @@ const el = (tag, attrs, ...children) => {
       return e.setAttribute(k, String(v));
     }
 })());
-  $flat(children, ).forEach((child) => (() => {
+  $flat(children).forEach((child) => (() => {
     if (typeof child === "string") {
       return e.appendChild(document.createTextNode(child));
     } else if (child instanceof Node) {

@@ -4920,7 +4920,11 @@ const cg_emit_expr = (st, expr) => {
         return cg_emit_expr(st, mem) + "(" + args + ")";
       } else {
         let obj = cg_emit_expr(st, mem.object);
-        return "$" + mem.property + "(" + obj + ", " + args + ")";
+        if (args == "") {
+          return "$" + mem.property + "(" + obj + ")";
+        } else {
+          return "$" + mem.property + "(" + obj + ", " + args + ")";
+        }
       }
     } else if (expr.callee.kind == "Identifier") {
       return cg_emit_name(st, expr.callee.name) + "(" + args + ")";

@@ -376,7 +376,11 @@ fn cg_emit_expr(st: CgState, expr: any) -> string {
         cg_emit_expr(st, mem) + "(" + args + ")"
       } else {
         let obj = cg_emit_expr(st, mem.object)
-        "$" + mem.property + "(" + obj + ", " + args + ")"
+        if args == "" {
+          "$" + mem.property + "(" + obj + ")"
+        } else {
+          "$" + mem.property + "(" + obj + ", " + args + ")"
+        }
       }
     } else if expr.callee.kind == "Identifier" {
       cg_emit_name(st, expr.callee.name) + "(" + args + ")"
