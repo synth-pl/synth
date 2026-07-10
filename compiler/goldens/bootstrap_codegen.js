@@ -343,6 +343,10 @@ const is_stdlib_name = (name) => {
     return true;
   } else if (name == "println") {
     return true;
+  } else if (name == "likely_best") {
+    return true;
+  } else if (name == "embed") {
+    return true;
   } else {
     return false;
   }
@@ -438,6 +442,8 @@ const cg_pattern_condition = (pat, subj) => {
     return subj + ".tag === \"" + pat.name + "\"";
   } else if (k == "EnumPat") {
     return subj + " === " + pat.enumName + "." + pat.variant;
+  } else if (k == "LikelyPat") {
+    return "false";
   } else {
     return "true";
   }
@@ -533,14 +539,145 @@ const cg_match_chain = (st, arms, idx, subj_var) => {
 };
 
 /**
+ * @param {*} arms
+ * @returns {boolean}
+ */
+const cg_match_has_likely = (arms) => {
+  let i = 0;
+  while (i < arms.length) {
+    if (arms[i].pattern.kind == "LikelyPat") {
+      return true;
+    }
+    i = i + 1;
+  }
+  return false;
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} arm
+ * @param {string} subj_var
+ * @returns {string}
+ */
+const cg_emit_hard_arm_if = (st, arm, subj_var) => {
+  let pat = arm.pattern;
+  if (pat.kind == "IdentPat" && ident_is_binding(pat.name)) {
+    let name = pat.name;
+    let s = cg_push_scope(st);
+    s = cg_declare(s, name);
+    let raw_body = cg_emit_expr(s, arm.body);
+    s = cg_pop_scope(s);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      return "  { const " + name + " = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n";
+    } else {
+      return "  { const " + name + " = " + subj_var + "; return " + raw_body + "; }\n";
+    }
+  } else if (pat.kind == "TagPat" && pat.bindings != null && pat.bindings.length > 0) {
+    let cond = cg_pattern_condition(pat, subj_var);
+    let bind_str = "";
+    let bi = 0;
+    while (bi < pat.bindings.length) {
+      if (bi > 0) {
+        bind_str = bind_str + ", ";
+      }
+      bind_str = bind_str + pat.bindings[bi];
+      bi = bi + 1;
+    }
+    let s = cg_push_scope(st);
+    bi = 0;
+    while (bi < pat.bindings.length) {
+      s = cg_declare(s, pat.bindings[bi]);
+      bi = bi + 1;
+    }
+    let raw_body = cg_emit_expr(s, arm.body);
+    s = cg_pop_scope(s);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      return "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n";
+    } else {
+      return "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; return " + raw_body + "; }\n";
+    }
+  } else {
+    let cond = cg_pattern_condition(pat, subj_var);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      if (cond == "true") {
+        cond = g;
+      } else {
+        cond = "(" + cond + ") && (" + g + ")";
+      }
+    }
+    let body = cg_emit_expr(st, arm.body);
+    if (cond == "true") {
+      return "  return " + body + ";\n";
+    } else {
+      return "  if (" + cond + ") return " + body + ";\n";
+    }
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} expr
+ * @returns {string}
+ */
+const cg_emit_likely_match = (st, expr) => {
+  let subj = cg_emit_expr(st, expr.subject);
+  let hard = "";
+  let claims = "";
+  let claim_n = 0;
+  let likely_ifs = "";
+  let fallback = "undefined";
+  let i = 0;
+  while (i < expr.arms.length) {
+    let arm = expr.arms[i];
+    let pat = arm.pattern;
+    if (pat.kind == "LikelyPat") {
+      if (claim_n > 0) {
+        claims = claims + ", ";
+      }
+      claims = claims + cg_json_string(pat.claim);
+      let body = cg_emit_expr(st, arm.body);
+      likely_ifs = likely_ifs + "  if (__li === " + claim_n + ") return " + body + ";\n";
+      claim_n = claim_n + 1;
+    } else if (pat.kind == "WildcardPat") {
+      fallback = cg_emit_expr(st, arm.body);
+    } else if (pat.kind == "IdentPat" && ident_is_binding(pat.name)) {
+      let name = pat.name;
+      let s = cg_push_scope(st);
+      s = cg_declare(s, name);
+      let raw_body = cg_emit_expr(s, arm.body);
+      s = cg_pop_scope(s);
+      fallback = "((" + name + ") => " + raw_body + ")(_m)";
+    } else {
+      hard = hard + cg_emit_hard_arm_if(st, arm, "_m");
+    }
+    i = i + 1;
+  }
+  let likely_block = (() => {
+    if (claim_n == 0) {
+      return "";
+    } else {
+      return "  const __li = $likely_best(_m, [" + claims + "], 0.28);\n" + likely_ifs;
+    }
+})();
+  return "((_m) => {\n" + hard + likely_block + "  return " + fallback + ";\n})(" + subj + ")";
+};
+
+/**
  * @param {CgState} st
  * @param {*} expr
  * @returns {string}
  */
 const cg_emit_match = (st, expr) => {
   let subj = cg_emit_expr(st, expr.subject);
-  let chain = cg_match_chain(st, expr.arms, 0, "_m");
-  return "((_m) => " + chain + ")(" + subj + ")";
+  if (cg_match_has_likely(expr.arms)) {
+    return cg_emit_likely_match(st, expr);
+  } else {
+    let chain = cg_match_chain(st, expr.arms, 0, "_m");
+    return "((_m) => " + chain + ")(" + subj + ")";
+  }
 };
 
 /**

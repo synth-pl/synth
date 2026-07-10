@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intent Router — Synth v1.1</title>
+  <style>
+    :root {
+      --bg: #0d0221;
+      --panel: #120330;
+      --border: rgba(176,96,255,0.22);
+      --text: #e2d5ff;
+      --muted: #8060b0;
+      --pink: #ff2d78;
+      --cyan: #00d4ff;
+      --purple: #b060ff;
+      --amber: #ffb020;
+      --green: #00e5a0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(255,45,120,0.12), transparent),
+                  radial-gradient(900px 500px at 90% 10%, rgba(0,212,255,0.1), transparent),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .page-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: rgba(18,3,48,0.85); backdrop-filter: blur(10px);
+    }
+    .header-glyph { font-size: 22px; filter: drop-shadow(0 0 8px rgba(0,212,255,0.5)); }
+    .header-title {
+      font-size: 18px; font-weight: 700;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header-sub { font-size: 12px; color: var(--muted); }
+    .header-badge {
+      margin-left: auto; font-size: 11px; font-family: 'Courier New', monospace;
+      color: var(--cyan); border: 1px solid rgba(0,212,255,0.35);
+      background: rgba(0,212,255,0.08); padding: 4px 10px; border-radius: 999px;
+    }
+    .back-link {
+      color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 8px;
+    }
+    .back-link:hover { color: var(--text); }
+    .page-body {
+      max-width: 920px; width: 100%; margin: 0 auto;
+      padding: 28px 20px 40px; flex: 1;
+      display: grid; gap: 20px;
+    }
+    .hero-copy h1 {
+      font-size: 28px; letter-spacing: -0.4px; margin-bottom: 8px;
+    }
+    .hero-copy p { color: var(--muted); line-height: 1.6; font-size: 15px; }
+    .hero-copy code {
+      font-family: 'Courier New', monospace; font-size: 13px;
+      color: var(--cyan); background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2); padding: 1px 6px; border-radius: 4px;
+    }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px;
+    }
+    .panel-label {
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); font-family: 'Courier New', monospace; margin-bottom: 10px;
+    }
+    .composer { display: flex; gap: 10px; flex-wrap: wrap; }
+    #msg {
+      flex: 1; min-width: 220px;
+      background: #0a0118; border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 12px 14px; font-size: 15px; outline: none;
+    }
+    #msg:focus { border-color: var(--purple); }
+    .btn {
+      border: 1px solid var(--pink); background: rgba(255,45,120,0.15);
+      color: var(--pink); border-radius: 8px; padding: 12px 18px;
+      font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer;
+    }
+    .btn:hover { background: rgba(255,45,120,0.28); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .chip {
+      border: 1px solid var(--border); background: rgba(176,96,255,0.08);
+      color: var(--text); border-radius: 999px; padding: 6px 12px;
+      font-size: 12px; cursor: pointer;
+    }
+    .chip:hover { border-color: var(--cyan); color: var(--cyan); }
+    .result-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .result-grid { grid-template-columns: 1fr; }
+      .page-header { flex-wrap: wrap; }
+      .header-badge { margin-left: 0; }
+    }
+    .result-card {
+      background: #0a0118; border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px;
+    }
+    .result-k { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-family: 'Courier New', monospace; }
+    .result-v { font-size: 16px; font-weight: 600; }
+    .result-v.intent { color: var(--cyan); }
+    .result-v.reply { color: var(--text); font-weight: 500; line-height: 1.45; }
+    .log {
+      max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+    }
+    .log-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px;
+      padding: 10px 12px; border-radius: 8px; background: #0a0118;
+      border: 1px solid rgba(176,96,255,0.12); font-size: 13px;
+    }
+    .log-msg { color: var(--muted); }
+    .log-intent {
+      font-family: 'Courier New', monospace; color: var(--amber); white-space: nowrap;
+    }
+    .source-panel { margin-top: 4px; }
+    .source-panel summary {
+      cursor: pointer; color: var(--muted); font-size: 13px; margin-bottom: 8px;
+    }
+    pre {
+      background: #080118; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+      color: #d7c7ff; font-family: 'Courier New', monospace;
+    }
+    .kw { color: #ff79c6; font-weight: 600; }
+    .str { color: #f1fa8c; }
+    .cmt { color: #6272a4; font-style: italic; }
+    .note {
+      margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.5;
+    }
+  </style>
+  <link rel="stylesheet" href="site-footer.css">
+</head>
+<body>
+  <header class="page-header">
+    <div class="header-glyph">🧭</div>
+    <div>
+      <div class="header-title">Intent Router</div>
+      <div class="header-sub">likely match arms · host embedding API</div>
+    </div>
+    <div class="header-badge">v1.1</div>
+    <a class="back-link" href="landing.html">← Synth</a>
+  </header>
+
+  <main class="page-body">
+    <section class="hero-copy">
+      <h1>Route by meaning, not exact strings.</h1>
+      <p>
+        Exact arms still win first (<code>"quit"</code>). Soft <code>likely "…"</code> arms
+        compete by embedding similarity. Plug in a real model with
+        <code>SynthRuntime.setEmbed(fn)</code> — demos use a tiny offline embedder by default.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-label">Try a message</div>
+      <div class="composer">
+        <input id="msg" type="text" placeholder="Type something like “I need my money back”" />
+        <button class="btn" id="send">Route</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-label">Latest route</div>
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="result-k">Intent</div>
+          <div class="result-v intent" id="out-intent">—</div>
+        </div>
+        <div class="result-card">
+          <div class="result-k">Label</div>
+          <div class="result-v" id="out-label">—</div>
+        </div>
+      </div>
+      <div class="result-card" style="margin-top:12px">
+        <div class="result-k">Reply</div>
+        <div class="result-v reply" id="out-reply">Send a message to see soft routing.</div>
+      </div>
+      <p class="note">
+        Default embedder is lexical (hashed bag-of-words). Swap it for OpenAI / local embeddings
+        without changing the Synth source.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-label">History</div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <details class="source-panel panel">
+      <summary>View intent_router.syn</summary>
+      <pre id="src"></pre>
+    </details>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
+
+  <script src="synth.stdlib.js"></script>
+  <script src="intent_router.sources.js"></script>
+  <script>
+    const samples = [
+      "hey there",
+      "how do I install this?",
+      "I want a refund",
+      "the app keeps crashing",
+      "what does the pro plan cost?",
+      "quit"
+    ];
+
+    const chips = document.getElementById('chips');
+    samples.forEach((s) => {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = s;
+      b.onclick = () => { document.getElementById('msg').value = s; route(); };
+      chips.appendChild(b);
+    });
+
+    function route() {
+      const msg = document.getElementById('msg').value.trim();
+      if (!msg) return;
+      const r = handle_message(msg);
+      document.getElementById('out-intent').textContent = r.intent;
+      document.getElementById('out-label').textContent = r.label;
+      document.getElementById('out-reply').textContent = r.reply;
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      row.innerHTML = `<div class="log-msg">${escapeHtml(msg)}</div><div class="log-intent">${escapeHtml(r.intent)}</div>`;
+      const log = document.getElementById('log');
+      log.prepend(row);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    document.getElementById('send').onclick = route;
+    document.getElementById('msg').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') route();
+    });
+
+    fetch('intent_router.syn').then(async (r) => {
+      if (!r.ok) {
+        document.getElementById('src').textContent = '// See examples/intent_router.syn in the repo';
+        return;
+      }
+      const src = await r.text();
+      document.getElementById('src').innerHTML = highlight(src);
+    }).catch(() => {
+      document.getElementById('src').textContent = '// See examples/intent_router.syn';
+    });
+
+    function highlight(src) {
+      return src
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/(\/\/[^\n]*)/g, '<span class="cmt">$1</span>')
+        .replace(/("(?:\\.|[^"\\])*")/g, '<span class="str">$1</span>')
+        .replace(/\b(fn|match|likely|let|return)\b/g, '<span class="kw">$1</span>');
+    }
+  </script>
+</body>
+</html>

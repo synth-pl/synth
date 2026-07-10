@@ -1755,7 +1755,19 @@ fn ps_parse_match(st: ParserState) -> ParseVal {
   let mut arms = []
   while not ps_check(s, "RBRACE") and not ps_is_eof(s) {
     s = ps_expect(s, "PIPE").st
-    let pat_got = ps_parse_pattern(s)
+    let pat_got = if ps_check(s, "KW_LIKELY") {
+      let adv = ps_advance(s)
+      let claim_tok = ps_peek(adv.st)
+      if claim_tok.type != "STRING" {
+        let err = { severity: "error", message: "likely arm needs a string claim, e.g. | likely \"greeting\" => ...", line: claim_tok.line, col: claim_tok.col }
+        ParseVal(ParserState(adv.st.tokens, adv.st.pos, adv.st.in_match_guard, adv.st.errors.concat([err])), { kind: "WildcardPat" })
+      } else {
+        let c_adv = ps_advance(adv.st)
+        ParseVal(c_adv.st, { kind: "LikelyPat", claim: claim_tok.value })
+      }
+    } else {
+      ps_parse_pattern(s)
+    }
     s = pat_got.st
     let mut guard = null
     if ps_check(s, "KW_WHEN") {

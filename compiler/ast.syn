@@ -476,6 +476,11 @@ export record EnumPat {
   variant:   string
 }
 
+export record LikelyPat {
+  kind:  string
+  claim: string
+}
+
 // ── Diagnostics ───────────────────────────────────────────────────────────────
 
 export record Diagnostic {

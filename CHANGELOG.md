@@ -1,5 +1,22 @@
 # Synth Changelog
 
+## v1.1.0 — The AI-Native Update
+
+### Language
+
+- **`likely` match arms** — soft semantic classifiers inside `match`. Exact arms run first; then all `likely` claims compete via embeddings; then `_` fallback.
+- Default similarity threshold: `0.28`.
+
+### Runtime
+
+- **Host embedding API** — `SynthRuntime.setEmbed(fn)` / `globalThis.__synth_embed`, plus `$embed` / `$likely_best`.
+- Offline default: hashed bag-of-words embedder (no network required).
+
+### Demo / site
+
+- Intent Router demo (`demo/intent_router.html`) showcasing exact + `likely` routing.
+- Docs: Pattern Matching section covers `likely` and the host API.
+
 ## v1.0.2 — Compiler patches
 
 ### Bug fixes

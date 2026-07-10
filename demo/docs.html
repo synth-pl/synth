@@ -5,7 +5,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="favicon.png" type="image/png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synth Language Reference — v1.0.2</title>
+  <title>Synth Language Reference — v1.1.0</title>
   <style>
     /* ── Synthwave dark palette ─────────────────────────────────────────── */
     :root {
@@ -701,7 +701,7 @@
     </a>
     <span class="top-header-sub">Language Reference</span>
     <div class="header-badges">
-      <span class="hbadge hbadge-ver">v1.0.2</span>
+      <span class="hbadge hbadge-ver">v1.1.0</span>
       <span class="hbadge hbadge-ai">AI-native</span>
     </div>
   </header>
@@ -1046,8 +1046,29 @@
             <tr><td>Circle</td><td>Tagged union variant (unit or payload), by tag name</td></tr>
             <tr><td>Circle { r }</td><td>Tagged union variant, destructures payload field <code>r</code></td></tr>
             <tr><td>n when expr</td><td>Binding pattern with guard expression</td></tr>
+            <tr><td>likely "claim"</td><td>Soft semantic match — closest embedding above threshold (v1.1)</td></tr>
           </tbody>
         </table></div>
+
+        <h3 class="subsection"><span class="mono">likely</span> arms <span style="font-size:0.7rem;color:var(--gold)">v1.1</span></h3>
+        <p>
+          Soft classifiers inside <code>match</code>. Exact / hard arms are tried first; then all
+          <code>likely</code> claims compete via the host embedding API; then <code>_</code> fallback.
+          Default threshold is <code>0.28</code>. Claims are string phrases that describe the intent —
+          not regexes.
+        </p>
+        <div class="code-block">
+          <div class="code-label"><span class="dot"></span>synth</div>
+          <pre id="match-likely-code"></pre>
+        </div>
+        <div class="callout">
+          <div class="callout-head">Host embedding API</div>
+          Plug in a real model without changing Synth source:
+          <code>SynthRuntime.setEmbed((text) =&gt; /* Float32Array */)</code>
+          or assign <code>globalThis.__synth_embed</code>. Without a host embedder, Synth uses a
+          hashed bag-of-words vector so demos work offline. See the
+          <a href="intent_router.html" style="color:var(--cyan)">Intent Router</a> demo.
+        </div>
       </section>
 
       <!-- ── Pipelines ─────────────────────────────────────────────────────── -->
@@ -1831,9 +1852,22 @@ $ synth --check src/main.syn
 
         <div class="version-card vc-current">
           <div class="version-header">
+            <span class="version-tag">v1.1.0</span>
+            <span class="version-name">The AI-Native Update</span>
+            <span class="version-status vs-current">Current</span>
+          </div>
+          <ul class="version-features">
+            <li><strong><code>likely</code> match arms</strong> — soft semantic classifiers inside <code>match</code></li>
+            <li><strong>Host embedding API</strong> — <code>SynthRuntime.setEmbed</code> / <code>__synth_embed</code>, with offline bag-of-words default</li>
+            <li><strong>Intent Router demo</strong> — exact arms first, then <code>likely</code> routing</li>
+          </ul>
+        </div>
+
+        <div class="version-card vc-stable">
+          <div class="version-header">
             <span class="version-tag">v1.0.2</span>
             <span class="version-name">Stable Release — Patch</span>
-            <span class="version-status vs-current">Current</span>
+            <span class="version-status vs-stable">Stable</span>
           </div>
           <ul class="version-features">
             <li><strong>Object spread codegen</strong> — <code>{ ...obj }</code> emits real JS spread instead of a broken <code>_spread_</code> shape</li>
@@ -2203,10 +2237,10 @@ $ synth --check src/main.syn
             </ul>
           </div>
 
-          <div class="roadmap-card" style="border-color:#ff6aff33;background:linear-gradient(135deg,#120020,#1a0028)">
-            <div class="roadmap-ver" style="color:#cc88ff">v1.1</div>
+          <div class="roadmap-card" style="border-color:#00d4ff33;background:linear-gradient(135deg,#0a1020,#120028)">
+            <div class="roadmap-ver" style="color:#00d4ff">v1.1 ✓</div>
             <div class="roadmap-title">The AI-Native Update</div>
-            <div class="roadmap-desc">The constructs that only make sense when an AI is both author and reader. Requires a stable v1.0 spec to define their semantics.</div>
+            <div class="roadmap-desc">Shipped. Soft classifiers in <code>match</code>, pluggable embeddings, and the Intent Router demo.</div>
             <ul class="roadmap-features">
               <li><code>likely</code> match arms — pattern matching by semantic similarity rather than literal equality; arms become soft classifiers</li>
               <li>Host-runtime embedding API — pluggable model for <code>likely</code> evaluation</li>
@@ -2585,6 +2619,21 @@ let label = match status {
   | "away"    => "○ Away"
   | _         => "✗ Offline"
 }
+`);
+
+    setCode('match-likely-code', `
+fn route(msg: string) -> string {
+  match msg {
+    | "quit" => "exit"
+    | likely "greeting hello hi hey" => "greet"
+    | likely "help how do I docs"    => "help"
+    | likely "refund billing charge" => "billing"
+    | _ => "unknown"
+  }
+}
+
+// Host override (JS):
+// SynthRuntime.setEmbed((text) => myModel.embed(text))
 `);
 
     setCode('match-guard-code', `

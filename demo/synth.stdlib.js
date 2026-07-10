@@ -73,6 +73,80 @@ const $unwrap = (r) => { if (r != null && r.tag === 'Ok') return r.value; throw 
 const $unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fallback;
 const $delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const $println = (...args) => { console.log(...args); console.log(''); };
+
+// ── likely / embedding host API (v1.1) ───────────────────────────────────────
+// Hosts may plug in a real embedder:
+//   globalThis.__synth_embed = (text) => Float32Array | number[]
+// Without a host embedder, a tiny hashed bag-of-words vector is used so demos
+// work offline. Similarity is cosine; $likely_best returns the best claim index
+// above `threshold`, or -1.
+
+const __synth_default_embed = (text) => {
+  const s = String(text ?? '').toLowerCase();
+  const dim = 64;
+  const v = new Float32Array(dim);
+  const toks = s.split(/[^a-z0-9]+/).filter(Boolean);
+  for (const t of toks) {
+    let h = 2166136261;
+    for (let i = 0; i < t.length; i++) {
+      h ^= t.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    v[(h >>> 0) % dim] += 1;
+    if (t.length >= 3) {
+      for (let i = 0; i < t.length - 2; i++) {
+        const tri = t.slice(i, i + 3);
+        let th = 2166136261;
+        for (let j = 0; j < tri.length; j++) {
+          th ^= tri.charCodeAt(j);
+          th = Math.imul(th, 16777619);
+        }
+        v[(th >>> 0) % dim] += 0.5;
+      }
+    }
+  }
+  let norm = 0;
+  for (let i = 0; i < dim; i++) norm += v[i] * v[i];
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < dim; i++) v[i] /= norm;
+  return v;
+};
+
+const $embed = (text) => {
+  const host = (typeof globalThis !== 'undefined') ? globalThis.__synth_embed : null;
+  if (typeof host === 'function') return host(String(text ?? ''));
+  return __synth_default_embed(text);
+};
+
+const $cosine = (a, b) => {
+  if (!a || !b) return 0;
+  const n = Math.min(a.length, b.length);
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < n; i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    dot += x * y; na += x * x; nb += y * y;
+  }
+  const d = Math.sqrt(na) * Math.sqrt(nb);
+  return d > 0 ? dot / d : 0;
+};
+
+const $likely_best = (subject, claims, threshold = 0.28) => {
+  const sv = $embed(subject);
+  let best = -1, bestScore = threshold;
+  for (let i = 0; i < claims.length; i++) {
+    const score = $cosine(sv, $embed(claims[i]));
+    if (score > bestScore) { bestScore = score; best = i; }
+  }
+  return best;
+};
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.SynthRuntime = globalThis.SynthRuntime || {};
+  globalThis.SynthRuntime.embed = $embed;
+  globalThis.SynthRuntime.likelyBest = $likely_best;
+  globalThis.SynthRuntime.setEmbed = (fn) => { globalThis.__synth_embed = fn; };
+}
+
 const __synth_tests = [];
 const __runSynthTests = () => {
   let passed = 0, failed = 0;

@@ -2211,7 +2211,21 @@ const ps_parse_match = (st) => {
   let arms = [];
   while (!ps_check(s, "RBRACE") && !ps_is_eof(s)) {
     s = ps_expect(s, "PIPE").st;
-    let pat_got = ps_parse_pattern(s);
+    let pat_got = (() => {
+      if (ps_check(s, "KW_LIKELY")) {
+        let adv = ps_advance(s);
+        let claim_tok = ps_peek(adv.st);
+        if (claim_tok.type != "STRING") {
+          let err = {severity: "error", message: "likely arm needs a string claim, e.g. | likely \"greeting\" => ...", line: claim_tok.line, col: claim_tok.col};
+          return ParseVal(ParserState(adv.st.tokens, adv.st.pos, adv.st.in_match_guard, adv.st.errors.concat([err])), {kind: "WildcardPat"});
+        } else {
+          let c_adv = ps_advance(adv.st);
+          return ParseVal(c_adv.st, {kind: "LikelyPat", claim: claim_tok.value});
+        }
+      } else {
+        return ps_parse_pattern(s);
+      }
+})();
     s = pat_got.st;
     let guard = null;
     if (ps_check(s, "KW_WHEN")) {

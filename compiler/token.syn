@@ -36,6 +36,7 @@ export fn keyword_type(name: string) -> string {
     | "while"      => "KW_WHILE"
     | "mut"        => "KW_MUT"
     | "refine"     => "KW_REFINE"
+    | "likely"     => "KW_LIKELY"
     | "interface"  => "KW_INTERFACE"
     | "infer"      => "KW_INFER"
     | "async"      => "KW_ASYNC"

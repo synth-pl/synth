@@ -148,6 +148,7 @@ fn is_stdlib_name(name: string) -> bool {
   else if name == "ok" { true } else if name == "err" { true } else if name == "is_ok" { true }
   else if name == "is_err" { true } else if name == "unwrap" { true } else if name == "unwrap_or" { true }
   else if name == "delay" { true } else if name == "println" { true }
+  else if name == "likely_best" { true } else if name == "embed" { true }
   else { false }
 }
 
@@ -203,6 +204,9 @@ fn cg_pattern_condition(pat: any, subj: string) -> string {
     subj + ".tag === \"" + pat.name + "\""
   } else if k == "EnumPat" {
     subj + " === " + pat.enumName + "." + pat.variant
+  } else if k == "LikelyPat" {
+    // Soft arms are handled by cg_emit_likely_match; treat as never-hard-match here.
+    "false"
   } else {
     "true"
   }
@@ -280,10 +284,118 @@ fn cg_match_chain(st: CgState, arms: any[], idx: int, subj_var: string) -> strin
   }
 }
 
+fn cg_match_has_likely(arms: any[]) -> bool {
+  let mut i = 0
+  while i < arms.length {
+    if arms[i].pattern.kind == "LikelyPat" { return true }
+    i = i + 1
+  }
+  false
+}
+
+fn cg_emit_hard_arm_if(st: CgState, arm: any, subj_var: string) -> string {
+  let pat = arm.pattern
+  if pat.kind == "IdentPat" and ident_is_binding(pat.name) {
+    let name = pat.name
+    let mut s = cg_push_scope(st)
+    s = cg_declare(s, name)
+    let raw_body = cg_emit_expr(s, arm.body)
+    s = cg_pop_scope(s)
+    if arm.guard != null {
+      let g = cg_emit_expr(st, arm.guard)
+      "  { const " + name + " = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n"
+    } else {
+      "  { const " + name + " = " + subj_var + "; return " + raw_body + "; }\n"
+    }
+  } else if pat.kind == "TagPat" and pat.bindings != null and pat.bindings.length > 0 {
+    let cond = cg_pattern_condition(pat, subj_var)
+    let bind_str = ""
+    let mut bi = 0
+    while bi < pat.bindings.length {
+      if bi > 0 { bind_str = bind_str + ", " }
+      bind_str = bind_str + pat.bindings[bi]
+      bi = bi + 1
+    }
+    let mut s = cg_push_scope(st)
+    bi = 0
+    while bi < pat.bindings.length {
+      s = cg_declare(s, pat.bindings[bi])
+      bi = bi + 1
+    }
+    let raw_body = cg_emit_expr(s, arm.body)
+    s = cg_pop_scope(s)
+    if arm.guard != null {
+      let g = cg_emit_expr(st, arm.guard)
+      "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n"
+    } else {
+      "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; return " + raw_body + "; }\n"
+    }
+  } else {
+    let mut cond = cg_pattern_condition(pat, subj_var)
+    if arm.guard != null {
+      let g = cg_emit_expr(st, arm.guard)
+      if cond == "true" {
+        cond = g
+      } else {
+        cond = "(" + cond + ") && (" + g + ")"
+      }
+    }
+    let body = cg_emit_expr(st, arm.body)
+    if cond == "true" {
+      "  return " + body + ";\n"
+    } else {
+      "  if (" + cond + ") return " + body + ";\n"
+    }
+  }
+}
+
+fn cg_emit_likely_match(st: CgState, expr: any) -> string {
+  let subj = cg_emit_expr(st, expr.subject)
+  let mut hard = ""
+  let mut claims = ""
+  let mut claim_n = 0
+  let mut likely_ifs = ""
+  let mut fallback = "undefined"
+  let mut i = 0
+  while i < expr.arms.length {
+    let arm = expr.arms[i]
+    let pat = arm.pattern
+    if pat.kind == "LikelyPat" {
+      if claim_n > 0 { claims = claims + ", " }
+      claims = claims + cg_json_string(pat.claim)
+      let body = cg_emit_expr(st, arm.body)
+      likely_ifs = likely_ifs + "  if (__li === " + claim_n + ") return " + body + ";\n"
+      claim_n = claim_n + 1
+    } else if pat.kind == "WildcardPat" {
+      fallback = cg_emit_expr(st, arm.body)
+    } else if pat.kind == "IdentPat" and ident_is_binding(pat.name) {
+      let name = pat.name
+      let mut s = cg_push_scope(st)
+      s = cg_declare(s, name)
+      let raw_body = cg_emit_expr(s, arm.body)
+      s = cg_pop_scope(s)
+      fallback = "((" + name + ") => " + raw_body + ")(_m)"
+    } else {
+      hard = hard + cg_emit_hard_arm_if(st, arm, "_m")
+    }
+    i = i + 1
+  }
+  let likely_block = if claim_n == 0 {
+    ""
+  } else {
+    "  const __li = $likely_best(_m, [" + claims + "], 0.28);\n" + likely_ifs
+  }
+  "((_m) => {\n" + hard + likely_block + "  return " + fallback + ";\n})(" + subj + ")"
+}
+
 fn cg_emit_match(st: CgState, expr: any) -> string {
   let subj = cg_emit_expr(st, expr.subject)
-  let chain = cg_match_chain(st, expr.arms, 0, "_m")
-  "((_m) => " + chain + ")(" + subj + ")"
+  if cg_match_has_likely(expr.arms) {
+    cg_emit_likely_match(st, expr)
+  } else {
+    let chain = cg_match_chain(st, expr.arms, 0, "_m")
+    "((_m) => " + chain + ")(" + subj + ")"
+  }
 }
 
 fn cg_emit_template(st: CgState, expr: any) -> string {

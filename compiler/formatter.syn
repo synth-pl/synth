@@ -58,6 +58,7 @@ fn space_after(tok_type: string) -> bool {
     or tok_type == "KW_FROM" or tok_type == "KW_INTERFACE" or tok_type == "KW_REFINE"
     or tok_type == "KW_INFER" or tok_type == "KW_MUT" or tok_type == "KW_WHEN"
     or tok_type == "KW_AS" or tok_type == "KW_NEW" or tok_type == "KW_WHERE"
+    or tok_type == "KW_LIKELY"
 }
 
 fn is_op_type(tok_type: string) -> bool {

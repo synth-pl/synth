@@ -4,12 +4,12 @@
 // API: SynthCompiler.compile(src) → { js, errors, warnings }
 //      SynthCompiler.check(src)   → { warnings, errors }
 //      SynthCompiler.stdlib       → stdlib JS string
-//      SynthCompiler.version      → "1.0.2"
+//      SynthCompiler.version      → "1.1.0"
 //      SynthCompiler.backend      → "bootstrap"
 (function (global) {
   "use strict";
 
-  const SYNTH_STDLIB = "\n\nconst $map = (xs, fn) => xs.map(fn);\nconst $filter = (xs, pred) => xs.filter(pred);\nconst $fold = (xs, init, fn) => xs.reduce(fn, init);\nconst $pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x);\nconst $zip = (xs, ys) => xs.map((x, i) => [x, ys[i]]);\nconst $range = (start, end) => Array.from({ length: Math.max(0, end - start) }, (_, i) => start + i);\nconst $first = (xs) => xs[0];\nconst $last = (xs) => xs[xs.length - 1];\nconst $sum = (xs) => xs.reduce((a, b) => a + b, 0);\nconst $count = (xs, pred) => pred ? xs.filter(pred).length : xs.length;\nconst $any = (xs, pred) => xs.some(pred);\nconst $all = (xs, pred) => xs.every(pred);\nconst $flat = (xs) => xs.flat();\nconst $groupBy = (xs, keyFn) => xs.reduce((m, x) => { const k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); return m; }, new Map());\nconst $pick = (obj, keys) => Object.fromEntries(keys.filter(k => k in obj).map(k => [k, obj[k]]));\nconst $omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));\nconst $sort_by = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka < kb ? -1 : ka > kb ? 1 : 0; });\nconst $sort_by_desc = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka > kb ? -1 : ka < kb ? 1 : 0; });\nconst $trim = (s) => s.trim();\nconst $split = (s, sep) => s.split(sep);\nconst $starts_with = (s, prefix) => s.startsWith(prefix);\nconst $ends_with = (s, suffix) => s.endsWith(suffix);\nconst $contains = (s, sub) => s.includes(sub);\nconst $to_upper = (s) => s.toUpperCase();\nconst $to_lower = (s) => s.toLowerCase();\nconst $replace_all = (s, from, to) => s.replaceAll(from, to);\nconst $pad_start = (s, len, padChar = ' ') => s.padStart(len, padChar);\nconst $pad_end = (s, len, padChar = ' ') => s.padEnd(len, padChar);\nconst $min = (xs) => xs.reduce((a, b) => a < b ? a : b);\nconst $max = (xs) => xs.reduce((a, b) => a > b ? a : b);\nconst $min_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) <= keyFn(b) ? a : b);\nconst $max_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) >= keyFn(b) ? a : b);\nconst $take = (xs, n) => xs.slice(0, n);\nconst $drop = (xs, n) => xs.slice(n);\nconst $uniq = (xs) => [...new Set(xs)];\nconst $chunk = (xs, n) => { const out = []; for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n)); return out; };\nconst $flat_map = (xs, fn) => xs.flatMap(fn);\nconst $set_at = (xs, i, val) => [...xs.slice(0, i), val, ...xs.slice(i + 1)];\nconst $reverse = (xs) => [...xs].reverse();\nconst $sum_by = (xs, keyFn) => xs.reduce((acc, x) => acc + keyFn(x), 0);\nconst $clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));\nconst $abs = (x) => Math.abs(x);\nconst $round = (x) => Math.round(x);\nconst $floor = (x) => Math.floor(x);\nconst $ceil = (x) => Math.ceil(x);\nconst $pow = (x, exp) => Math.pow(x, exp);\nconst $sqrt = (x) => Math.sqrt(x);\nconst $random = () => Math.random();\nconst $random_int = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;\nconst __synth_presets = {\n  email:   /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,\n  url:     /^https?:\\/\\//,\n  uuid:    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,\n  alpha:   /^[a-zA-Z]+$/,\n  alnum:   /^[a-zA-Z0-9]+$/,\n  numeric: /^[0-9]+$/,\n  slug:    /^[a-z0-9-]+$/,\n  hex:     /^#?[0-9a-fA-F]{3,8}$/,\n};\nconst $find = (xs, pred) => xs.find(pred);\nconst $find_index = (xs, pred) => xs.findIndex(pred);\nconst $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };\nconst $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };\nconst $ok = (value) => ({ tag: 'Ok', value });\nconst $err = (message) => ({ tag: 'Err', message });\nconst $is_ok = (r) => r != null && r.tag === 'Ok';\nconst $is_err = (r) => r != null && r.tag === 'Err';\nconst $unwrap = (r) => { if (r != null && r.tag === 'Ok') return r.value; throw new Error(r != null ? r.message : 'unwrap called on null'); };\nconst $unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fallback;\nconst $delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));\nconst $println = (...args) => { console.log(...args); console.log(''); };\nconst __synth_tests = [];\nconst __runSynthTests = () => {\n  let passed = 0, failed = 0;\n  const results = [];\n  for (const t of __synth_tests) {\n    try {\n      const isOk = !!t.fn();\n      if (isOk) { passed++; results.push({ ok: true, desc: t.desc }); }\n      else { failed++; results.push({ ok: false, desc: t.desc, error: 'assertion returned false' }); }\n    } catch(e) { failed++; results.push({ ok: false, desc: t.desc, error: String(e) }); }\n  }\n  return { passed, failed, total: passed + failed, results };\n};\nif (typeof globalThis !== 'undefined') { globalThis.__synth_tests = __synth_tests; globalThis.__runSynthTests = __runSynthTests; }\n";
+  const SYNTH_STDLIB = "\n\nconst $map = (xs, fn) => xs.map(fn);\nconst $filter = (xs, pred) => xs.filter(pred);\nconst $fold = (xs, init, fn) => xs.reduce(fn, init);\nconst $pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x);\nconst $zip = (xs, ys) => xs.map((x, i) => [x, ys[i]]);\nconst $range = (start, end) => Array.from({ length: Math.max(0, end - start) }, (_, i) => start + i);\nconst $first = (xs) => xs[0];\nconst $last = (xs) => xs[xs.length - 1];\nconst $sum = (xs) => xs.reduce((a, b) => a + b, 0);\nconst $count = (xs, pred) => pred ? xs.filter(pred).length : xs.length;\nconst $any = (xs, pred) => xs.some(pred);\nconst $all = (xs, pred) => xs.every(pred);\nconst $flat = (xs) => xs.flat();\nconst $groupBy = (xs, keyFn) => xs.reduce((m, x) => { const k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); return m; }, new Map());\nconst $pick = (obj, keys) => Object.fromEntries(keys.filter(k => k in obj).map(k => [k, obj[k]]));\nconst $omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));\nconst $sort_by = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka < kb ? -1 : ka > kb ? 1 : 0; });\nconst $sort_by_desc = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka > kb ? -1 : ka < kb ? 1 : 0; });\nconst $trim = (s) => s.trim();\nconst $split = (s, sep) => s.split(sep);\nconst $starts_with = (s, prefix) => s.startsWith(prefix);\nconst $ends_with = (s, suffix) => s.endsWith(suffix);\nconst $contains = (s, sub) => s.includes(sub);\nconst $to_upper = (s) => s.toUpperCase();\nconst $to_lower = (s) => s.toLowerCase();\nconst $replace_all = (s, from, to) => s.replaceAll(from, to);\nconst $pad_start = (s, len, padChar = ' ') => s.padStart(len, padChar);\nconst $pad_end = (s, len, padChar = ' ') => s.padEnd(len, padChar);\nconst $min = (xs) => xs.reduce((a, b) => a < b ? a : b);\nconst $max = (xs) => xs.reduce((a, b) => a > b ? a : b);\nconst $min_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) <= keyFn(b) ? a : b);\nconst $max_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) >= keyFn(b) ? a : b);\nconst $take = (xs, n) => xs.slice(0, n);\nconst $drop = (xs, n) => xs.slice(n);\nconst $uniq = (xs) => [...new Set(xs)];\nconst $chunk = (xs, n) => { const out = []; for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n)); return out; };\nconst $flat_map = (xs, fn) => xs.flatMap(fn);\nconst $set_at = (xs, i, val) => [...xs.slice(0, i), val, ...xs.slice(i + 1)];\nconst $reverse = (xs) => [...xs].reverse();\nconst $sum_by = (xs, keyFn) => xs.reduce((acc, x) => acc + keyFn(x), 0);\nconst $clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));\nconst $abs = (x) => Math.abs(x);\nconst $round = (x) => Math.round(x);\nconst $floor = (x) => Math.floor(x);\nconst $ceil = (x) => Math.ceil(x);\nconst $pow = (x, exp) => Math.pow(x, exp);\nconst $sqrt = (x) => Math.sqrt(x);\nconst $random = () => Math.random();\nconst $random_int = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;\nconst __synth_presets = {\n  email:   /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,\n  url:     /^https?:\\/\\//,\n  uuid:    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,\n  alpha:   /^[a-zA-Z]+$/,\n  alnum:   /^[a-zA-Z0-9]+$/,\n  numeric: /^[0-9]+$/,\n  slug:    /^[a-z0-9-]+$/,\n  hex:     /^#?[0-9a-fA-F]{3,8}$/,\n};\nconst $find = (xs, pred) => xs.find(pred);\nconst $find_index = (xs, pred) => xs.findIndex(pred);\nconst $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };\nconst $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };\nconst $ok = (value) => ({ tag: 'Ok', value });\nconst $err = (message) => ({ tag: 'Err', message });\nconst $is_ok = (r) => r != null && r.tag === 'Ok';\nconst $is_err = (r) => r != null && r.tag === 'Err';\nconst $unwrap = (r) => { if (r != null && r.tag === 'Ok') return r.value; throw new Error(r != null ? r.message : 'unwrap called on null'); };\nconst $unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fallback;\nconst $delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));\nconst $println = (...args) => { console.log(...args); console.log(''); };\n\n// ── likely / embedding host API (v1.1) ───────────────────────────────────────\n// Hosts may plug in a real embedder:\n//   globalThis.__synth_embed = (text) => Float32Array | number[]\n// Without a host embedder, a tiny hashed bag-of-words vector is used so demos\n// work offline. Similarity is cosine; $likely_best returns the best claim index\n// above `threshold`, or -1.\n\nconst __synth_default_embed = (text) => {\n  const s = String(text ?? '').toLowerCase();\n  const dim = 64;\n  const v = new Float32Array(dim);\n  const toks = s.split(/[^a-z0-9]+/).filter(Boolean);\n  for (const t of toks) {\n    let h = 2166136261;\n    for (let i = 0; i < t.length; i++) {\n      h ^= t.charCodeAt(i);\n      h = Math.imul(h, 16777619);\n    }\n    v[(h >>> 0) % dim] += 1;\n    if (t.length >= 3) {\n      for (let i = 0; i < t.length - 2; i++) {\n        const tri = t.slice(i, i + 3);\n        let th = 2166136261;\n        for (let j = 0; j < tri.length; j++) {\n          th ^= tri.charCodeAt(j);\n          th = Math.imul(th, 16777619);\n        }\n        v[(th >>> 0) % dim] += 0.5;\n      }\n    }\n  }\n  let norm = 0;\n  for (let i = 0; i < dim; i++) norm += v[i] * v[i];\n  norm = Math.sqrt(norm) || 1;\n  for (let i = 0; i < dim; i++) v[i] /= norm;\n  return v;\n};\n\nconst $embed = (text) => {\n  const host = (typeof globalThis !== 'undefined') ? globalThis.__synth_embed : null;\n  if (typeof host === 'function') return host(String(text ?? ''));\n  return __synth_default_embed(text);\n};\n\nconst $cosine = (a, b) => {\n  if (!a || !b) return 0;\n  const n = Math.min(a.length, b.length);\n  let dot = 0, na = 0, nb = 0;\n  for (let i = 0; i < n; i++) {\n    const x = a[i] || 0, y = b[i] || 0;\n    dot += x * y; na += x * x; nb += y * y;\n  }\n  const d = Math.sqrt(na) * Math.sqrt(nb);\n  return d > 0 ? dot / d : 0;\n};\n\nconst $likely_best = (subject, claims, threshold = 0.28) => {\n  const sv = $embed(subject);\n  let best = -1, bestScore = threshold;\n  for (let i = 0; i < claims.length; i++) {\n    const score = $cosine(sv, $embed(claims[i]));\n    if (score > bestScore) { bestScore = score; best = i; }\n  }\n  return best;\n};\n\nif (typeof globalThis !== 'undefined') {\n  globalThis.SynthRuntime = globalThis.SynthRuntime || {};\n  globalThis.SynthRuntime.embed = $embed;\n  globalThis.SynthRuntime.likelyBest = $likely_best;\n  globalThis.SynthRuntime.setEmbed = (fn) => { globalThis.__synth_embed = fn; };\n}\n\nconst __synth_tests = [];\nconst __runSynthTests = () => {\n  let passed = 0, failed = 0;\n  const results = [];\n  for (const t of __synth_tests) {\n    try {\n      const isOk = !!t.fn();\n      if (isOk) { passed++; results.push({ ok: true, desc: t.desc }); }\n      else { failed++; results.push({ ok: false, desc: t.desc, error: 'assertion returned false' }); }\n    } catch(e) { failed++; results.push({ ok: false, desc: t.desc, error: String(e) }); }\n  }\n  return { passed, failed, total: passed + failed, results };\n};\nif (typeof globalThis !== 'undefined') { globalThis.__synth_tests = __synth_tests; globalThis.__runSynthTests = __runSynthTests; }\n";
 
   const __synth_compiler = (function () {
 const $map = (xs, fn) => xs.map(fn);
@@ -108,7 +108,7 @@ const Token = (type, value, line, col) => ({ type, value, line, col });
  * @param {string} name
  * @returns {string}
  */
-const keyword_type = (name) => ((_m) => (_m === "type") ? "KW_TYPE" : (_m === "fn") ? "KW_FN" : (_m === "record") ? "KW_RECORD" : (_m === "module") ? "KW_MODULE" : (_m === "match") ? "KW_MATCH" : (_m === "let") ? "KW_LET" : (_m === "where") ? "KW_WHERE" : (_m === "true") ? "KW_TRUE" : (_m === "false") ? "KW_FALSE" : (_m === "if") ? "KW_IF" : (_m === "else") ? "KW_ELSE" : (_m === "return") ? "KW_RETURN" : (_m === "typeof") ? "KW_TYPEOF" : (_m === "instanceof") ? "KW_INSTANCEOF" : (_m === "new") ? "KW_NEW" : (_m === "when") ? "KW_WHEN" : (_m === "as") ? "KW_AS" : (_m === "import") ? "KW_IMPORT" : (_m === "export") ? "KW_EXPORT" : (_m === "from") ? "KW_FROM" : (_m === "for") ? "KW_FOR" : (_m === "in") ? "KW_IN" : (_m === "break") ? "KW_BREAK" : (_m === "continue") ? "KW_CONTINUE" : (_m === "while") ? "KW_WHILE" : (_m === "mut") ? "KW_MUT" : (_m === "refine") ? "KW_REFINE" : (_m === "interface") ? "KW_INTERFACE" : (_m === "infer") ? "KW_INFER" : (_m === "async") ? "KW_ASYNC" : (_m === "await") ? "KW_AWAIT" : (_m === "enum") ? "KW_ENUM" : (_m === "do") ? "KW_DO" : (_m === "and") ? "AND" : (_m === "or") ? "OR" : (_m === "not") ? "BANG" : "")(name);
+const keyword_type = (name) => ((_m) => (_m === "type") ? "KW_TYPE" : (_m === "fn") ? "KW_FN" : (_m === "record") ? "KW_RECORD" : (_m === "module") ? "KW_MODULE" : (_m === "match") ? "KW_MATCH" : (_m === "let") ? "KW_LET" : (_m === "where") ? "KW_WHERE" : (_m === "true") ? "KW_TRUE" : (_m === "false") ? "KW_FALSE" : (_m === "if") ? "KW_IF" : (_m === "else") ? "KW_ELSE" : (_m === "return") ? "KW_RETURN" : (_m === "typeof") ? "KW_TYPEOF" : (_m === "instanceof") ? "KW_INSTANCEOF" : (_m === "new") ? "KW_NEW" : (_m === "when") ? "KW_WHEN" : (_m === "as") ? "KW_AS" : (_m === "import") ? "KW_IMPORT" : (_m === "export") ? "KW_EXPORT" : (_m === "from") ? "KW_FROM" : (_m === "for") ? "KW_FOR" : (_m === "in") ? "KW_IN" : (_m === "break") ? "KW_BREAK" : (_m === "continue") ? "KW_CONTINUE" : (_m === "while") ? "KW_WHILE" : (_m === "mut") ? "KW_MUT" : (_m === "refine") ? "KW_REFINE" : (_m === "likely") ? "KW_LIKELY" : (_m === "interface") ? "KW_INTERFACE" : (_m === "infer") ? "KW_INFER" : (_m === "async") ? "KW_ASYNC" : (_m === "await") ? "KW_AWAIT" : (_m === "enum") ? "KW_ENUM" : (_m === "do") ? "KW_DO" : (_m === "and") ? "AND" : (_m === "or") ? "OR" : (_m === "not") ? "BANG" : "")(name);
 
 /**
  * @param {string} ch
@@ -800,6 +800,8 @@ const IdentPat = (kind, name) => ({ kind, name });
 const TagPat = (kind, name, bindings) => ({ kind, name, bindings });
 
 const EnumPat = (kind, enumName, variant) => ({ kind, enumName, variant });
+
+const LikelyPat = (kind, claim) => ({ kind, claim });
 
 const Diagnostic = (severity, message, line, col) => ({ severity, message, line, col });
 
@@ -3123,7 +3125,21 @@ const ps_parse_match = (st) => {
   let arms = [];
   while (!ps_check(s, "RBRACE") && !ps_is_eof(s)) {
     s = ps_expect(s, "PIPE").st;
-    let pat_got = ps_parse_pattern(s);
+    let pat_got = (() => {
+      if (ps_check(s, "KW_LIKELY")) {
+        let adv = ps_advance(s);
+        let claim_tok = ps_peek(adv.st);
+        if (claim_tok.type != "STRING") {
+          let err = {severity: "error", message: "likely arm needs a string claim, e.g. | likely \"greeting\" => ...", line: claim_tok.line, col: claim_tok.col};
+          return ParseVal(ParserState(adv.st.tokens, adv.st.pos, adv.st.in_match_guard, adv.st.errors.concat([err])), {kind: "WildcardPat"});
+        } else {
+          let c_adv = ps_advance(adv.st);
+          return ParseVal(c_adv.st, {kind: "LikelyPat", claim: claim_tok.value});
+        }
+      } else {
+        return ps_parse_pattern(s);
+      }
+})();
     s = pat_got.st;
     let guard = null;
     if (ps_check(s, "KW_WHEN")) {
@@ -4602,6 +4618,10 @@ const is_stdlib_name = (name) => {
     return true;
   } else if (name == "println") {
     return true;
+  } else if (name == "likely_best") {
+    return true;
+  } else if (name == "embed") {
+    return true;
   } else {
     return false;
   }
@@ -4697,6 +4717,8 @@ const cg_pattern_condition = (pat, subj) => {
     return subj + ".tag === \"" + pat.name + "\"";
   } else if (k == "EnumPat") {
     return subj + " === " + pat.enumName + "." + pat.variant;
+  } else if (k == "LikelyPat") {
+    return "false";
   } else {
     return "true";
   }
@@ -4792,14 +4814,145 @@ const cg_match_chain = (st, arms, idx, subj_var) => {
 };
 
 /**
+ * @param {*} arms
+ * @returns {boolean}
+ */
+const cg_match_has_likely = (arms) => {
+  let i = 0;
+  while (i < arms.length) {
+    if (arms[i].pattern.kind == "LikelyPat") {
+      return true;
+    }
+    i = i + 1;
+  }
+  return false;
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} arm
+ * @param {string} subj_var
+ * @returns {string}
+ */
+const cg_emit_hard_arm_if = (st, arm, subj_var) => {
+  let pat = arm.pattern;
+  if (pat.kind == "IdentPat" && ident_is_binding(pat.name)) {
+    let name = pat.name;
+    let s = cg_push_scope(st);
+    s = cg_declare(s, name);
+    let raw_body = cg_emit_expr(s, arm.body);
+    s = cg_pop_scope(s);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      return "  { const " + name + " = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n";
+    } else {
+      return "  { const " + name + " = " + subj_var + "; return " + raw_body + "; }\n";
+    }
+  } else if (pat.kind == "TagPat" && pat.bindings != null && pat.bindings.length > 0) {
+    let cond = cg_pattern_condition(pat, subj_var);
+    let bind_str = "";
+    let bi = 0;
+    while (bi < pat.bindings.length) {
+      if (bi > 0) {
+        bind_str = bind_str + ", ";
+      }
+      bind_str = bind_str + pat.bindings[bi];
+      bi = bi + 1;
+    }
+    let s = cg_push_scope(st);
+    bi = 0;
+    while (bi < pat.bindings.length) {
+      s = cg_declare(s, pat.bindings[bi]);
+      bi = bi + 1;
+    }
+    let raw_body = cg_emit_expr(s, arm.body);
+    s = cg_pop_scope(s);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      return "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; if (" + g + ") return " + raw_body + "; }\n";
+    } else {
+      return "  if (" + cond + ") { const { " + bind_str + " } = " + subj_var + "; return " + raw_body + "; }\n";
+    }
+  } else {
+    let cond = cg_pattern_condition(pat, subj_var);
+    if (arm.guard != null) {
+      let g = cg_emit_expr(st, arm.guard);
+      if (cond == "true") {
+        cond = g;
+      } else {
+        cond = "(" + cond + ") && (" + g + ")";
+      }
+    }
+    let body = cg_emit_expr(st, arm.body);
+    if (cond == "true") {
+      return "  return " + body + ";\n";
+    } else {
+      return "  if (" + cond + ") return " + body + ";\n";
+    }
+  }
+};
+
+/**
+ * @param {CgState} st
+ * @param {*} expr
+ * @returns {string}
+ */
+const cg_emit_likely_match = (st, expr) => {
+  let subj = cg_emit_expr(st, expr.subject);
+  let hard = "";
+  let claims = "";
+  let claim_n = 0;
+  let likely_ifs = "";
+  let fallback = "undefined";
+  let i = 0;
+  while (i < expr.arms.length) {
+    let arm = expr.arms[i];
+    let pat = arm.pattern;
+    if (pat.kind == "LikelyPat") {
+      if (claim_n > 0) {
+        claims = claims + ", ";
+      }
+      claims = claims + cg_json_string(pat.claim);
+      let body = cg_emit_expr(st, arm.body);
+      likely_ifs = likely_ifs + "  if (__li === " + claim_n + ") return " + body + ";\n";
+      claim_n = claim_n + 1;
+    } else if (pat.kind == "WildcardPat") {
+      fallback = cg_emit_expr(st, arm.body);
+    } else if (pat.kind == "IdentPat" && ident_is_binding(pat.name)) {
+      let name = pat.name;
+      let s = cg_push_scope(st);
+      s = cg_declare(s, name);
+      let raw_body = cg_emit_expr(s, arm.body);
+      s = cg_pop_scope(s);
+      fallback = "((" + name + ") => " + raw_body + ")(_m)";
+    } else {
+      hard = hard + cg_emit_hard_arm_if(st, arm, "_m");
+    }
+    i = i + 1;
+  }
+  let likely_block = (() => {
+    if (claim_n == 0) {
+      return "";
+    } else {
+      return "  const __li = $likely_best(_m, [" + claims + "], 0.28);\n" + likely_ifs;
+    }
+})();
+  return "((_m) => {\n" + hard + likely_block + "  return " + fallback + ";\n})(" + subj + ")";
+};
+
+/**
  * @param {CgState} st
  * @param {*} expr
  * @returns {string}
  */
 const cg_emit_match = (st, expr) => {
   let subj = cg_emit_expr(st, expr.subject);
-  let chain = cg_match_chain(st, expr.arms, 0, "_m");
-  return "((_m) => " + chain + ")(" + subj + ")";
+  if (cg_match_has_likely(expr.arms)) {
+    return cg_emit_likely_match(st, expr);
+  } else {
+    let chain = cg_match_chain(st, expr.arms, 0, "_m");
+    return "((_m) => " + chain + ")(" + subj + ")";
+  }
 };
 
 /**
@@ -6013,7 +6166,7 @@ const space_before = (tok_type) => tok_type == "LBRACE" || tok_type == "THIN_ARR
  * @param {string} tok_type
  * @returns {boolean}
  */
-const space_after = (tok_type) => tok_type == "COMMA" || tok_type == "COLON" || tok_type == "THIN_ARROW" || tok_type == "FAT_ARROW" || tok_type == "DOUBLE_COLON" || tok_type == "PIPE_OP" || tok_type == "AND" || tok_type == "OR" || tok_type == "EQ" || tok_type == "STRICT_EQ" || tok_type == "NEQ" || tok_type == "STRICT_NEQ" || tok_type == "LTE" || tok_type == "GTE" || tok_type == "ASSIGN" || tok_type == "NULL_COALESCE" || tok_type == "KW_FN" || tok_type == "KW_TYPE" || tok_type == "KW_RECORD" || tok_type == "KW_LET" || tok_type == "KW_MATCH" || tok_type == "KW_IF" || tok_type == "KW_ELSE" || tok_type == "KW_RETURN" || tok_type == "KW_FOR" || tok_type == "KW_IN" || tok_type == "KW_ASYNC" || tok_type == "KW_AWAIT" || tok_type == "KW_IMPORT" || tok_type == "KW_EXPORT" || tok_type == "KW_FROM" || tok_type == "KW_INTERFACE" || tok_type == "KW_REFINE" || tok_type == "KW_INFER" || tok_type == "KW_MUT" || tok_type == "KW_WHEN" || tok_type == "KW_AS" || tok_type == "KW_NEW" || tok_type == "KW_WHERE";
+const space_after = (tok_type) => tok_type == "COMMA" || tok_type == "COLON" || tok_type == "THIN_ARROW" || tok_type == "FAT_ARROW" || tok_type == "DOUBLE_COLON" || tok_type == "PIPE_OP" || tok_type == "AND" || tok_type == "OR" || tok_type == "EQ" || tok_type == "STRICT_EQ" || tok_type == "NEQ" || tok_type == "STRICT_NEQ" || tok_type == "LTE" || tok_type == "GTE" || tok_type == "ASSIGN" || tok_type == "NULL_COALESCE" || tok_type == "KW_FN" || tok_type == "KW_TYPE" || tok_type == "KW_RECORD" || tok_type == "KW_LET" || tok_type == "KW_MATCH" || tok_type == "KW_IF" || tok_type == "KW_ELSE" || tok_type == "KW_RETURN" || tok_type == "KW_FOR" || tok_type == "KW_IN" || tok_type == "KW_ASYNC" || tok_type == "KW_AWAIT" || tok_type == "KW_IMPORT" || tok_type == "KW_EXPORT" || tok_type == "KW_FROM" || tok_type == "KW_INTERFACE" || tok_type == "KW_REFINE" || tok_type == "KW_INFER" || tok_type == "KW_MUT" || tok_type == "KW_WHEN" || tok_type == "KW_AS" || tok_type == "KW_NEW" || tok_type == "KW_WHERE" || tok_type == "KW_LIKELY";
 
 /**
  * @param {string} tok_type
@@ -6328,7 +6481,7 @@ const format = (source) => format_source(source);
   global.SynthCompiler = {
     compile,
     check,
-    version: '1.0.2',
+    version: '1.1.0',
     backend: 'bootstrap',
     stdlib: SYNTH_STDLIB,
   }

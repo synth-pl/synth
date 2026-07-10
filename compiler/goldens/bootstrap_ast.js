@@ -148,6 +148,8 @@ const TagPat = (kind, name, bindings) => ({ kind, name, bindings });
 
 const EnumPat = (kind, enumName, variant) => ({ kind, enumName, variant });
 
+const LikelyPat = (kind, claim) => ({ kind, claim });
+
 const Diagnostic = (severity, message, line, col) => ({ severity, message, line, col });
 
 /**
