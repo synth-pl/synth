@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Intent Router — Synth v1.1</title>
   <style>
     :root {
@@ -70,11 +70,7 @@
       grid-template-columns: 1.05fr 0.95fr;
       gap: 16px;
       min-height: 480px;
-    }
-    @media (max-width: 860px) {
-      .stage { grid-template-columns: 1fr; }
-      .page-header { flex-wrap: wrap; }
-      .header-badge { margin-left: 0; }
+      align-items: stretch;
     }
     .panel {
       background: var(--panel); border: 1px solid var(--border);
@@ -92,6 +88,8 @@
     .chat {
       flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
       padding: 4px 2px 12px; min-height: 280px; max-height: 420px;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
     .bubble {
       max-width: 88%; padding: 10px 13px; border-radius: 12px;
@@ -143,24 +141,33 @@
       border: 1px dashed var(--border); background: transparent; max-width: 100%;
       margin-top: 40px;
     }
-    .composer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; }
+    .composer {
+      display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch;
+      margin-top: auto; padding-top: 4px;
+    }
     #msg {
-      flex: 1; min-width: 180px;
+      flex: 1; min-width: 0;
       background: #0a0118; border: 1px solid var(--border); color: var(--text);
-      border-radius: 8px; padding: 12px 14px; font-size: 15px; outline: none;
+      border-radius: 8px; padding: 12px 14px; font-size: 16px; outline: none;
+      /* 16px avoids iOS focus zoom */
     }
     #msg:focus { border-color: var(--purple); }
     .btn {
       border: 1px solid var(--pink); background: rgba(255,45,120,0.15);
       color: var(--pink); border-radius: 8px; padding: 12px 18px;
       font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer;
+      flex-shrink: 0; min-height: 44px; touch-action: manipulation;
     }
     .btn:hover { background: rgba(255,45,120,0.28); }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .chips {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+    }
     .chip {
       border: 1px solid var(--border); background: rgba(176,96,255,0.08);
-      color: var(--text); border-radius: 999px; padding: 6px 12px;
+      color: var(--text); border-radius: 999px; padding: 8px 12px;
       font-size: 12px; cursor: pointer;
+      min-height: 36px; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .chip:hover { border-color: var(--cyan); color: var(--cyan); }
     .board-head {
@@ -194,6 +201,7 @@
     .claim.winner .claim-score { color: var(--cyan); }
     .claim-phrase {
       font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.35;
+      overflow-wrap: anywhere; word-break: break-word;
     }
     .bar-track {
       position: relative; height: 10px; border-radius: 5px;
@@ -229,10 +237,81 @@
       background: #080118; border: 1px solid var(--border); border-radius: 10px;
       padding: 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
       color: #d7c7ff; font-family: 'Courier New', monospace;
+      -webkit-overflow-scrolling: touch; max-width: 100%;
     }
     .kw { color: #ff79c6; font-weight: 600; }
     .str { color: #f1fa8c; }
     .cmt { color: #6272a4; font-style: italic; }
+
+    /* ── Mobile / narrow ─────────────────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .page-header {
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        padding: 12px 16px;
+        padding-top: max(12px, env(safe-area-inset-top));
+      }
+      .header-badge { margin-left: 0; }
+      .back-link { margin-left: auto; }
+      .page-body {
+        padding: 16px 14px 28px;
+        padding-bottom: max(28px, env(safe-area-inset-bottom));
+        gap: 14px;
+      }
+      .hero-copy h1 { font-size: 22px; }
+      .hero-copy p { font-size: 14px; }
+      .stage {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        gap: 12px;
+      }
+      /* Chat first (compose), then live scores — natural mobile scroll story */
+      .panel { padding: 14px; border-radius: 10px; }
+      .chat {
+        min-height: 180px;
+        max-height: min(42vh, 320px);
+      }
+      .bubble { max-width: 94%; font-size: 14px; }
+      .bubble.empty { margin-top: 16px; font-size: 13px; padding: 12px; }
+      .chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        margin-inline: -2px;
+        padding-inline: 2px;
+        scrollbar-width: thin;
+      }
+      .chip { flex-shrink: 0; white-space: nowrap; }
+      .panel-label { flex-wrap: wrap; }
+      .board-head { margin-bottom: 6px; }
+      .claims { gap: 8px; }
+      .claim { padding: 9px 10px; }
+      .preview-status { font-size: 11px; min-height: 2.4em; }
+      .note { font-size: 11px; }
+      pre { font-size: 11.5px; padding: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .header-sub { display: none; }
+      .header-title { font-size: 16px; }
+      .hero-copy h1 { font-size: 20px; letter-spacing: -0.3px; }
+      .composer { gap: 8px; }
+      .btn { padding: 12px 14px; }
+      .chat {
+        min-height: 150px;
+        max-height: min(38vh, 280px);
+      }
+      .claim-phrase { font-size: 10.5px; }
+    }
+
+    @media (max-width: 860px) and (orientation: landscape) {
+      .chat {
+        min-height: 120px;
+        max-height: min(50vh, 240px);
+      }
+      .hero-copy p { display: none; }
+    }
   </style>
   <link rel="stylesheet" href="site-footer.css">
 </head>
