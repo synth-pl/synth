@@ -77,6 +77,16 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+    a.top-header-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+    a.top-header-brand:hover .top-header-title {
+      filter: brightness(1.15);
+    }
 
     .top-header-sub {
       font-size: 12px;
@@ -685,8 +695,10 @@
     <button class="mobile-nav-btn" onclick="toggleSidebar()" aria-label="Open navigation">
       ☰ Sections
     </button>
-    <span class="top-header-glyph">⬡</span>
-    <span class="top-header-title">Synth</span>
+    <a class="top-header-brand" href="landing.html" aria-label="Synth home">
+      <span class="top-header-glyph">⬡</span>
+      <span class="top-header-title">Synth</span>
+    </a>
     <span class="top-header-sub">Language Reference</span>
     <div class="header-badges">
       <span class="hbadge hbadge-ver">v1.0.2</span>
