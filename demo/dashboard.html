@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Synth Dashboard — v1.0.0 Demo</title>
-  <script src="synth.compiler.js?v=1.0.0-f46cb5b"></script>
+  <script src="compiler.bootstrap.js"></script>
   <style>
     :root {
       --bg:         #0d0120;
@@ -417,9 +417,11 @@ const compiledJS = compileAll();
 
 function evalSim(code) {
   try {
-    return (new Function('Math', 'console',
-      code + '; return { filter_tasks, active_tasks, completion_rate, critical_count, velocity, tick, TaskStatus, Priority };'
-    ))(Math, console);
+    // Stdlib ($filter, $map, $sum, …) ships with the browser compiler bundle
+    // and must be in scope when the compiled JS runs.
+    const execJs = (SynthCompiler.stdlib || '') + '\n' + code
+      + '; return { filter_tasks, active_tasks, completion_rate, critical_count, velocity, tick, TaskStatus, Priority };';
+    return (new Function('Math', 'console', execJs))(Math, console);
   } catch(e) {
     logEvent('error', 'Sim error: ' + e.message);
     return null;
