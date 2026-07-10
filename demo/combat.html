@@ -301,16 +301,6 @@
       color: var(--green-dim);
     }
 
-    /* ── Footer ──────────────────────────────────────────────────────────── */
-    .footer {
-      text-align: center;
-      padding: 14px;
-      font-size: 11px;
-      color: var(--dim);
-      border-top: 1px solid var(--border);
-      letter-spacing: 1px;
-    }
-
     @media (max-width: 640px) {
       .page-header { padding: 12px 16px; }
       .page-body { padding: 14px 12px; }
@@ -319,6 +309,7 @@
       .page-title { font-size: 14px; letter-spacing: 1px; }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -372,9 +363,7 @@
     </div>
   </section>
 
-  <footer class="footer">
-    SYNTH v0.4.0 · AI-NATIVE LANGUAGE · TRANSPILES TO JAVASCRIPT
-  </footer>
+  
 
   <script src="combat.synth.js"></script>
   <script src="combat.sources.js"></script>
@@ -394,6 +383,17 @@
       document.getElementById('js-src').textContent  = COMBAT_SOURCES.js;
     }
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 </body>
 </html>

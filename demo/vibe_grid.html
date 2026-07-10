@@ -390,20 +390,6 @@
   .cm  { color: var(--muted); }
   .hl  { background: #ff2d7820; border-radius: 2px; padding: 0 2px; }
 
-  /* ── Footer ─────────────────────────────────────────────────────────────── */
-
-  .footer {
-    text-align: center;
-    font-size: .62rem;
-    color: var(--muted);
-    padding: 16px 0 8px;
-    border-top: 1px solid var(--border);
-    margin-top: 8px;
-  }
-
-  .footer a { color: var(--cyan); text-decoration: none; }
-  .footer a:hover { text-decoration: underline; }
-
   @media (max-width: 680px) {
     .wrap { padding: 14px 12px 20px; }
     .hdr { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -413,6 +399,7 @@
     .btn-icon   { font-size: 2.4rem; }
   }
 </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 <div class="wrap">
@@ -526,10 +513,7 @@
 
   </div><!-- .main -->
 
-  <footer class="footer">
-    Built with <a href="landing.html">Synth</a> — AI-native language that transpiles to JavaScript ·
-    <a href="https://github.com/synth-pl/synth" target="_blank">github.com/synth-pl/synth</a>
-  </footer>
+  
 
 </div><!-- .wrap -->
 
@@ -569,5 +553,16 @@
     btn.textContent = (open ? '▾' : '▸') + ' View Synth Source'
   }
 </script>
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
+
 </body>
 </html>

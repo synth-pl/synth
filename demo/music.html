@@ -385,24 +385,6 @@
       tab-size: 2;
     }
 
-    /* ── Footer ──────────────────────────────────────────────────────────── */
-    .footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 12px;
-      color: var(--text-dim);
-      border-top: 1px solid var(--border);
-    }
-
-    .footer code {
-      background: rgba(176,96,255,0.1);
-      border: 1px solid rgba(176,96,255,0.2);
-      color: var(--purple);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
     @media (max-width: 640px) {
       .page-header { padding: 16px; gap: 12px; }
       .header-glyph { font-size: 28px; }
@@ -414,6 +396,7 @@
       .filter-btn { padding: 5px 10px; font-size: 11px; }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -451,14 +434,7 @@
     </div>
   </section>
 
-  <footer class="footer">
-    <p>
-      Synth v0.6.0 · Designed by AI for AI · Transpiles to JavaScript ·
-      <code>"Hello {name}"</code> string interpolation ·
-      <code>filter(.active)</code> .field shorthand ·
-      <code>@memo</code> memoization
-    </p>
-  </footer>
+  
 
   <!-- Transpiled Synth -->
   <script src="music.synth.js"></script>
@@ -498,6 +474,17 @@
       document.getElementById('js-src').textContent  = MUSIC_SOURCES.js;
     }
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 </body>
 </html>

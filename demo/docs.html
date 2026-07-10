@@ -577,15 +577,8 @@
     .roadmap-features li::before { content: '→'; position: absolute; left: 0; color: var(--purple); font-size: 11px; top: 1px; }
     .roadmap-features code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--cyan); }
 
-    /* ── Footer ──────────────────────────────────────────────────────────── */
-    .page-footer {
-      margin-left: var(--nav-width);
-      text-align: center;
-      padding: 24px 20px;
-      font-size: 12px;
-      color: var(--text-dim);
-      border-top: 1px solid var(--border);
-    }
+    /* Site footer sits beside the docs sidebar on desktop */
+    .site-footer { margin-left: var(--nav-width); }
 
     /* ── Mobile sidebar drawer ───────────────────────────────────────────── */
     .sidebar-overlay {
@@ -628,7 +621,7 @@
 
       /* Main content — min-width:0 critical to prevent flex child from
          expanding to fit wide pre elements */
-      .main, .page-footer { margin-left: 0; }
+      .main, .site-footer { margin-left: 0; }
       .main { padding: 28px 16px 60px; min-width: 0; }
 
       /* Header */
@@ -674,9 +667,6 @@
 
       /* Design-goal pills */
       .pill { font-size: 11px; padding: 3px 10px; }
-
-      /* Page footer */
-      .page-footer { padding: 16px; text-align: center; }
     }
 
     @media (max-width: 420px) {
@@ -686,6 +676,7 @@
       .code-block pre { font-size: 11px; }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -2203,8 +2194,15 @@ $ synth --check src/main.syn
     </main>
   </div>
 
-  <footer class="page-footer">
-    Synth v1.0.1 · Designed by AI for AI · Transpiles to JavaScript · <code>@intent</code> · <code>@pure</code> · <code>|&gt;</code>
+    <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
   </footer>
 
   <script>

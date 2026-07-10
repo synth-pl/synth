@@ -62,10 +62,9 @@
     pointer-events: none; z-index: 2;
   }
   canvas { display: block; width: 100%; height: 100%; cursor: none; }
-  .footer { font-size: .6rem; color: var(--muted); letter-spacing: .06em; text-align: center; line-height: 1.8; }
-  .footer a { color: var(--cyan); text-decoration: none; }
 </style>
 <link rel="stylesheet" href="game-mobile.css">
+<link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 <div class="wrap">
@@ -91,10 +90,21 @@
   <div class="canvas-wrap">
     <canvas id="c" width="800" height="520"></canvas>
   </div>
-  <div class="footer">
+  <div class="controls-hint">
     ← → Arrow keys, A/D, or tap screen sides to change lanes · Built with <a href="playground.html">Synth</a>
   </div>
 </div>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 <script src="synth.stdlib.js"></script>
 <script src="drift.sources.js"></script>

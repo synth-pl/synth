@@ -913,41 +913,6 @@
       background: rgba(176,96,255,0.07);
     }
 
-    /* ── Footer ──────────────────────────────────────────────────────────── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .footer-logo {
-      font-size: 16px;
-      font-weight: 700;
-      background: linear-gradient(90deg, var(--pink), var(--purple));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .footer-links { display: flex; gap: 20px; }
-
-    .footer-link {
-      font-size: 15px;
-      color: var(--text-dim);
-      text-decoration: none;
-      transition: color 0.15s;
-    }
-    .footer-link:hover { color: var(--text-muted); }
-
-    .footer-copy {
-      font-size: 14px;
-      color: var(--text-dim);
-    }
-
     /* ── Code highlighting ───────────────────────────────────────────────── */
     .kw   { color: #ff2d78; font-weight: 600; }
     .ann  { color: #00d4ff; }
@@ -1056,10 +1021,6 @@
       .roadmap-v2 { padding: 0 16px; margin-bottom: 56px; }
       .rm-remaining { grid-template-columns: 1fr; }
       .rm-history-chips { display: none; }
-
-      /* Footer */
-      footer { padding: 24px 16px; flex-direction: column; align-items: center; text-align: center; }
-      .footer-links { justify-content: center; flex-wrap: wrap; }
     }
 
     @media (max-width: 420px) {
@@ -1067,6 +1028,7 @@
       .stat-num { font-size: 24px; }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -1453,7 +1415,7 @@
   </div>
 
   <!-- ── Footer ────────────────────────────────────────────────────────────── -->
-  <footer>
+  <footer class="site-footer">
     <div class="footer-logo">⬡ Synth</div>
     <div class="footer-links">
       <a class="footer-link" href="docs.html">Docs</a>

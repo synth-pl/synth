@@ -175,20 +175,9 @@
     height: 100%;
     cursor: none;
   }
-
-  /* ── Footer ─────────────────────────────────────────────────────────────── */
-
-  .footer {
-    font-size: .6rem;
-    color: var(--muted);
-    letter-spacing: .06em;
-    text-align: center;
-    line-height: 1.8;
-  }
-
-  .footer a { color: var(--cyan); text-decoration: none; }
 </style>
 <link rel="stylesheet" href="game-mobile.css">
+<link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 <div class="wrap">
@@ -231,12 +220,23 @@
     <canvas id="c" width="800" height="520"></canvas>
   </div>
 
-  <div class="footer">
+  <div class="controls-hint">
     Mouse or arrow keys to move · Space to start/continue · Built in 191 lines of
     <a href="playground.html">Synth</a>
   </div>
 
 </div><!-- .wrap -->
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 <script src="synth.stdlib.js"></script>
 <script src="breakout.sources.js"></script>

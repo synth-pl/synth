@@ -317,8 +317,6 @@
     .op   { color: #ff79c6; opacity: 0.8; }
     .bool { color: #bd93f9; }
 
-    /* ── Footer ── */
-    footer {
       text-align: center;
       padding: 16px;
       font-size: 11px;
@@ -451,13 +449,9 @@
       }
 
       .source-block pre { font-size: 11px; padding: 12px; }
-      footer {
-        padding: 12px 10px;
-        font-size: 10px;
-        line-height: 1.5;
-      }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -539,9 +533,7 @@
 
   </div>
 
-  <footer>
-    Chronicle · Synth v0.8.0 · <code>store</code> · <code>async fn</code> · <code>await</code> · <code>on...change</code>
-  </footer>
+  
 
   <script src="chronicle.sources.js"></script>
 
@@ -621,6 +613,17 @@ async fn tick() {
 on Kingdom.change { render() }
 `);
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 </body>
 </html>

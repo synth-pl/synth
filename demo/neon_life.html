@@ -111,11 +111,9 @@
     background: var(--cyan); box-shadow: 0 0 6px var(--cyan); cursor: pointer;
   }
 
-  .footer { font-size: .6rem; color: var(--muted); letter-spacing: .06em; text-align: center; line-height: 1.8; }
-  .footer a { color: var(--cyan); text-decoration: none; }
-
 </style>
 <link rel="stylesheet" href="game-mobile.css">
+<link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 <div class="wrap">
@@ -151,11 +149,22 @@
     </div>
   </div>
 
-  <div class="footer">
+  <div class="controls-hint">
     Click, drag, or touch to draw · Space to play/pause · Built with <a href="playground.html">Synth</a>
   </div>
 
 </div>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
 <script src="synth.stdlib.js"></script>
 <script src="neon_life.sources.js"></script>

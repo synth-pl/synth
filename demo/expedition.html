@@ -189,16 +189,6 @@
     .s-data { color: #c084fc; }
 
     /* ── Synth tag ───────────────────────────────────────── */
-    .synth-tag {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-align: center;
-      padding: 1.5rem;
-      border-top: 1px solid var(--border);
-      margin-top: 0.5rem;
-    }
-    .synth-tag a { color: var(--accent); text-decoration: none; }
-    .synth-tag a:hover { text-decoration: underline; }
 
     @media (max-width: 640px) {
       .site-header,
@@ -232,6 +222,7 @@
       input[type=range] { width: 100%; max-width: none; }
     }
   </style>
+  <link rel="stylesheet" href="site-footer.css">
 </head>
 <body>
 
@@ -309,10 +300,21 @@
     <div id="grid"></div>
   </div>
 
-  <div class="synth-tag">
-    Powered by <a href="https://synth-pl.github.io/synth/playground.html" target="_blank">Synth</a> —
-    view <a href="https://github.com/synth-pl/synth/blob/main/examples/expedition.syn" target="_blank">expedition.syn</a>
+  <div class="demo-meta">
+    Powered by <a href="playground.html">Synth</a> —
+    view <a href="https://github.com/synth-pl/synth/blob/main/examples/expedition.syn" target="_blank" rel="noopener">expedition.syn</a>
   </div>
+
+  <footer class="site-footer">
+    <div class="footer-logo">⬡ Synth</div>
+    <div class="footer-links">
+      <a class="footer-link" href="docs.html">Docs</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+      <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+      <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+    </div>
+    <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+  </footer>
 
   <script src="synth.stdlib.js"></script>
   <script src="expedition.sources.js"></script>
