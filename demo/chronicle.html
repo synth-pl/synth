@@ -29,13 +29,19 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      overflow-x: clip;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow-x: clip;
     }
 
     /* ── Header ── */
@@ -324,34 +330,87 @@
 
     /* ── Tablet / mobile ─────────────────────────────────────── */
     @media (max-width: 768px) {
-      .page-header { padding: 0 16px; gap: 8px; }
-      .header-badge { font-size: 10px; padding: 2px 7px; }
+      .page-header {
+        padding: 0 16px;
+        gap: 8px;
+        flex-wrap: wrap;
+        height: auto;
+        min-height: var(--header-h);
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .header-badge {
+        margin-left: 0;
+        font-size: 10px;
+        padding: 2px 7px;
+      }
 
       .page-body {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         padding: 12px 12px 0;
         gap: 12px;
       }
+      /* Flatten so we can order: kingdom header → controls → log → source */
       .kingdom-panel {
-        grid-column: 1;
-        grid-row: 1;
-        padding-right: 0;
+        display: contents;
+      }
+      .kingdom-header {
+        order: 1;
+        min-width: 0;
       }
       .controls-panel {
-        grid-column: 1;
-        grid-row: 2;
+        order: 2;
+        width: 100%;
+        min-width: 0;
+      }
+      .log-panel {
+        order: 3;
+        flex: none;
+        height: min(42vh, 360px);
+        min-height: 220px;
+        min-width: 0;
       }
       .source-panel {
-        grid-column: 1;
-        grid-row: 3;
+        order: 4;
+        margin-top: 8px;
+        min-width: 0;
       }
+
+      #chr-log {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+
       .kingdom-day { font-size: 28px; }
       .kingdom-name { font-size: 20px; }
+
+      .ctrl-btn {
+        min-height: 44px;
+        font-size: 12px;
+      }
+      .speed-btn-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      .speed-btn {
+        text-align: center;
+        min-height: 40px;
+        padding: 8px 4px;
+      }
+
+      .source-info {
+        font-size: 10px;
+        line-height: 1.4;
+        word-break: break-word;
+      }
     }
 
     /* ── Small phones (≤ 480px) ───────────────────────────────── */
     @media (max-width: 480px) {
-      .page-header { padding: 0 12px; }
+      .page-header { padding: 10px 12px; }
+      .header-glyph { font-size: 18px; }
       .header-title { font-size: 15px; }
       .header-sub { font-size: 10px; }
       .header-badge { display: none; }
@@ -361,12 +420,42 @@
       .kingdom-header { padding: 14px 16px; }
       .kingdom-name { font-size: 17px; }
       .kingdom-day { font-size: 24px; }
-      .kingdom-meta { font-size: 14px; }
+      .kingdom-meta {
+        font-size: 13px;
+        line-height: 1.45;
+      }
 
-      .ctrl-btn { font-size: 11px; padding: 8px 0; }
-      .speed-btn { padding: 5px 9px; }
+      .log-panel {
+        height: min(38vh, 300px);
+        min-height: 180px;
+      }
+      .log-title { padding: 10px 14px; }
+      #chr-log { padding: 10px 14px; }
+      .chr-entry { font-size: 13px; padding: 7px 0; }
+      .chr-entry:first-child { font-size: 14px; }
+
+      .controls-panel { padding: 14px; gap: 12px; }
+      .ctrl-btn-row { gap: 6px; }
+      .ctrl-btn {
+        font-size: 11px;
+        padding: 10px 0;
+        min-height: 44px;
+      }
+      .speed-btn-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .speed-btn {
+        padding: 10px 6px;
+        min-height: 44px;
+        font-size: 12px;
+      }
 
       .source-block pre { font-size: 11px; padding: 12px; }
+      footer {
+        padding: 12px 10px;
+        font-size: 10px;
+        line-height: 1.5;
+      }
     }
   </style>
 </head>
