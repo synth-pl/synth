@@ -35,6 +35,7 @@ let traffic = [];
 let road_scroll = 0.0;
 let spawn_timer = 0.0;
 let invuln_timer = 0.0;
+let score_accum = 0.0;
 
 const lane_x = (() => {
   const __cache = new Map();
@@ -64,6 +65,7 @@ const start_game = () => {
   road_scroll = 0.0;
   spawn_timer = 0.0;
   invuln_timer = 0.0;
+  score_accum = 0.0;
   return Game.set({score: 0, lives: 3, phase: "playing", speed: 220.0});
 };
 
@@ -131,7 +133,9 @@ const tick = (dt) => {
     }
     let new_speed = speed + dt * 6.0;
     let cap_speed = new_speed < 560.0 ? new_speed : 560.0;
-    let pts = $floor(speed * dt * 0.08);
+    score_accum = score_accum + speed * dt * 0.08;
+    let pts = $floor(score_accum);
+    score_accum = score_accum - pts;
     let new_score = Game.score + pts;
     let new_hi = new_score > Game.hi ? new_score : Game.hi;
     return Game.set({speed: cap_speed, score: new_score, hi: new_hi});
