@@ -18,13 +18,11 @@
 
 // ── Constrained types ─────────────────────────────────────────────────────────
 
-type Gold      = int    where >= 0
-type XP        = int    where >= 0
+type Gold, XP  = int    where >= 0
 type HP        = int    where >= 0 && <= 999
 type StatValue = int    where >= 1 && <= 50
 type Level     = int    where >= 1 && <= 20
-type HeroName  = string where length > 0
-type ClassName = string where length > 0
+type HeroName, ClassName = string where length > 0
 
 // ── Records ───────────────────────────────────────────────────────────────────
 

@@ -19,8 +19,7 @@ window.MUSIC_SOURCES = {
 
 type BPM        = int    where >= 60 && <= 200
 type Duration   = int    where > 0
-type TrackTitle = string where length > 0
-type ArtistName = string where length > 0
+type TrackTitle, ArtistName = string where length > 0
 type Volume     = int    where >= 0 && <= 100
 
 // ── v0.1: Record declarations ─────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 /** @param {string} v @returns {boolean} */
 const __validate_NonEmptyString = (v) => v.length > 0;
 /** @param {string} v @returns {boolean} */
+const __validate_CSSClass = (v) => v.length > 0;
+/** @param {string} v @returns {boolean} */
 const __validate_EmailAddress = (v) => __synth_presets.email.test(v);
 /** @param {number} v @returns {boolean} */
 const __validate_PositiveInt = (v) => v > 0;
@@ -8,8 +10,6 @@ const __validate_PositiveInt = (v) => v > 0;
 const __validate_Score = (v) => (v >= 0) && (v <= 100);
 /** @param {number} v @returns {boolean} */
 const __validate_BoundedCount = (v) => (v >= -10) && (v <= 10);
-/** @param {string} v @returns {boolean} */
-const __validate_CSSClass = (v) => v.length > 0;
 /** @param {string} v @returns {boolean} */
 const __validate_SlugString = (v) => __synth_presets.slug.test(v);
 

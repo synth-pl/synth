@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Demos
+
+- **Synth Fantasy (`rpg2`)** — classic FF-style canvas turn battle vertical slice with Aria, Theron, and Lyra (Fight/Magic/Item/Defend menus, two fights + Shadow Wyrm boss).
+
+### Language
+
+- **Multi-name type aliases** — `type HeroName, ClassName = string where length > 0` declares several aliases that share one base type and optional `where` clause (one `__validate_*` each). Tagged unions and type parameters still require a single name.
+
 ### Checker
 
 - **Unbound names are errors** — `synth --check` / `check_source` resolve identifiers against scope (lets, params, imports, stores, union variants, stdlib/host allowlist). Catches missing tables like `LEVEL_BLURBS` that used to pass check and fail only at runtime.

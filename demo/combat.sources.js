@@ -18,10 +18,8 @@ window.COMBAT_SOURCES = {
 // Violation throws at the boundary — stats outside range are impossible by type.
 
 type HP        = int    where >= 0 && <= 200
-type StatValue = int    where >= 1 && <= 20
-type Level     = int    where >= 1 && <= 20
-type HeroName  = string where length > 0
-type ClassName = string where length > 0
+type StatValue, Level = int where >= 1 && <= 20
+type HeroName, ClassName = string where length > 0
 
 // ── v0.1: Records ─────────────────────────────────────────────────────────────
 

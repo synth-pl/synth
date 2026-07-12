@@ -1,0 +1,5 @@
+type A, B = int
+
+fn add :: (x: A, y: B) -> int {
+  x + y
+}

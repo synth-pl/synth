@@ -1,0 +1,691 @@
+// ── SYNTH FANTASY — classic FF turn battle (vertical slice) ───────────────────
+// Host contract:
+//   Game · start_game · menu_move · menu_confirm · menu_cancel · tick · get_view
+// Party: Aria (mage), Theron (knight), Lyra (ranger)
+// Scenes: title → fight1 → fight2 → boss → victory | gameover
+
+type HP = int where >= 0 && <= 999
+type MP = int where >= 0 && <= 99
+type Stat = int where >= 1 && <= 50
+
+record Hero {
+  id: string
+  name: string
+  heroClass: string
+  hp: int
+  maxHp: int
+  mp: int
+  maxMp: int
+  atk: int
+  def: int
+  alive: bool
+  defending: bool
+  color: string
+}
+
+record Foe {
+  id: string
+  name: string
+  hp: int
+  maxHp: int
+  atk: int
+  def: int
+  weakness: string
+  alive: bool
+  color: string
+}
+
+record MenuRow {
+  id: string
+  label: string
+}
+
+record Anim {
+  kind: string
+  timer: float
+  actor: int
+  target: int
+  amount: int
+  text: string
+  side: string
+}
+
+store Game {
+  scene:      string = "title"
+  encounter:  int    = 0
+  phase:      string = "idle"
+  active:     int    = 0
+  menu_mode:  string = "command"
+  menu_index: int    = 0
+  potions:    int    = 3
+  log0:       string = ""
+  log1:       string = ""
+  log2:       string = ""
+}
+
+let mut party = []
+let mut foes = []
+let mut anim = { kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero" }
+let mut pending = { cmd: "", skill: "" }
+let mut enemy_cursor = 0
+
+// ── Pure helpers ──────────────────────────────────────────────────────────────
+
+@intent "Physical damage after defense and optional defend stance"
+@pure @total @memo
+fn phys_damage :: (atk: Stat, def: Stat, defending: bool) -> int {
+  let raw = atk * 2 - def
+  let base = raw > 1 ? raw : 1
+  defending ? (floor(base / 2) > 1 ? floor(base / 2) : 1) : base
+}
+
+@intent "Spell damage with weakness bonus"
+@pure @total @memo
+fn spell_damage :: (power: Stat, def: Stat, weakness: string, element: string) -> int {
+  let raw = power * 3 - floor(def / 2)
+  let base = raw > 4 ? raw : 4
+  element == weakness ? base + 8 : base
+}
+
+@intent "Heal amount capped by missing HP"
+@pure @total
+fn heal_amount :: (missing: HP, potency: int) -> int {
+  missing < potency ? missing : potency
+}
+
+fn push_log(msg: string) {
+  Game.set({ log2: Game.log1, log1: Game.log0, log0: msg })
+}
+
+fn make_party() {
+  [
+    { id: "theron", name: "Theron", heroClass: "knight", hp: 92, maxHp: 92, mp: 12, maxMp: 12, atk: 14, def: 12, alive: true, defending: false, color: "#00e5ff" },
+    { id: "aria",   name: "Aria",   heroClass: "mage",   hp: 68, maxHp: 68, mp: 36, maxMp: 36, atk: 8,  def: 6,  alive: true, defending: false, color: "#b84fff" },
+    { id: "lyra",   name: "Lyra",   heroClass: "ranger", hp: 78, maxHp: 78, mp: 22, maxMp: 22, atk: 12, def: 8,  alive: true, defending: false, color: "#06d6a0" }
+  ]
+}
+
+fn encounter_foes(n: int) {
+  match n {
+    | 0 => [
+      { id: "goblin", name: "Goblin Scout", hp: 38, maxHp: 38, atk: 9,  def: 3, weakness: "fire",   alive: true, color: "#ff6e3a" },
+      { id: "slime",  name: "Neon Slime",   hp: 28, maxHp: 28, atk: 7,  def: 2, weakness: "light",  alive: true, color: "#ff2d78" }
+    ]
+    | 1 => [
+      { id: "bandit", name: "Forest Bandit", hp: 52, maxHp: 52, atk: 12, def: 5, weakness: "nature", alive: true, color: "#ffd166" },
+      { id: "archer", name: "Ash Archer",    hp: 44, maxHp: 44, atk: 14, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" }
+    ]
+    | _ => [
+      { id: "wyrm", name: "Shadow Wyrm", hp: 160, maxHp: 160, atk: 16, def: 9, weakness: "arcane", alive: true, color: "#b84fff" }
+    ]
+  }
+}
+
+fn encounter_title(n: int) -> string =
+  match n {
+    | 0 => "Encounter 1 — Mistwood Path"
+    | 1 => "Encounter 2 — Ruined Gate"
+    | _ => "Boss — Shadow Wyrm"
+  }
+
+fn party_alive() -> bool = party.any(h => h.alive)
+fn foes_alive() -> bool = foes.any(e => e.alive)
+
+fn first_alive_from(start: int) -> int {
+  let n = party.length
+  let mut i = start
+  let mut found = 0 - 1
+  let mut guard = 0
+  while guard < n {
+    let idx = i >= n ? 0 : i
+    if idx < n and party[idx].alive and found < 0 {
+      found = idx
+    }
+    i = idx + 1
+    guard = guard + 1
+  }
+  found
+}
+
+fn next_alive_after(cur: int) -> int {
+  let n = party.length
+  let mut i = cur + 1
+  while i < n {
+    if party[i].alive { return i }
+    i = i + 1
+  }
+  0 - 1
+}
+
+fn first_alive_foe() -> int {
+  let mut i = 0
+  while i < foes.length {
+    if foes[i].alive { return i }
+    i = i + 1
+  }
+  0 - 1
+}
+
+fn clear_defending() {
+  party = party.map(h => { ...h, defending: false })
+}
+
+fn set_hero(i: int, h: any) {
+  party = set_at(party, i, h)
+}
+
+fn set_foe(i: int, e: any) {
+  foes = set_at(foes, i, e)
+}
+
+fn begin_hero_turn(idx: int) {
+  if idx < 0 {
+    begin_enemy_phase()
+  } else {
+    let h = party[idx]
+    set_hero(idx, { ...h, defending: false })
+    pending = { cmd: "", skill: "" }
+    Game.set({ active: idx, phase: "hero_command", menu_mode: "command", menu_index: 0 })
+  }
+}
+
+fn begin_enemy_phase() {
+  enemy_cursor = 0
+  Game.set({ phase: "enemy_act", menu_mode: "command", menu_index: 0 })
+  run_next_enemy(0)
+}
+
+fn finish_battle_check() {
+  if not foes_alive() {
+    Game.set({ phase: "idle", scene: Game.encounter >= 2 ? "victory" : "battle" })
+    if Game.encounter >= 2 {
+      push_log("Shadow Wyrm falls! The party prevails!")
+      Game.set({ scene: "victory" })
+    } else {
+      push_log("Victory! Press Z to continue.")
+      Game.set({ phase: "battle_clear" })
+    }
+  } else if not party_alive() {
+    push_log("The party has fallen...")
+    Game.set({ scene: "gameover", phase: "idle" })
+  }
+}
+
+fn start_encounter(n: int) {
+  party = make_party()
+  foes = encounter_foes(n)
+  anim = { kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero" }
+  pending = { cmd: "", skill: "" }
+  let pots = n == 0 ? 3 : Game.potions
+  Game.set({
+    scene: "battle",
+    encounter: n,
+    potions: pots,
+    log0: encounter_title(n),
+    log1: n == 0 ? "Teach them steel." : (n == 1 ? "Magic and medicine." : "Aim for the arcane wound."),
+    log2: "",
+    phase: "hero_command",
+    active: 0,
+    menu_mode: "command",
+    menu_index: 0
+  })
+  begin_hero_turn(first_alive_from(0))
+}
+
+fn start_game() {
+  Game.set({ potions: 3 })
+  start_encounter(0)
+}
+
+fn advance_after_clear() {
+  start_encounter(Game.encounter + 1)
+}
+
+// ── Menus ─────────────────────────────────────────────────────────────────────
+
+fn command_menu(hero: any) -> any[] {
+  match hero.heroClass {
+    | "knight" => [
+      { id: "fight",  label: "Fight" },
+      { id: "defend", label: "Defend" },
+      { id: "guard",  label: "Guard" },
+      { id: "item",   label: "Item" }
+    ]
+    | "mage" => [
+      { id: "fight", label: "Fight" },
+      { id: "magic", label: "Magic" },
+      { id: "item",  label: "Item" }
+    ]
+    | _ => [
+      { id: "fight", label: "Fight" },
+      { id: "skill", label: "Skill" },
+      { id: "item",  label: "Item" }
+    ]
+  }
+}
+
+fn magic_menu() -> any[] = [
+  { id: "fire", label: "Fire   8 MP" },
+  { id: "cure", label: "Cure   6 MP" },
+  { id: "bolt", label: "Arcane 10 MP" }
+]
+
+fn skill_menu() -> any[] = [
+  { id: "pierce", label: "Pierce  4 MP" },
+  { id: "rain",   label: "Rain    7 MP" }
+]
+
+fn item_menu() -> any[] {
+  let n = Game.potions
+  [{ id: "potion", label: "Potion  x{n}" }]
+}
+
+fn target_enemy_menu() -> any[] =
+  range(0, foes.length)
+    .filter(i => foes[i].alive)
+    .map(i => { id: "enemy", label: foes[i].name, index: i })
+
+fn target_ally_menu() -> any[] =
+  range(0, party.length)
+    .filter(i => party[i].alive)
+    .map(i => { id: "ally", label: party[i].name, index: i })
+
+fn current_menu() -> any[] {
+  match Game.menu_mode {
+    | "command"      => command_menu(party[Game.active])
+    | "magic"        => magic_menu()
+    | "skill"        => skill_menu()
+    | "item"         => item_menu()
+    | "target_enemy" => target_enemy_menu()
+    | "target_ally"  => target_ally_menu()
+    | _              => []
+  }
+}
+
+fn clamp_menu_index() {
+  let m = current_menu()
+  let max = m.length > 0 ? m.length - 1 : 0
+  let idx = Game.menu_index < 0 ? 0 : (Game.menu_index > max ? max : Game.menu_index)
+  Game.set({ menu_index: idx })
+}
+
+fn menu_move(dir: int) {
+  if Game.scene != "battle" { return }
+  if Game.phase != "hero_command" and Game.phase != "hero_pick" { return }
+  let m = current_menu()
+  if m.length == 0 { return }
+  let next = Game.menu_index + dir
+  let wrapped = next < 0 ? m.length - 1 : (next >= m.length ? 0 : next)
+  Game.set({ menu_index: wrapped })
+}
+
+fn open_mode(mode: string) {
+  Game.set({ menu_mode: mode, menu_index: 0, phase: "hero_pick" })
+}
+
+fn start_resolve(kind: string, actor: int, target: int, amount: int, text: string, side: string) {
+  anim = { kind: kind, timer: 0.55, actor: actor, target: target, amount: amount, text: text, side: side }
+  Game.set({ phase: "resolve", menu_mode: "command" })
+  push_log(text)
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+fn do_fight(actor: int, foe_i: int) {
+  let h = party[actor]
+  let e = foes[foe_i]
+  let dmg = phys_damage(h.atk, e.def, false)
+  let nhp = e.hp - dmg
+  let dead = nhp <= 0
+  set_foe(foe_i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
+  start_resolve("attack", actor, foe_i, dmg, "{h.name} strikes {e.name} for {dmg}!", "hero")
+}
+
+fn do_defend(actor: int) {
+  let h = party[actor]
+  set_hero(actor, { ...h, defending: true })
+  start_resolve("defend", actor, actor, 0, "{h.name} raises a guard.", "hero")
+}
+
+fn do_guard(actor: int) {
+  let h = party[actor]
+  if h.mp < 3 {
+    push_log("Not enough MP!")
+    Game.set({ phase: "hero_command", menu_mode: "command", menu_index: 0 })
+  } else {
+    set_hero(actor, { ...h, mp: h.mp - 3, defending: true })
+    start_resolve("guard", actor, actor, 0, "{h.name} steels the line!", "hero")
+  }
+}
+
+fn do_fire(actor: int, foe_i: int) {
+  let h = party[actor]
+  if h.mp < 8 {
+    push_log("Not enough MP!")
+    open_mode("magic")
+  } else {
+    let e = foes[foe_i]
+    let dmg = spell_damage(h.atk + 4, e.def, e.weakness, "fire")
+    let nhp = e.hp - dmg
+    let dead = nhp <= 0
+    set_hero(actor, { ...h, mp: h.mp - 8 })
+    set_foe(foe_i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
+    start_resolve("magic", actor, foe_i, dmg, "{h.name} casts Fire on {e.name}! ({dmg})", "hero")
+  }
+}
+
+fn do_bolt(actor: int, foe_i: int) {
+  let h = party[actor]
+  if h.mp < 10 {
+    push_log("Not enough MP!")
+    open_mode("magic")
+  } else {
+    let e = foes[foe_i]
+    let dmg = spell_damage(h.atk + 6, e.def, e.weakness, "arcane")
+    let nhp = e.hp - dmg
+    let dead = nhp <= 0
+    set_hero(actor, { ...h, mp: h.mp - 10 })
+    set_foe(foe_i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
+    start_resolve("magic", actor, foe_i, dmg, "{h.name} casts Arcane on {e.name}! ({dmg})", "hero")
+  }
+}
+
+fn do_cure(actor: int, ally_i: int) {
+  let h = party[actor]
+  if h.mp < 6 {
+    push_log("Not enough MP!")
+    open_mode("magic")
+  } else {
+    let a = party[ally_i]
+    let healed = heal_amount(a.maxHp - a.hp, 28)
+    set_hero(actor, { ...h, mp: h.mp - 6 })
+    set_hero(ally_i, { ...a, hp: a.hp + healed })
+    start_resolve("heal", actor, ally_i, healed, "{h.name} cures {a.name} (+{healed})", "hero")
+  }
+}
+
+fn do_pierce(actor: int, foe_i: int) {
+  let h = party[actor]
+  if h.mp < 4 {
+    push_log("Not enough MP!")
+    open_mode("skill")
+  } else {
+    let e = foes[foe_i]
+    let dmg = phys_damage(h.atk + 3, floor(e.def / 2), false)
+    let nhp = e.hp - dmg
+    let dead = nhp <= 0
+    set_hero(actor, { ...h, mp: h.mp - 4 })
+    set_foe(foe_i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
+    start_resolve("skill", actor, foe_i, dmg, "{h.name} pierces {e.name} for {dmg}!", "hero")
+  }
+}
+
+fn do_rain(actor: int) {
+  let h = party[actor]
+  if h.mp < 7 {
+    push_log("Not enough MP!")
+    open_mode("skill")
+  } else {
+    set_hero(actor, { ...h, mp: h.mp - 7 })
+    let mut total = 0
+    let mut i = 0
+    while i < foes.length {
+      let e = foes[i]
+      if e.alive {
+        let dmg = spell_damage(h.atk, e.def, e.weakness, "nature")
+        let nhp = e.hp - dmg
+        let dead = nhp <= 0
+        set_foe(i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
+        total = total + dmg
+      }
+      i = i + 1
+    }
+    start_resolve("skill", actor, first_alive_foe(), total, "{h.name} looses Arrow Rain! ({total})", "hero")
+  }
+}
+
+fn do_potion(actor: int, ally_i: int) {
+  if Game.potions <= 0 {
+    push_log("No potions left!")
+    open_mode("item")
+  } else {
+    let a = party[ally_i]
+    let healed = heal_amount(a.maxHp - a.hp, 40)
+    Game.set({ potions: Game.potions - 1 })
+    set_hero(ally_i, { ...a, hp: a.hp + healed })
+    start_resolve("item", actor, ally_i, healed, "{a.name} drinks a Potion (+{healed})", "hero")
+  }
+}
+
+fn confirm_command_row(row: any) {
+  if row.id == "fight" {
+    pending = { cmd: "fight", skill: "" }
+    open_mode("target_enemy")
+  } else if row.id == "defend" {
+    do_defend(Game.active)
+  } else if row.id == "guard" {
+    do_guard(Game.active)
+  } else if row.id == "magic" {
+    open_mode("magic")
+  } else if row.id == "skill" {
+    open_mode("skill")
+  } else if row.id == "item" {
+    open_mode("item")
+  }
+}
+
+fn confirm_magic_row(row: any) {
+  if row.id == "fire" {
+    pending = { cmd: "magic", skill: "fire" }
+    open_mode("target_enemy")
+  } else if row.id == "bolt" {
+    pending = { cmd: "magic", skill: "bolt" }
+    open_mode("target_enemy")
+  } else if row.id == "cure" {
+    pending = { cmd: "magic", skill: "cure" }
+    open_mode("target_ally")
+  }
+}
+
+fn confirm_skill_row(row: any) {
+  if row.id == "pierce" {
+    pending = { cmd: "skill", skill: "pierce" }
+    open_mode("target_enemy")
+  } else if row.id == "rain" {
+    do_rain(Game.active)
+  }
+}
+
+fn confirm_item_row(row: any) {
+  if row.id == "potion" {
+    pending = { cmd: "item", skill: "potion" }
+    open_mode("target_ally")
+  }
+}
+
+fn confirm_target_row(row: any) {
+  let ti = row.index
+  if pending.cmd == "fight" {
+    do_fight(Game.active, ti)
+  } else if pending.cmd == "magic" {
+    if pending.skill == "fire" { do_fire(Game.active, ti) }
+    else if pending.skill == "bolt" { do_bolt(Game.active, ti) }
+    else if pending.skill == "cure" { do_cure(Game.active, ti) }
+  } else if pending.cmd == "skill" {
+    do_pierce(Game.active, ti)
+  } else if pending.cmd == "item" {
+    do_potion(Game.active, ti)
+  }
+}
+
+fn menu_confirm() {
+  if Game.scene == "title" {
+    start_game()
+    return
+  }
+  if Game.scene == "victory" or Game.scene == "gameover" {
+    Game.set({ scene: "title", phase: "idle", encounter: 0 })
+    return
+  }
+  if Game.scene == "battle" and Game.phase == "battle_clear" {
+    advance_after_clear()
+    return
+  }
+  if Game.scene != "battle" { return }
+  if Game.phase != "hero_command" and Game.phase != "hero_pick" { return }
+
+  let m = current_menu()
+  if m.length == 0 { return }
+  let row = m[Game.menu_index]
+  match Game.menu_mode {
+    | "command"      => confirm_command_row(row)
+    | "magic"        => confirm_magic_row(row)
+    | "skill"        => confirm_skill_row(row)
+    | "item"         => confirm_item_row(row)
+    | "target_enemy" => confirm_target_row(row)
+    | "target_ally"  => confirm_target_row(row)
+    | _              => {}
+  }
+}
+
+fn menu_cancel() {
+  if Game.scene != "battle" { return }
+  if Game.phase != "hero_pick" and Game.phase != "hero_command" { return }
+  if Game.menu_mode == "command" {
+    0
+  } else if Game.menu_mode == "target_enemy" {
+    if pending.cmd == "magic" {
+      open_mode("magic")
+    } else if pending.cmd == "skill" {
+      open_mode("skill")
+    } else {
+      Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
+    }
+  } else if Game.menu_mode == "target_ally" {
+    if pending.cmd == "magic" {
+      open_mode("magic")
+    } else if pending.cmd == "item" {
+      open_mode("item")
+    } else {
+      Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
+    }
+  } else {
+    Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
+  }
+}
+
+fn after_hero_resolve() {
+  finish_battle_check()
+  if Game.scene != "battle" { return }
+  if Game.phase == "battle_clear" { return }
+  let nxt = next_alive_after(Game.active)
+  if nxt < 0 {
+    begin_enemy_phase()
+  } else {
+    begin_hero_turn(nxt)
+  }
+}
+
+fn enemy_strike(ei: int) {
+  let e = foes[ei]
+  if not e.alive {
+    run_next_enemy(ei + 1)
+    return
+  }
+  let targets = range(0, party.length).filter(i => party[i].alive)
+  if targets.length == 0 {
+    finish_battle_check()
+    return
+  }
+  let ti = targets[floor(random() * targets.length)]
+  let h = party[ti]
+  let dmg = phys_damage(e.atk, h.def, h.defending)
+  let nhp = h.hp - dmg
+  let dead = nhp <= 0
+  set_hero(ti, { ...h, hp: dead ? 0 : nhp, alive: not dead, defending: false })
+  enemy_cursor = ei + 1
+  start_resolve("enemy", ei, ti, dmg, "{e.name} hits {h.name} for {dmg}!", "enemy")
+}
+
+fn run_next_enemy(start: int) {
+  let mut i = start
+  while i < foes.length {
+    if foes[i].alive {
+      enemy_strike(i)
+      return
+    }
+    i = i + 1
+  }
+  // all enemies acted
+  finish_battle_check()
+  if Game.scene == "battle" and Game.phase != "battle_clear" {
+    begin_hero_turn(first_alive_from(0))
+  }
+}
+
+fn after_enemy_resolve() {
+  finish_battle_check()
+  if Game.scene != "battle" { return }
+  if Game.phase == "battle_clear" { return }
+  run_next_enemy(enemy_cursor)
+}
+
+fn tick(dt: float) {
+  if anim.kind != "none" and anim.timer > 0.0 {
+    anim = { ...anim, timer: anim.timer - dt }
+    if anim.timer <= 0.0 {
+      let side = anim.side
+      anim = { ...anim, kind: "none", timer: 0.0 }
+      if side == "enemy" {
+        after_enemy_resolve()
+      } else {
+        after_hero_resolve()
+      }
+    }
+  }
+}
+
+fn get_view() {
+  {
+    scene: Game.scene,
+    encounter: Game.encounter,
+    title: encounter_title(Game.encounter),
+    phase: Game.phase,
+    menu_mode: Game.menu_mode,
+    menu_index: Game.menu_index,
+    menu: current_menu(),
+    active: Game.active,
+    potions: Game.potions,
+    logs: [Game.log0, Game.log1, Game.log2],
+    anim: anim,
+    party: party.map(h => h),
+    foes: foes.map(e => e),
+    hint: Game.scene == "title" ? "Press Z / Enter / Tap to start" :
+      (Game.scene == "victory" or Game.scene == "gameover" ? "Press Z / Enter for title" :
+      (Game.phase == "battle_clear" ? "Press Z / Enter for next fight" :
+        "↑↓ / WS select · Z/Enter confirm · X/Esc back"))
+  }
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+@test "phys_damage respects defend half" {
+  phys_damage(10, 4, false) == 16 and phys_damage(10, 4, true) == 8
+}
+
+@test "spell_damage weakness bonus" {
+  spell_damage(8, 4, "arcane", "arcane") == spell_damage(8, 4, "fire", "arcane") + 8
+}
+
+@test "heal_amount caps at missing" {
+  heal_amount(10, 28) == 10 and heal_amount(40, 28) == 28
+}
+
+@test "encounter 0 has two foes" {
+  encounter_foes(0).length == 2
+}
+
+@test "party has Aria Theron Lyra" {
+  let p = make_party()
+  p[0].name == "Theron" and p[1].name == "Aria" and p[2].name == "Lyra"
+}

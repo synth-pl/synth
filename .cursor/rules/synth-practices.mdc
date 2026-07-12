@@ -28,6 +28,7 @@ Canonical copy for agents working in this repo. Mist also keeps a mirror under `
 ## Constrained types (`where`)
 
 - Prefer on **boundaries** (params/returns that shouldn't lie): scores, levels, indices — see RPG/Controls.
+- Same base + `where` for multiple names: `type HeroName, ClassName = string where length > 0` (expands to one alias each; tagged unions / shared type params stay single-name).
 - Avoid sprinkling on every hot-path param if validation noise/cost isn't worth it; `store` fields in demos are still mostly bare `int`/`string`.
 - Training bias defaults to unconstrained ints in game loops — push back when a contract would actually catch bugs.
 - Don't use top-level `let x: T[] = […]` until the checker hang is fixed; untyped array + `record` shape is the workaround.

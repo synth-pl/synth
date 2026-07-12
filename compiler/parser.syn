@@ -282,6 +282,24 @@ fn ps_is_assignable(expr: any) -> bool {
 
 // ── Entry & top-level ─────────────────────────────────────────────────────────
 
+fn ps_flatten_top_level(decl: any) -> any[] {
+  if decl == null {
+    []
+  } else if decl.kind == "DeclList" {
+    decl.decls
+  } else if decl.kind == "ExportDecl" and decl.decl != null and decl.decl.kind == "DeclList" {
+    let mut out = []
+    let mut i = 0
+    while i < decl.decl.decls.length {
+      out = out.concat([{ kind: "ExportDecl", decl: decl.decl.decls[i], line: decl.line }])
+      i = i + 1
+    }
+    out
+  } else {
+    [decl]
+  }
+}
+
 fn ps_parse(st: ParserState) -> ParseVal {
   let mut s = st
   let mut body = []
@@ -289,9 +307,7 @@ fn ps_parse(st: ParserState) -> ParseVal {
   while not ps_is_eof(s) and not done {
     let got = ps_parse_top_level(s)
     s = got.st
-    if got.value != null {
-      body = body.concat([got.value])
-    }
+    body = body.concat(ps_flatten_top_level(got.value))
   }
   ParseVal(s, program(body))
 }
@@ -525,17 +541,40 @@ fn ps_parse_enum_decl(st: ParserState) -> ParseVal {
   ParseVal(s, { kind: "EnumDecl", name: name_got.value.value, variants: variants, line: line })
 }
 
+fn ps_make_type_alias(name: string, type_params: any[], ty: any, constraint: any, line: int) -> any {
+  if constraint == null {
+    { kind: "TypeAlias", name: name, typeParams: type_params, type: ty, line: line }
+  } else {
+    { kind: "TypeAlias", name: name, typeParams: type_params, type: ty, constraint: constraint, line: line }
+  }
+}
+
 fn ps_parse_type_alias_or_union(st: ParserState) -> ParseVal {
   let kw_got = ps_expect(st, "KW_TYPE")
   let line = kw_got.value.line
   let mut s = kw_got.st
   let name_got = ps_expect(s, "IDENT")
   s = name_got.st
+  let mut names = [name_got.value.value]
+  while ps_check(s, "COMMA") {
+    s = ps_advance(s).st
+    let next_got = ps_expect(s, "IDENT")
+    s = next_got.st
+    names = names.concat([next_got.value.value])
+  }
   let tp_got = ps_parse_type_params(s)
   s = tp_got.st
+  if names.length > 1 and tp_got.value.length > 0 {
+    let err = { severity: "error", message: "Shared type parameters are not allowed on multi-name type aliases", line: line, col: 1 }
+    s = ParserState(s.tokens, s.pos, s.in_match_guard, s.errors.concat([err]))
+  }
   s = ps_expect(s, "ASSIGN").st
   if ps_check(s, "PIPE") {
-    ps_parse_tagged_union_body(s, name_got.value.value, tp_got.value, line)
+    if names.length > 1 {
+      let err = { severity: "error", message: "Tagged unions require a single type name", line: line, col: 1 }
+      s = ParserState(s.tokens, s.pos, s.in_match_guard, s.errors.concat([err]))
+    }
+    ps_parse_tagged_union_body(s, names[0], tp_got.value, line)
   } else {
     let ty_got = ps_parse_type_expr(s)
     s = ty_got.st
@@ -546,10 +585,16 @@ fn ps_parse_type_alias_or_union(st: ParserState) -> ParseVal {
       s = c_got.st
       constraint = c_got.value
     }
-    if constraint == null {
-      ParseVal(s, { kind: "TypeAlias", name: name_got.value.value, typeParams: tp_got.value, type: ty_got.value, line: line })
+    if names.length == 1 {
+      ParseVal(s, ps_make_type_alias(names[0], tp_got.value, ty_got.value, constraint, line))
     } else {
-      ParseVal(s, { kind: "TypeAlias", name: name_got.value.value, typeParams: tp_got.value, type: ty_got.value, constraint: constraint, line: line })
+      let mut decls = []
+      let mut i = 0
+      while i < names.length {
+        decls = decls.concat([ps_make_type_alias(names[i], tp_got.value, ty_got.value, constraint, line)])
+        i = i + 1
+      }
+      ParseVal(s, { kind: "DeclList", decls: decls })
     }
   }
 }
@@ -885,9 +930,7 @@ fn ps_parse_module(st: ParserState) -> ParseVal {
   while not ps_check(s, "RBRACE") and not ps_is_eof(s) {
     let decl_got = ps_parse_top_level(s)
     s = decl_got.st
-    if decl_got.value != null {
-      body = body.concat([decl_got.value])
-    }
+    body = body.concat(ps_flatten_top_level(decl_got.value))
   }
   s = ps_expect(s, "RBRACE").st
   ParseVal(s, { kind: "ModuleDecl", name: name_got.value.value, annotations: ann_got.value, body: body, line: line })

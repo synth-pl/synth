@@ -1340,6 +1340,28 @@ const ps_is_assignable = (expr) => {
 };
 
 /**
+ * @param {*} decl
+ * @returns {*}
+ */
+const ps_flatten_top_level = (decl) => {
+  if (decl == null) {
+    return [];
+  } else if (decl.kind == "DeclList") {
+    return decl.decls;
+  } else if (decl.kind == "ExportDecl" && decl.decl != null && decl.decl.kind == "DeclList") {
+    let out = [];
+    let i = 0;
+    while (i < decl.decl.decls.length) {
+      out = out.concat([{kind: "ExportDecl", decl: decl.decl.decls[i], line: decl.line}]);
+      i = i + 1;
+    }
+    return out;
+  } else {
+    return [decl];
+  }
+};
+
+/**
  * @param {ParserState} st
  * @returns {ParseVal}
  */
@@ -1350,9 +1372,7 @@ const ps_parse = (st) => {
   while (!ps_is_eof(s) && !done) {
     let got = ps_parse_top_level(s);
     s = got.st;
-    if (got.value != null) {
-      body = body.concat([got.value]);
-    }
+    body = body.concat(ps_flatten_top_level(got.value));
   }
   return ParseVal(s, program(body));
 };
@@ -1645,6 +1665,22 @@ const ps_parse_enum_decl = (st) => {
 };
 
 /**
+ * @param {string} name
+ * @param {*} type_params
+ * @param {*} ty
+ * @param {*} constraint
+ * @param {number} line
+ * @returns {*}
+ */
+const ps_make_type_alias = (name, type_params, ty, constraint, line) => {
+  if (constraint == null) {
+    return {kind: "TypeAlias", name: name, typeParams: type_params, type: ty, line: line};
+  } else {
+    return {kind: "TypeAlias", name: name, typeParams: type_params, type: ty, constraint: constraint, line: line};
+  }
+};
+
+/**
  * @param {ParserState} st
  * @returns {ParseVal}
  */
@@ -1654,11 +1690,26 @@ const ps_parse_type_alias_or_union = (st) => {
   let s = kw_got.st;
   let name_got = ps_expect(s, "IDENT");
   s = name_got.st;
+  let names = [name_got.value.value];
+  while (ps_check(s, "COMMA")) {
+    s = ps_advance(s).st;
+    let next_got = ps_expect(s, "IDENT");
+    s = next_got.st;
+    names = names.concat([next_got.value.value]);
+  }
   let tp_got = ps_parse_type_params(s);
   s = tp_got.st;
+  if (names.length > 1 && tp_got.value.length > 0) {
+    let err = {severity: "error", message: "Shared type parameters are not allowed on multi-name type aliases", line: line, col: 1};
+    s = ParserState(s.tokens, s.pos, s.in_match_guard, s.errors.concat([err]));
+  }
   s = ps_expect(s, "ASSIGN").st;
   if (ps_check(s, "PIPE")) {
-    return ps_parse_tagged_union_body(s, name_got.value.value, tp_got.value, line);
+    if (names.length > 1) {
+      let err = {severity: "error", message: "Tagged unions require a single type name", line: line, col: 1};
+      s = ParserState(s.tokens, s.pos, s.in_match_guard, s.errors.concat([err]));
+    }
+    return ps_parse_tagged_union_body(s, names[0], tp_got.value, line);
   } else {
     let ty_got = ps_parse_type_expr(s);
     s = ty_got.st;
@@ -1669,10 +1720,16 @@ const ps_parse_type_alias_or_union = (st) => {
       s = c_got.st;
       constraint = c_got.value;
     }
-    if (constraint == null) {
-      return ParseVal(s, {kind: "TypeAlias", name: name_got.value.value, typeParams: tp_got.value, type: ty_got.value, line: line});
+    if (names.length == 1) {
+      return ParseVal(s, ps_make_type_alias(names[0], tp_got.value, ty_got.value, constraint, line));
     } else {
-      return ParseVal(s, {kind: "TypeAlias", name: name_got.value.value, typeParams: tp_got.value, type: ty_got.value, constraint: constraint, line: line});
+      let decls = [];
+      let i = 0;
+      while (i < names.length) {
+        decls = decls.concat([ps_make_type_alias(names[i], tp_got.value, ty_got.value, constraint, line)]);
+        i = i + 1;
+      }
+      return ParseVal(s, {kind: "DeclList", decls: decls});
     }
   }
 };
@@ -2067,9 +2124,7 @@ const ps_parse_module = (st) => {
   while (!ps_check(s, "RBRACE") && !ps_is_eof(s)) {
     let decl_got = ps_parse_top_level(s);
     s = decl_got.st;
-    if (decl_got.value != null) {
-      body = body.concat([decl_got.value]);
-    }
+    body = body.concat(ps_flatten_top_level(decl_got.value));
   }
   s = ps_expect(s, "RBRACE").st;
   return ParseVal(s, {kind: "ModuleDecl", name: name_got.value.value, annotations: ann_got.value, body: body, line: line});

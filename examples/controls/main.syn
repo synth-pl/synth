@@ -7,12 +7,11 @@
 // Any function that declares a param with one of these types gets an auto-injected
 // guard at entry — no manual validation calls needed.
 
-type NonEmptyString = string where length > 0
+type NonEmptyString, CSSClass = string where length > 0
 type EmailAddress   = string where matches(#email)
 type PositiveInt    = int    where > 0
 type Score          = int    where >= 0 && <= 100
 type BoundedCount   = int    where >= -10 && <= 10
-type CSSClass       = string where length > 0
 type ThemeName      = string
 type SlugString     = string where matches(#slug)
 

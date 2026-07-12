@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synth Fantasy — Classic Turn Battle</title>
+<style>
+  :root {
+    --bg: #07071a;
+    --surf: #101028;
+    --pink: #ff2d78;
+    --cyan: #00e5ff;
+    --purple: #b84fff;
+    --gold: #ffd166;
+    --green: #06d6a0;
+    --text: #e8e0ff;
+    --muted: #6a6490;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(184,79,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+    background-size: 36px 36px; pointer-events: none; z-index: 0;
+  }
+  .wrap {
+    position: relative; z-index: 1; width: 100%; max-width: 840px;
+    padding: 16px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .hdr {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 10px; border-bottom: 1px solid #1e1e3a;
+  }
+  .logo { font-size: 1rem; font-weight: bold; letter-spacing: .18em; color: var(--gold); text-shadow: 0 0 12px #ffd16666; }
+  .logo span { color: var(--pink); text-shadow: 0 0 12px #ff2d7899; }
+  .hdr-right { font-size: .62rem; color: var(--muted); letter-spacing: .08em; text-align: right; line-height: 1.5; }
+  .hdr-right a { color: var(--cyan); text-decoration: none; }
+  .canvas-wrap {
+    position: relative; width: 100%; max-width: 800px; aspect-ratio: 800 / 520;
+    border: 1px solid #2a2a4a; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 0 40px #b84fff22, 0 0 80px #00e5ff11;
+  }
+  .canvas-wrap::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.05) 3px, rgba(0,0,0,.05) 4px);
+    pointer-events: none; z-index: 2;
+  }
+  canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+  .controls-hint {
+    font-size: .68rem; color: var(--muted); text-align: center; line-height: 1.5;
+  }
+  .controls-hint a { color: var(--cyan); text-decoration: none; }
+</style>
+<link rel="stylesheet" href="game-mobile.css">
+<link rel="stylesheet" href="site-footer.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+    <div class="logo">SYNTH<span>FANTASY</span></div>
+    <div class="hdr-right">
+      Classic FF turn battle · Built with <a href="landing.html">Synth</a><br>
+      <a href="https://github.com/synth-pl/synth" target="_blank">github.com/synth-pl/synth</a>
+    </div>
+  </header>
+  <div class="canvas-wrap">
+    <canvas id="c" width="800" height="520"></canvas>
+  </div>
+  <div class="controls-hint">
+    ↑↓ / W S select · Z / Enter confirm · X / Esc cancel · Tap menu rows on mobile<br>
+    Sequel to <a href="rpg.standalone.html">RPG Adventure</a> — Aria · Theron · Lyra
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-logo">⬡ Synth</div>
+  <div class="footer-links">
+    <a class="footer-link" href="docs.html">Docs</a>
+    <a class="footer-link" href="https://github.com/synth-pl/synth">GitHub</a>
+    <a class="footer-link" href="https://github.com/synth-pl/synth/issues">Issues</a>
+    <a class="footer-link" href="https://www.npmjs.com/package/synth-lang">npm</a>
+  </div>
+  <div class="footer-copy">MIT License · © 2026 synth-pl</div>
+</footer>
+
+<script src="synth.stdlib.js"></script>
+<script src="rpg2.sources.js"></script>
+<script>
+const canvas = document.getElementById('c')
+const ctx = canvas.getContext('2d')
+const W = 800, H = 520
+
+function roundRect(x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.arcTo(x + w, y, x + w, y + h, rr)
+  ctx.arcTo(x + w, y + h, x, y + h, rr)
+  ctx.arcTo(x, y + h, x, y, rr)
+  ctx.arcTo(x, y, x + w, y, rr)
+  ctx.closePath()
+}
+
+function drawPanel(x, y, w, h, fill, stroke) {
+  ctx.fillStyle = fill
+  roundRect(x, y, w, h, 8)
+  ctx.fill()
+  ctx.strokeStyle = stroke
+  ctx.lineWidth = 1.5
+  roundRect(x, y, w, h, 8)
+  ctx.stroke()
+}
+
+function drawBar(x, y, w, h, ratio, color) {
+  ctx.fillStyle = '#1a1430'
+  roundRect(x, y, w, h, 3)
+  ctx.fill()
+  const rw = Math.max(0, Math.min(1, ratio)) * w
+  if (rw > 0) {
+    ctx.fillStyle = color
+    roundRect(x, y, rw, h, 3)
+    ctx.fill()
+  }
+}
+
+function drawSilhouette(x, y, w, h, color, kind) {
+  ctx.save()
+  ctx.shadowColor = color
+  ctx.shadowBlur = 16
+  ctx.fillStyle = color
+  if (kind === 'knight') {
+    ctx.fillRect(x + w * 0.3, y + h * 0.25, w * 0.4, h * 0.55)
+    ctx.beginPath()
+    ctx.moveTo(x + w * 0.5, y)
+    ctx.lineTo(x + w * 0.85, y + h * 0.28)
+    ctx.lineTo(x + w * 0.15, y + h * 0.28)
+    ctx.closePath()
+    ctx.fill()
+  } else if (kind === 'mage') {
+    ctx.beginPath()
+    ctx.moveTo(x + w * 0.5, y)
+    ctx.lineTo(x + w, y + h * 0.85)
+    ctx.lineTo(x, y + h * 0.85)
+    ctx.closePath()
+    ctx.fill()
+  } else if (kind === 'ranger') {
+    ctx.fillRect(x + w * 0.35, y + h * 0.15, w * 0.3, h * 0.7)
+    ctx.fillRect(x + w * 0.1, y + h * 0.35, w * 0.8, h * 0.12)
+  } else if (kind === 'boss') {
+    ctx.beginPath()
+    ctx.ellipse(x + w / 2, y + h * 0.55, w * 0.45, h * 0.4, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(x + w * 0.2, y + h * 0.35)
+    ctx.lineTo(x + w * 0.35, y)
+    ctx.lineTo(x + w * 0.5, y + h * 0.3)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(x + w * 0.8, y + h * 0.35)
+    ctx.lineTo(x + w * 0.65, y)
+    ctx.lineTo(x + w * 0.5, y + h * 0.3)
+    ctx.fill()
+  } else {
+    ctx.beginPath()
+    ctx.ellipse(x + w / 2, y + h * 0.55, w * 0.4, h * 0.38, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillRect(x + w * 0.35, y + h * 0.1, w * 0.3, h * 0.35)
+  }
+  ctx.restore()
+  ctx.shadowBlur = 0
+}
+
+function foeKind(id) {
+  if (id === 'wyrm') return 'boss'
+  return 'foe'
+}
+
+function heroKind(cls) {
+  if (cls === 'knight') return 'knight'
+  if (cls === 'mage') return 'mage'
+  return 'ranger'
+}
+
+function drawTitle(view) {
+  ctx.fillStyle = '#07071a'
+  ctx.fillRect(0, 0, W, H)
+  const g = ctx.createLinearGradient(0, 0, W, H)
+  g.addColorStop(0, 'rgba(184,79,255,0.25)')
+  g.addColorStop(0.5, 'rgba(0,229,255,0.08)')
+  g.addColorStop(1, 'rgba(255,45,120,0.2)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
+
+  ctx.fillStyle = '#ffd166'
+  ctx.font = 'bold 42px Courier New'
+  ctx.textAlign = 'center'
+  ctx.shadowColor = '#ffd166'
+  ctx.shadowBlur = 18
+  ctx.fillText('SYNTH FANTASY', W / 2, 180)
+  ctx.shadowBlur = 0
+  ctx.fillStyle = '#e8e0ff'
+  ctx.font = '16px Courier New'
+  ctx.fillText('A classic turn-based battle — Aria · Theron · Lyra', W / 2, 220)
+  ctx.fillStyle = '#00e5ff'
+  ctx.font = '14px Courier New'
+  ctx.fillText(view.hint || 'Press Z / Enter to start', W / 2, 320)
+  ctx.fillStyle = '#6a6490'
+  ctx.font = '12px Courier New'
+  ctx.fillText('Vertical slice sequel to RPG Adventure', W / 2, 360)
+}
+
+function drawEnd(view, title, color) {
+  ctx.fillStyle = '#07071a'
+  ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = color
+  ctx.font = 'bold 40px Courier New'
+  ctx.textAlign = 'center'
+  ctx.shadowColor = color
+  ctx.shadowBlur = 20
+  ctx.fillText(title, W / 2, 220)
+  ctx.shadowBlur = 0
+  ctx.fillStyle = '#e8e0ff'
+  ctx.font = '14px Courier New'
+  ctx.fillText(view.hint || '', W / 2, 280)
+}
+
+function drawBattle(view, dt) {
+  // Arena background
+  const sky = ctx.createLinearGradient(0, 0, 0, H)
+  sky.addColorStop(0, '#12082a')
+  sky.addColorStop(0.55, '#1a0f38')
+  sky.addColorStop(1, '#0a0618')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, W, H)
+
+  // Ground
+  ctx.fillStyle = '#16102e'
+  ctx.fillRect(0, 300, W, 220)
+  ctx.strokeStyle = 'rgba(0,229,255,0.15)'
+  ctx.beginPath()
+  ctx.moveTo(0, 300)
+  ctx.lineTo(W, 300)
+  ctx.stroke()
+
+  // Title strip
+  ctx.fillStyle = '#ffd166'
+  ctx.font = 'bold 13px Courier New'
+  ctx.textAlign = 'left'
+  ctx.fillText(view.title || '', 20, 28)
+
+  const anim = view.anim || { kind: 'none', timer: 0 }
+  const shake = anim.kind !== 'none' && anim.timer > 0.35 ? Math.sin(anim.timer * 40) * 3 : 0
+
+  // Enemies left
+  const foes = view.foes || []
+  foes.forEach((e, i) => {
+    if (!e.alive && !(anim.side === 'hero' && anim.target === i && anim.timer > 0)) return
+    const x = 80 + (i % 2) * 110 + shake
+    const y = 110 + Math.floor(i / 2) * 100
+    const alpha = e.alive ? 1 : 0.35
+    ctx.globalAlpha = alpha
+    const flash = anim.kind !== 'none' && anim.side === 'hero' && anim.target === i && anim.timer > 0.2
+    drawSilhouette(x, y, 70, 90, flash ? '#ffffff' : e.color, foeKind(e.id))
+    ctx.globalAlpha = 1
+    ctx.fillStyle = '#e8e0ff'
+    ctx.font = '12px Courier New'
+    ctx.textAlign = 'center'
+    ctx.fillText(e.name, x + 35, y + 105)
+    drawBar(x, y + 110, 70, 7, e.maxHp ? e.hp / e.maxHp : 0, '#ff2d78')
+    if (anim.kind !== 'none' && anim.side === 'hero' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
+      ctx.fillStyle = '#ffd166'
+      ctx.font = 'bold 16px Courier New'
+      ctx.fillText('-' + anim.amount, x + 35, y - 8 + (0.55 - anim.timer) * 30)
+    }
+  })
+
+  // Party right
+  const party = view.party || []
+  party.forEach((h, i) => {
+    const x = 620 + shake * -0.5
+    const y = 90 + i * 85
+    const active = view.phase !== 'enemy_act' && view.phase !== 'resolve' && view.active === i
+    ctx.globalAlpha = h.alive ? 1 : 0.35
+    if (active) {
+      ctx.strokeStyle = '#ffd166'
+      ctx.lineWidth = 2
+      roundRect(x - 8, y - 8, 86, 78, 6)
+      ctx.stroke()
+    }
+    const flash = anim.kind !== 'none' && anim.side === 'enemy' && anim.target === i && anim.timer > 0.2
+    drawSilhouette(x, y, 70, 70, flash ? '#ffffff' : h.color, heroKind(h.heroClass))
+    ctx.globalAlpha = 1
+    if (h.defending) {
+      ctx.fillStyle = '#00e5ff'
+      ctx.font = '10px Courier New'
+      ctx.textAlign = 'center'
+      ctx.fillText('GUARD', x + 35, y - 4)
+    }
+    if (anim.kind !== 'none' && anim.side === 'enemy' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
+      ctx.fillStyle = '#ff5566'
+      ctx.font = 'bold 16px Courier New'
+      ctx.textAlign = 'center'
+      ctx.fillText('-' + anim.amount, x + 35, y - 10 + (0.55 - anim.timer) * 30)
+    }
+    if (anim.kind === 'heal' || anim.kind === 'item') {
+      if (anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
+        ctx.fillStyle = '#06d6a0'
+        ctx.font = 'bold 16px Courier New'
+        ctx.textAlign = 'center'
+        ctx.fillText('+' + anim.amount, x + 35, y - 10)
+      }
+    }
+  })
+
+  // Command / menu window
+  drawPanel(16, 340, 280, 164, 'rgba(16,16,40,0.92)', 'rgba(184,79,255,0.45)')
+  ctx.fillStyle = '#b84fff'
+  ctx.font = 'bold 12px Courier New'
+  ctx.textAlign = 'left'
+  const modeLabel = view.menu_mode === 'command' ? 'COMMAND' :
+    view.menu_mode === 'magic' ? 'MAGIC' :
+    view.menu_mode === 'skill' ? 'SKILL' :
+    view.menu_mode === 'item' ? 'ITEM' :
+    view.menu_mode === 'target_enemy' ? 'TARGET' :
+    view.menu_mode === 'target_ally' ? 'ALLY' : String(view.menu_mode || '').toUpperCase()
+  const actor = party[view.active]
+  const actorName = actor ? actor.name : ''
+  ctx.fillText(modeLabel + (actorName ? ' — ' + actorName : ''), 28, 360)
+
+  const menu = view.menu || []
+  const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
+  menu.forEach((row, i) => {
+    const yy = 380 + i * 22
+    if (canPick && i === view.menu_index) {
+      ctx.fillStyle = 'rgba(0,229,255,0.18)'
+      ctx.fillRect(24, yy - 14, 260, 20)
+      ctx.fillStyle = '#00e5ff'
+      ctx.fillText('▸ ' + row.label, 32, yy)
+    } else {
+      ctx.fillStyle = '#c8c0e8'
+      ctx.fillText('  ' + row.label, 32, yy)
+    }
+  })
+  if (!canPick) {
+    ctx.fillStyle = '#6a6490'
+    ctx.font = '12px Courier New'
+    ctx.fillText(view.phase === 'resolve' ? '…resolving' :
+      view.phase === 'enemy_act' ? 'Enemy turn…' :
+      view.phase === 'battle_clear' ? 'Victory! Confirm to continue' : view.phase, 32, 480)
+  }
+
+  // Party status strip
+  drawPanel(312, 340, 472, 164, 'rgba(16,16,40,0.92)', 'rgba(0,229,255,0.35)')
+  party.forEach((h, i) => {
+    const yy = 358 + i * 48
+    ctx.fillStyle = h.alive ? h.color : '#6a6490'
+    ctx.font = 'bold 13px Courier New'
+    ctx.textAlign = 'left'
+    ctx.fillText(h.name, 328, yy)
+    ctx.fillStyle = '#6a6490'
+    ctx.font = '11px Courier New'
+    ctx.fillText(h.heroClass.toUpperCase(), 410, yy)
+    ctx.fillStyle = '#e8e0ff'
+    ctx.fillText('HP ' + h.hp + '/' + h.maxHp, 500, yy)
+    drawBar(500, yy + 6, 120, 6, h.maxHp ? h.hp / h.maxHp : 0, '#ff2d78')
+    ctx.fillStyle = '#e8e0ff'
+    ctx.fillText('MP ' + h.mp + '/' + h.maxMp, 640, yy)
+    drawBar(640, yy + 6, 110, 6, h.maxMp ? h.mp / h.maxMp : 0, '#00e5ff')
+  })
+
+  // Battle log
+  drawPanel(16, 16, 360, 64, 'rgba(10,6,24,0.75)', 'rgba(255,209,102,0.25)')
+  const logs = view.logs || []
+  ctx.font = '11px Courier New'
+  ctx.textAlign = 'left'
+  logs.forEach((line, i) => {
+    ctx.fillStyle = i === 0 ? '#ffd166' : '#8a84a8'
+    ctx.fillText(line || '', 28, 36 + i * 14)
+  })
+
+  ctx.fillStyle = '#6a6490'
+  ctx.font = '11px Courier New'
+  ctx.textAlign = 'right'
+  ctx.fillText('Potions x' + (view.potions ?? 0), W - 20, 28)
+  ctx.fillText(view.hint || '', W - 20, 48)
+}
+
+function draw(dt) {
+  const view = get_view()
+  if (view.scene === 'title') drawTitle(view)
+  else if (view.scene === 'victory') drawEnd(view, 'VICTORY', '#06d6a0')
+  else if (view.scene === 'gameover') drawEnd(view, 'GAME OVER', '#ff2d78')
+  else drawBattle(view, dt)
+}
+
+let prev = performance.now()
+function loop(now) {
+  const dt = Math.min((now - prev) / 1000, 0.05)
+  prev = now
+  tick(dt)
+  draw(dt)
+  requestAnimationFrame(loop)
+}
+requestAnimationFrame(loop)
+
+function onConfirm() { menu_confirm() }
+function onCancel() { menu_cancel() }
+function onUp() { menu_move(-1) }
+function onDown() { menu_move(1) }
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); onUp() }
+  else if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); onDown() }
+  else if (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'Space') { e.preventDefault(); onConfirm() }
+  else if (e.code === 'Escape' || e.code === 'KeyX' || e.code === 'Backspace') { e.preventDefault(); onCancel() }
+})
+
+canvas.addEventListener('click', e => {
+  const view = get_view()
+  if (view.scene !== 'battle') { onConfirm(); return }
+  if (view.phase === 'battle_clear') { onConfirm(); return }
+  if (view.phase !== 'hero_command' && view.phase !== 'hero_pick') return
+
+  const rect = canvas.getBoundingClientRect()
+  const x = (e.clientX - rect.left) * W / rect.width
+  const y = (e.clientY - rect.top) * H / rect.height
+  // Menu panel hit
+  if (x >= 16 && x <= 296 && y >= 370 && y <= 500) {
+    const idx = Math.floor((y - 366) / 22)
+    const menu = view.menu || []
+    if (idx >= 0 && idx < menu.length) {
+      // move selection then confirm
+      const delta = idx - view.menu_index
+      if (delta !== 0) menu_move(delta)
+      onConfirm()
+    }
+  }
+})
+</script>
+</body>
+</html>

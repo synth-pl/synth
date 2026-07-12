@@ -1,0 +1,20 @@
+// Multi-name type aliases share base + where; each name gets its own validator.
+
+type HeroName, ClassName = string where length > 0
+type Gold, XP = int where >= 0
+
+fn greet :: (name: HeroName, klass: ClassName) -> string {
+  name + " the " + klass
+}
+
+fn purse :: (g: Gold, x: XP) -> int {
+  g + x
+}
+
+@test "validators accept non-empty names" {
+  greet("Ada", "Mage") == "Ada the Mage"
+}
+
+@test "gold and xp share constraint shape" {
+  purse(3, 7) == 10
+}

@@ -35,6 +35,7 @@ const DEMOS = [
   { label: 'drift', syn: 'examples/drift/main.syn', out: 'demo/drift.sources.js', mode: 'single' },
   { label: 'expedition', syn: 'examples/expedition/main.syn', out: 'demo/expedition.sources.js', mode: 'single' },
   { label: 'invaders', syn: 'examples/invaders/main.syn', out: 'demo/invaders.sources.js', mode: 'single' },
+  { label: 'rpg2', syn: 'examples/rpg2/main.syn', out: 'demo/rpg2.sources.js', mode: 'single' },
   { label: 'kanban', syn: 'examples/kanban/main.syn', out: 'demo/kanban.sources.js', mode: 'single' },
   { label: 'neon_life', syn: 'examples/neon_life/main.syn', out: 'demo/neon_life.sources.js', mode: 'single' },
   { label: 'vibe_grid', syn: 'examples/vibe_grid/main.syn', out: 'demo/vibe_grid.sources.js', mode: 'single' },

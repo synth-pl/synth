@@ -110,6 +110,7 @@ let square = x => x * x
 ```synth
 type EmailAddress = string where value.includes("@") && value.length > 3
 type Percentage   = int    where value >= 0 && value <= 100
+type HeroName, ClassName = string where length > 0
 
 // Guard clause injected automatically at function entry
 fn send_welcome :: (email: EmailAddress) -> void {
