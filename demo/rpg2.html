@@ -234,6 +234,7 @@ function syncHeroAnims(view, dt) {
     let st = heroAnim[id]
     if (!st) { st = heroAnim[id] = { name: 'idle', frame: 0, timer: 0, oneShot: false } }
     const def = partyMeta.heroes[id].anims[want] || partyMeta.heroes[id].anims.idle
+    const n = (def.frames && def.frames.length) || 1
     if (st.name !== want) {
       st.name = want
       st.frame = 0
@@ -246,9 +247,9 @@ function syncHeroAnims(view, dt) {
     while (st.timer >= frameDur) {
       st.timer -= frameDur
       if (st.oneShot) {
-        if (st.frame < def.frames - 1) st.frame++
+        if (st.frame < n - 1) st.frame++
       } else {
-        st.frame = (st.frame + 1) % def.frames
+        st.frame = (st.frame + 1) % n
       }
     }
   })
@@ -265,19 +266,22 @@ function drawHeroSprite(h, i, x, y, drawW, drawH, flash) {
   const meta = partyMeta.heroes[id]
   const st = heroAnim[id] || { name: 'idle', frame: 0 }
   const anim = meta.anims[st.name] || meta.anims.idle
-  const start = anim.start || 0
-  const col = start + st.frame
-  const fw = meta.frameW
-  const fh = meta.frameH
-  const sx = col * fw
-  const sy = anim.row * fh
+  const boxes = anim.frames || []
+  const box = boxes[Math.min(st.frame, boxes.length - 1)]
+  if (!box) return
   const sheet = heroSheets[id]
+  // Contain frame in draw box (sheets are irregular cell sizes)
+  const scale = Math.min(drawW / box.w, drawH / box.h)
+  const dw = box.w * scale
+  const dh = box.h * scale
+  const ox = (drawW - dw) / 2
+  const oy = drawH - dh // feet on the bottom of the slot
   ctx.save()
   if (flash) ctx.globalAlpha = Math.min(ctx.globalAlpha, 1) * 0.85
   // Flip horizontally — sheets face right, party should face foes (left)
   ctx.translate(x + drawW, y)
   ctx.scale(-1, 1)
-  ctx.drawImage(sheet, sx, sy, fw, fh, 0, 0, drawW, drawH)
+  ctx.drawImage(sheet, box.x, box.y, box.w, box.h, ox, oy, dw, dh)
   ctx.restore()
 }
 
