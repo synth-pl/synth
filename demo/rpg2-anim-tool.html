@@ -189,12 +189,13 @@
         </div>
         <button type="button" id="btnAddSelected">Add selected → timeline</button>
         <div class="row" style="margin-top:4px">
+          <button type="button" class="primary" id="btnSnapDetect" title="Snap selected box to nearest chroma object (S)">Snap to nearest</button>
           <button type="button" id="btnDupDetect" title="Clone selected box to the right">Duplicate →</button>
           <button type="button" id="btnSplitDetect" title="Split selected box into left + right halves">Split ↔</button>
           <button type="button" id="btnNewDetect" title="Add a blank detect box">New box</button>
           <button type="button" class="danger" id="btnDelDetect">Delete box</button>
         </div>
-        <p class="hint" style="margin:4px 0 0">Merged two sprites? Shrink one side, then <b>Duplicate →</b> and nudge the copy onto the leftover. Or <b>Split ↔</b>, or Shift-drag on the sheet to draw a new box.</p>
+        <p class="hint" style="margin:4px 0 0">Place a box near a sprite, then <b>Snap to nearest</b> (or press <b>S</b>) to hug its pixels. Shift-drag to draw a new box.</p>
       </div>
 
       <div class="card">
@@ -205,7 +206,7 @@
   </div>
 
   <footer>
-    <span>Drag yellow handles to resize · drag box to move · click = append · Shift-drag = new box · Space = play</span>
+    <span>Drag handles to resize · Snap to nearest (S) · click = append · Shift-drag = new box · Space = play</span>
     <span id="footerStatus"></span>
   </footer>
 </div>
@@ -303,10 +304,11 @@
   }
 
   /**
-   * Connected-component frame detection with nearby-box merge.
+   * Connected-component islands on the sheet.
    * @param {HTMLImageElement|HTMLCanvasElement} img
+   * @param {{ mergeGap?: number, minW?: number, minH?: number, pad?: number, minPixels?: number }} [opts]
    */
-  function detectFrames(img) {
+  function detectIslands(img, opts = {}) {
     const w = img.naturalWidth || img.width
     const h = img.naturalHeight || img.height
     const c = document.createElement('canvas')
@@ -316,10 +318,11 @@
     ctx.drawImage(img, 0, 0)
     const { data } = ctx.getImageData(0, 0, w, h)
     const ch = chroma()
-    const minW = +$('minW').value
-    const minH = +$('minH').value
-    const mergeGap = +$('mergeGap').value
-    const pad = +$('boxPad').value
+    const minW = opts.minW != null ? opts.minW : +$('minW').value
+    const minH = opts.minH != null ? opts.minH : +$('minH').value
+    const mergeGap = opts.mergeGap != null ? opts.mergeGap : +$('mergeGap').value
+    const pad = opts.pad != null ? opts.pad : +$('boxPad').value
+    const minPixels = opts.minPixels != null ? opts.minPixels : 24
 
     const fg = new Uint8Array(w * h)
     for (let i = 0, p = 0; i < data.length; i += 4, p++) {
@@ -368,7 +371,7 @@
         }
         const bw = maxX - minX + 1
         const bh = maxY - minY + 1
-        if (count < 24 || bw < minW || bh < minH) continue
+        if (count < minPixels || bw < minW || bh < minH) continue
         boxes.push({ x: minX, y: minY, w: bw, h: bh })
       }
     }
@@ -389,6 +392,70 @@
       return a.x - b.x
     })
     return merged
+  }
+
+  function detectFrames(img) {
+    return detectIslands(img)
+  }
+
+  function boxCenter(b) {
+    return { x: b.x + b.w * 0.5, y: b.y + b.h * 0.5 }
+  }
+
+  function overlapArea(a, b) {
+    const x0 = Math.max(a.x, b.x)
+    const y0 = Math.max(a.y, b.y)
+    const x1 = Math.min(a.x + a.w, b.x + b.w)
+    const y1 = Math.min(a.y + a.h, b.y + b.h)
+    return Math.max(0, x1 - x0) * Math.max(0, y1 - y0)
+  }
+
+  function snapSelectedToNearest() {
+    if (!sheetImg) {
+      setFooter('Load a sheet first')
+      return
+    }
+    if (selectedDetect < 0 || !detectBoxes[selectedDetect]) {
+      setFooter('Select a detect box first (click or right-click)')
+      return
+    }
+    const minW = Math.max(4, Math.floor(+$('minW').value * 0.5) || 4)
+    const minH = Math.max(4, Math.floor(+$('minH').value * 0.5) || 4)
+    // Unmerged islands so side-by-side sprites stay separate
+    const islands = detectIslands(sheetImg, {
+      mergeGap: 0,
+      minW,
+      minH,
+      pad: +$('boxPad').value,
+      minPixels: 16,
+    })
+    if (!islands.length) {
+      setFooter('No objects found — tweak chroma and try again')
+      return
+    }
+    const sel = detectBoxes[selectedDetect]
+    const sc = boxCenter(sel)
+    let best = null
+    let bestScore = Infinity
+    for (const isl of islands) {
+      const ic = boxCenter(isl)
+      const dist = Math.hypot(ic.x - sc.x, ic.y - sc.y)
+      const ov = overlapArea(sel, isl)
+      // Prefer islands that overlap the selection; then nearest center
+      const score = (ov > 0 ? 0 : 100000) + dist - ov * 0.02
+      if (score < bestScore) {
+        bestScore = score
+        best = isl
+      }
+    }
+    if (!best) {
+      setFooter('No nearby object to snap to')
+      return
+    }
+    detectBoxes[selectedDetect] = { x: best.x, y: best.y, w: best.w, h: best.h }
+    commitDetectBoxes()
+    syncBoxNudge()
+    setFooter(`Snapped box ${selectedDetect} to nearest object (${best.w}×${best.h})`)
   }
 
   function mergeNearby(boxes, gap) {
@@ -953,6 +1020,16 @@
     drawSheet()
   })
 
+  sheetCanvas.addEventListener('dblclick', (ev) => {
+    if (!sheetImg || ev.shiftKey) return
+    ev.preventDefault()
+    const { x, y } = canvasCoords(ev)
+    const i = hitTestBox(x, y)
+    if (i < 0) return
+    selectedDetect = i
+    snapSelectedToNearest()
+  })
+
   sheetCanvas.addEventListener('mousedown', (ev) => {
     if (!sheetImg || ev.button !== 0) return
     const { x, y } = canvasCoords(ev)
@@ -1214,6 +1291,7 @@
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) return
     appendTimelineBox(detectBoxes[selectedDetect])
   })
+  $('btnSnapDetect').addEventListener('click', snapSelectedToNearest)
   $('btnDupDetect').addEventListener('click', () => {
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) {
       setFooter('Right-click a detect box first')
@@ -1348,6 +1426,9 @@
       } else {
         $('btnDel').click()
       }
+    } else if (ev.key === 's' || ev.key === 'S') {
+      ev.preventDefault()
+      snapSelectedToNearest()
     }
   })
 
