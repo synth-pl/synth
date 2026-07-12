@@ -43,42 +43,9 @@
   .hdr-right { font-size: .62rem; color: var(--muted); letter-spacing: .08em; text-align: right; line-height: 1.5; }
   .hdr-right a { color: var(--cyan); text-decoration: none; }
   .canvas-wrap {
-    position: relative; width: 100%; max-width: 800px; aspect-ratio: var(--rpg2-ratio, 800 / 520);
+    position: relative; width: 100%; max-width: 800px; aspect-ratio: 800 / 520;
     border: 1px solid #2a2a4a; border-radius: 8px; overflow: hidden;
     box-shadow: 0 0 40px #b84fff22, 0 0 80px #00e5ff11;
-  }
-  .fs-btn {
-    position: absolute; top: 10px; right: 10px; z-index: 5;
-    min-width: 44px; min-height: 44px; padding: 8px 12px;
-    border: 1px solid rgba(0,229,255,0.55);
-    border-radius: 8px;
-    background: rgba(7,7,26,0.82);
-    color: var(--cyan);
-    font-family: 'Courier New', monospace;
-    font-size: .72rem; font-weight: bold; letter-spacing: .06em;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .fs-btn:hover, .fs-btn:focus-visible {
-    background: rgba(0,229,255,0.16);
-    outline: none;
-  }
-  .fs-btn:active { transform: scale(0.96); }
-  .canvas-wrap.is-fullscreen {
-    max-width: none;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    aspect-ratio: auto !important;
-    border-radius: 0;
-    border: none;
-  }
-  .canvas-wrap.is-fullscreen canvas {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #07071a;
   }
   .canvas-wrap::after {
     content: ''; position: absolute; inset: 0;
@@ -106,11 +73,7 @@
 <link rel="stylesheet" href="game-mobile.css">
 <link rel="stylesheet" href="site-footer.css">
 <style>
-  /* Taller mobile canvas so menu rows stay near 44px CSS tap targets */
-  .canvas-wrap.rpg2-canvas {
-    aspect-ratio: var(--rpg2-ratio, 800 / 520) !important;
-    touch-action: manipulation;
-  }
+  .canvas-wrap.rpg2-canvas { touch-action: manipulation; }
 </style>
 </head>
 <body>
@@ -122,9 +85,8 @@
       <a href="https://github.com/synth-pl/synth" target="_blank">github.com/synth-pl/synth</a>
     </div>
   </header>
-  <div class="canvas-wrap rpg2-canvas" id="gameStage">
+  <div class="canvas-wrap rpg2-canvas">
     <canvas id="c" width="800" height="520"></canvas>
-    <button type="button" class="fs-btn" id="fsBtn" aria-label="Fullscreen">Fullscreen</button>
   </div>
   <div class="controls-hint">
     <span class="desk">↑↓ / W S select · Z / Enter confirm · X / Esc / ← Back cancel · Tap menu rows</span>
@@ -149,120 +111,39 @@
 <script>
 const canvas = document.getElementById('c')
 const ctx = canvas.getContext('2d')
-const gameStage = document.getElementById('gameStage')
-const fsBtn = document.getElementById('fsBtn')
-const W = 800
-let H = 520
-
-function fsElement() {
-  return document.fullscreenElement
-    || document.webkitFullscreenElement
-    || document.msFullscreenElement
-    || null
-}
-
-function requestFs(el) {
-  if (el.requestFullscreen) return el.requestFullscreen()
-  if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen()
-  if (el.msRequestFullscreen) return el.msRequestFullscreen()
-  return Promise.reject(new Error('Fullscreen not supported'))
-}
-
-function exitFs() {
-  if (document.exitFullscreen) return document.exitFullscreen()
-  if (document.webkitExitFullscreen) return document.webkitExitFullscreen()
-  if (document.msExitFullscreen) return document.msExitFullscreen()
-  return Promise.resolve()
-}
-
-function syncFsUi() {
-  const on = !!fsElement()
-  gameStage.classList.toggle('is-fullscreen', on)
-  fsBtn.textContent = on ? 'Exit' : 'Fullscreen'
-  fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen')
-  syncCanvasSize()
-}
-
-fsBtn.addEventListener('click', e => {
-  e.preventDefault()
-  e.stopPropagation()
-  if (fsElement()) exitFs().catch(() => {})
-  else requestFs(gameStage).catch(() => {})
-})
-
-document.addEventListener('fullscreenchange', syncFsUi)
-document.addEventListener('webkitfullscreenchange', syncFsUi)
+const W = 800, H = 520
 
 function isCompactUi() {
   return canvas.clientWidth < 560
     || window.matchMedia('(hover: none) and (pointer: coarse)').matches
 }
 
-function syncCanvasSize() {
-  const compact = isCompactUi()
-  const nextH = compact ? 840 : 520
-  if (canvas.height !== nextH) {
-    canvas.height = nextH
-    H = nextH
-  } else {
-    H = canvas.height
-  }
-  document.documentElement.style.setProperty('--rpg2-ratio', '800 / ' + nextH)
-}
-
 function hudLayout() {
   const compact = isCompactUi()
-  // On phones the canvas is narrow, so rows need ~90 canvas px
-  // to land near ~44 CSS px tap targets. Canvas grows taller in compact mode.
-  if (compact) {
-    return {
-      compact: true,
-      fieldH: 260,
-      logY: 368,
-      logH: 32,
-      menuX: 12,
-      menuY: 404,
-      menuW: 776,
-      menuH: 420,
-      menuTitleY: 432,
-      menuRow0: 456,
-      menuRowH: 92,
-      menuHitPad: 4,
-      menuFont: 26,
-      menuTitleFont: 18,
-      partyX: 12,
-      partyY: 264,
-      partyW: 776,
-      partyH: 100,
-      nameFont: 16,
-      metaFont: 14,
-      titleFont: 16,
-      logFont: 14
-    }
-  }
+  // Compact: slightly taller menu rows + larger type. Desktop stays classic.
   return {
-    compact: false,
-    fieldH: 308,
-    logY: 308,
-    logH: 28,
+    compact,
+    fieldH: compact ? 300 : 308,
+    logY: compact ? 300 : 308,
+    logH: compact ? 28 : 28,
     menuX: 16,
-    menuY: 338,
+    menuY: compact ? 332 : 342,
     menuW: 280,
-    menuH: 166,
-    menuTitleY: 358,
-    menuRow0: 380,
-    menuRowH: 28,
-    menuHitPad: 0,
-    menuFont: 13,
-    menuTitleFont: 12,
+    menuH: compact ? 172 : 162,
+    menuTitleY: compact ? 352 : 362,
+    menuRow0: compact ? 374 : 382,
+    menuRowH: compact ? 32 : 22,
+    menuHitPad: compact ? 2 : 0,
+    menuFont: compact ? 15 : 12,
+    menuTitleFont: compact ? 13 : 12,
     partyX: 312,
-    partyY: 338,
+    partyY: compact ? 332 : 342,
     partyW: 472,
-    partyH: 166,
-    nameFont: 13,
-    metaFont: 11,
-    titleFont: 13,
-    logFont: 11
+    partyH: compact ? 172 : 162,
+    nameFont: compact ? 14 : 13,
+    metaFont: compact ? 12 : 11,
+    titleFont: compact ? 14 : 13,
+    logFont: compact ? 12 : 11
   }
 }
 
@@ -1347,10 +1228,10 @@ function drawBattle(view, dt) {
   const menu = view.menu || []
   const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
   const nowMs = performance.now()
-  const boxH = Math.max(20, Math.round(hud.menuRowH * 0.82))
-  const boxX = hud.compact ? hud.menuX + 14 : 24
-  const boxW = hud.compact ? hud.menuW - 28 : 260
-  const textX = boxX + 8
+  const boxH = Math.max(20, Math.round(hud.menuRowH * (20 / 22)))
+  const boxX = 24
+  const boxW = 260
+  const textX = 32
   menu.forEach((row, i) => {
     const yy = hud.menuRow0 + i * hud.menuRowH
     const selected = canPick && i === view.menu_index
@@ -1385,7 +1266,7 @@ function drawBattle(view, dt) {
     ctx.font = hud.menuFont + 'px Courier New'
     ctx.fillText(view.phase === 'resolve' ? '…resolving' :
       view.phase === 'enemy_act' ? 'Enemy turn…' :
-      view.phase === 'battle_clear' ? '' : view.phase, textX, hud.menuY + hud.menuH - 18)
+      view.phase === 'battle_clear' ? '' : view.phase, textX, hud.menuY + hud.menuH - 16)
   }
 
   // Party status strip
@@ -1436,10 +1317,10 @@ function drawBattle(view, dt) {
 // Menu geometry for click hit-testing (kept in sync with drawBattle / hudLayout)
 function menuHit() {
   const hud = hudLayout()
-  const boxH = Math.max(20, Math.round(hud.menuRowH * 0.82))
+  const boxH = Math.max(20, Math.round(hud.menuRowH * (20 / 22)))
   return {
-    x0: hud.compact ? hud.menuX + 14 : 24,
-    x1: hud.compact ? hud.menuX + hud.menuW - 14 : 284,
+    x0: 24,
+    x1: 284,
     y0: hud.menuRow0 - Math.round(boxH * 0.7) - hud.menuHitPad,
     rowH: hud.menuRowH
   }
@@ -1535,7 +1416,6 @@ function dipAlpha() {
 }
 
 function draw(dt) {
-  syncCanvasSize()
   const live = get_view()
   updateDip(dt, live)
   const under = (dip.phase === 'out' && dip.holdView) ? dip.holdView : live
@@ -1599,11 +1479,7 @@ function loop(now) {
   draw(dt)
   requestAnimationFrame(loop)
 }
-loadPartyAssets().finally(() => {
-  syncCanvasSize()
-  window.addEventListener('resize', syncCanvasSize)
-  requestAnimationFrame(loop)
-})
+loadPartyAssets().finally(() => requestAnimationFrame(loop))
 </script>
 </body>
 </html>
