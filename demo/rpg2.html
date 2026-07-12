@@ -43,9 +43,42 @@
   .hdr-right { font-size: .62rem; color: var(--muted); letter-spacing: .08em; text-align: right; line-height: 1.5; }
   .hdr-right a { color: var(--cyan); text-decoration: none; }
   .canvas-wrap {
-    position: relative; width: 100%; max-width: 800px; aspect-ratio: 800 / 520;
+    position: relative; width: 100%; max-width: 800px; aspect-ratio: var(--rpg2-ratio, 800 / 520);
     border: 1px solid #2a2a4a; border-radius: 8px; overflow: hidden;
     box-shadow: 0 0 40px #b84fff22, 0 0 80px #00e5ff11;
+  }
+  .fs-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 5;
+    min-width: 44px; min-height: 44px; padding: 8px 12px;
+    border: 1px solid rgba(0,229,255,0.55);
+    border-radius: 8px;
+    background: rgba(7,7,26,0.82);
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: .72rem; font-weight: bold; letter-spacing: .06em;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fs-btn:hover, .fs-btn:focus-visible {
+    background: rgba(0,229,255,0.16);
+    outline: none;
+  }
+  .fs-btn:active { transform: scale(0.96); }
+  .canvas-wrap.is-fullscreen {
+    max-width: none;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    aspect-ratio: auto !important;
+    border-radius: 0;
+    border: none;
+  }
+  .canvas-wrap.is-fullscreen canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #07071a;
   }
   .canvas-wrap::after {
     content: ''; position: absolute; inset: 0;
@@ -72,6 +105,13 @@
 </style>
 <link rel="stylesheet" href="game-mobile.css">
 <link rel="stylesheet" href="site-footer.css">
+<style>
+  /* Taller mobile canvas so menu rows stay near 44px CSS tap targets */
+  .canvas-wrap.rpg2-canvas {
+    aspect-ratio: var(--rpg2-ratio, 800 / 520) !important;
+    touch-action: manipulation;
+  }
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -82,8 +122,9 @@
       <a href="https://github.com/synth-pl/synth" target="_blank">github.com/synth-pl/synth</a>
     </div>
   </header>
-  <div class="canvas-wrap">
+  <div class="canvas-wrap rpg2-canvas" id="gameStage">
     <canvas id="c" width="800" height="520"></canvas>
+    <button type="button" class="fs-btn" id="fsBtn" aria-label="Fullscreen">Fullscreen</button>
   </div>
   <div class="controls-hint">
     <span class="desk">↑↓ / W S select · Z / Enter confirm · X / Esc / ← Back cancel · Tap menu rows</span>
@@ -108,39 +149,120 @@
 <script>
 const canvas = document.getElementById('c')
 const ctx = canvas.getContext('2d')
-const W = 800, H = 520
+const gameStage = document.getElementById('gameStage')
+const fsBtn = document.getElementById('fsBtn')
+const W = 800
+let H = 520
+
+function fsElement() {
+  return document.fullscreenElement
+    || document.webkitFullscreenElement
+    || document.msFullscreenElement
+    || null
+}
+
+function requestFs(el) {
+  if (el.requestFullscreen) return el.requestFullscreen()
+  if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen()
+  if (el.msRequestFullscreen) return el.msRequestFullscreen()
+  return Promise.reject(new Error('Fullscreen not supported'))
+}
+
+function exitFs() {
+  if (document.exitFullscreen) return document.exitFullscreen()
+  if (document.webkitExitFullscreen) return document.webkitExitFullscreen()
+  if (document.msExitFullscreen) return document.msExitFullscreen()
+  return Promise.resolve()
+}
+
+function syncFsUi() {
+  const on = !!fsElement()
+  gameStage.classList.toggle('is-fullscreen', on)
+  fsBtn.textContent = on ? 'Exit' : 'Fullscreen'
+  fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen')
+  syncCanvasSize()
+}
+
+fsBtn.addEventListener('click', e => {
+  e.preventDefault()
+  e.stopPropagation()
+  if (fsElement()) exitFs().catch(() => {})
+  else requestFs(gameStage).catch(() => {})
+})
+
+document.addEventListener('fullscreenchange', syncFsUi)
+document.addEventListener('webkitfullscreenchange', syncFsUi)
 
 function isCompactUi() {
   return canvas.clientWidth < 560
     || window.matchMedia('(hover: none) and (pointer: coarse)').matches
 }
 
+function syncCanvasSize() {
+  const compact = isCompactUi()
+  const nextH = compact ? 840 : 520
+  if (canvas.height !== nextH) {
+    canvas.height = nextH
+    H = nextH
+  } else {
+    H = canvas.height
+  }
+  document.documentElement.style.setProperty('--rpg2-ratio', '800 / ' + nextH)
+}
+
 function hudLayout() {
   const compact = isCompactUi()
-  // Taller menu rows + bigger type on phones so taps and text stay usable
+  // On phones the canvas is narrow, so rows need ~90 canvas px
+  // to land near ~44 CSS px tap targets. Canvas grows taller in compact mode.
+  if (compact) {
+    return {
+      compact: true,
+      fieldH: 260,
+      logY: 368,
+      logH: 32,
+      menuX: 12,
+      menuY: 404,
+      menuW: 776,
+      menuH: 420,
+      menuTitleY: 432,
+      menuRow0: 456,
+      menuRowH: 92,
+      menuHitPad: 4,
+      menuFont: 26,
+      menuTitleFont: 18,
+      partyX: 12,
+      partyY: 264,
+      partyW: 776,
+      partyH: 100,
+      nameFont: 16,
+      metaFont: 14,
+      titleFont: 16,
+      logFont: 14
+    }
+  }
   return {
-    compact,
-    fieldH: compact ? 292 : 308,
-    logY: compact ? 292 : 308,
-    logH: compact ? 30 : 28,
+    compact: false,
+    fieldH: 308,
+    logY: 308,
+    logH: 28,
     menuX: 16,
-    menuY: compact ? 326 : 342,
+    menuY: 338,
     menuW: 280,
-    menuH: compact ? 178 : 162,
-    menuTitleY: compact ? 348 : 362,
-    menuRow0: compact ? 372 : 382,
-    menuRowH: compact ? 30 : 22,
-    menuHitPad: compact ? 4 : 0,
-    menuFont: compact ? 15 : 12,
-    menuTitleFont: compact ? 14 : 12,
+    menuH: 166,
+    menuTitleY: 358,
+    menuRow0: 380,
+    menuRowH: 28,
+    menuHitPad: 0,
+    menuFont: 13,
+    menuTitleFont: 12,
     partyX: 312,
-    partyY: compact ? 326 : 342,
+    partyY: 338,
     partyW: 472,
-    partyH: compact ? 178 : 162,
-    nameFont: compact ? 15 : 13,
-    metaFont: compact ? 13 : 11,
-    titleFont: compact ? 15 : 13,
-    logFont: compact ? 13 : 11
+    partyH: 166,
+    nameFont: 13,
+    metaFont: 11,
+    titleFont: 13,
+    logFont: 11
   }
 }
 
@@ -1225,34 +1347,37 @@ function drawBattle(view, dt) {
   const menu = view.menu || []
   const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
   const nowMs = performance.now()
-  const rowBoxH = hud.menuRowH - 2
+  const boxH = Math.max(20, Math.round(hud.menuRowH * 0.82))
+  const boxX = hud.compact ? hud.menuX + 14 : 24
+  const boxW = hud.compact ? hud.menuW - 28 : 260
+  const textX = boxX + 8
   menu.forEach((row, i) => {
     const yy = hud.menuRow0 + i * hud.menuRowH
     const selected = canPick && i === view.menu_index
     const flashed = canPick && i === flashIdx && nowMs < flashUntil
-    const boxY = yy - Math.floor(rowBoxH * 0.7)
+    const boxY = yy - Math.round(boxH * 0.7)
     if (flashed) {
       ctx.fillStyle = 'rgba(255,209,102,0.45)'
-      ctx.fillRect(24, boxY, 260, rowBoxH)
+      ctx.fillRect(boxX, boxY, boxW, boxH)
       ctx.strokeStyle = '#ffd166'
       ctx.lineWidth = 1.5
-      ctx.strokeRect(24.5, boxY + 0.5, 259, rowBoxH - 1)
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
       ctx.fillStyle = '#ffd166'
       ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
-      ctx.fillText('▸ ' + row.label, 32, yy)
+      ctx.fillText('▸ ' + row.label, textX, yy)
     } else if (selected) {
       ctx.fillStyle = 'rgba(0,229,255,0.22)'
-      ctx.fillRect(24, boxY, 260, rowBoxH)
+      ctx.fillRect(boxX, boxY, boxW, boxH)
       ctx.strokeStyle = 'rgba(0,229,255,0.7)'
       ctx.lineWidth = 1
-      ctx.strokeRect(24.5, boxY + 0.5, 259, rowBoxH - 1)
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
       ctx.fillStyle = '#00e5ff'
       ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
-      ctx.fillText('▸ ' + row.label, 32, yy)
+      ctx.fillText('▸ ' + row.label, textX, yy)
     } else {
       ctx.fillStyle = '#c8c0e8'
       ctx.font = hud.menuFont + 'px Courier New'
-      ctx.fillText('  ' + row.label, 32, yy)
+      ctx.fillText('  ' + row.label, textX, yy)
     }
   })
   if (!canPick) {
@@ -1260,7 +1385,7 @@ function drawBattle(view, dt) {
     ctx.font = hud.menuFont + 'px Courier New'
     ctx.fillText(view.phase === 'resolve' ? '…resolving' :
       view.phase === 'enemy_act' ? 'Enemy turn…' :
-      view.phase === 'battle_clear' ? '' : view.phase, 32, hud.menuY + hud.menuH - 16)
+      view.phase === 'battle_clear' ? '' : view.phase, textX, hud.menuY + hud.menuH - 18)
   }
 
   // Party status strip
@@ -1311,10 +1436,11 @@ function drawBattle(view, dt) {
 // Menu geometry for click hit-testing (kept in sync with drawBattle / hudLayout)
 function menuHit() {
   const hud = hudLayout()
+  const boxH = Math.max(20, Math.round(hud.menuRowH * 0.82))
   return {
-    x0: hud.menuX,
-    x1: hud.menuX + hud.menuW,
-    y0: hud.menuRow0 - Math.floor((hud.menuRowH - 2) * 0.7) - hud.menuHitPad,
+    x0: hud.compact ? hud.menuX + 14 : 24,
+    x1: hud.compact ? hud.menuX + hud.menuW - 14 : 284,
+    y0: hud.menuRow0 - Math.round(boxH * 0.7) - hud.menuHitPad,
     rowH: hud.menuRowH
   }
 }
@@ -1409,6 +1535,7 @@ function dipAlpha() {
 }
 
 function draw(dt) {
+  syncCanvasSize()
   const live = get_view()
   updateDip(dt, live)
   const under = (dip.phase === 'out' && dip.holdView) ? dip.holdView : live
@@ -1472,7 +1599,11 @@ function loop(now) {
   draw(dt)
   requestAnimationFrame(loop)
 }
-loadPartyAssets().finally(() => requestAnimationFrame(loop))
+loadPartyAssets().finally(() => {
+  syncCanvasSize()
+  window.addEventListener('resize', syncCanvasSize)
+  requestAnimationFrame(loop)
+})
 </script>
 </body>
 </html>
