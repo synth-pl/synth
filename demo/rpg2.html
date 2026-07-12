@@ -256,13 +256,15 @@ function drawBattle(view, dt) {
   ctx.fillText(view.title || '', 20, 28)
 
   const anim = view.anim || { kind: 'none', timer: 0 }
-  const shake = anim.kind !== 'none' && anim.timer > 0.35 ? Math.sin(anim.timer * 40) * 3 : 0
+  const pulse = anim.kind !== 'none' && anim.timer > 0.35 ? Math.sin(anim.timer * 40) * 3 : 0
 
   // Enemies left
   const foes = view.foes || []
   const foeHitKinds = { attack: 1, magic: 1, skill: 1 }
   foes.forEach((e, i) => {
     if (!e.alive && !(anim.side === 'hero' && foeHitKinds[anim.kind] && anim.target === i && anim.timer > 0)) return
+    // Only shake the targeted foe on real hits — never on defend/potion/heal
+    const shake = foeHitKinds[anim.kind] && anim.side === 'hero' && anim.target === i ? pulse : 0
     const x = 80 + (i % 2) * 110 + shake
     const y = 95 + Math.floor(i / 2) * 88
     const alpha = e.alive ? 1 : 0.35
@@ -286,6 +288,7 @@ function drawBattle(view, dt) {
   const party = view.party || []
   const allyFxKinds = { heal: 1, item: 1, defend: 1, guard: 1 }
   party.forEach((h, i) => {
+    const shake = anim.side === 'enemy' && anim.target === i ? pulse : 0
     const x = 620 + shake * -0.5
     const y = 80 + i * 78
     const active = view.phase !== 'enemy_act' && view.phase !== 'resolve' && view.active === i
