@@ -220,6 +220,17 @@
       margin: 12px 0 24px;
     }
 
+    /* Annotation pages: white title + cyan @ tags (keeps highlight, matches other h2s) */
+    .ann-heading-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 6px 0 0;
+    }
+    .ann-heading-tags + .section-rule {
+      margin-top: 14px;
+    }
+
     .subsection-title {
       font-size: 16px;
       font-weight: 600;
@@ -1315,7 +1326,11 @@
       <!-- ── @pure / @total ────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-pure">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@pure</code> &amp; <code>@total</code></h2>
+        <h2 class="section-title">Purity &amp; Totality</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@pure</span>
+          <span class="pill pill-cyan">@total</span>
+        </div>
         <div class="section-rule"></div>
 
         <p><strong>House style:</strong> write annotations <em>above</em> the function
@@ -1341,7 +1356,10 @@
       <!-- ── @intent ───────────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-intent">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@intent</code></h2>
+        <h2 class="section-title">Intent</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@intent</span>
+        </div>
         <div class="section-rule"></div>
 
         <p>The single most important annotation in Synth. <code>@intent</code> is a machine-readable natural language description of what a function is <em>for</em> — not what it does mechanically, but why it exists. It lives in Synth source today; JSDoc emission is planned for a future release.</p>
@@ -1362,7 +1380,10 @@
       <!-- ── @effects ──────────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-effects">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@effects</code></h2>
+        <h2 class="section-title">Effects</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@effects</span>
+        </div>
         <div class="section-rule"></div>
 
         <p>Declares the set of side effects a function produces. As of v1.0.1, the checker warns when an <code>async fn</code> lacks an <code>@effects</code> declaration. It does not yet verify that the body matches the declared effect list.</p>
@@ -1376,7 +1397,10 @@
       <!-- ── @memo ─────────────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-memo">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@memo</code></h2>
+        <h2 class="section-title">Memoization</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@memo</span>
+        </div>
         <div class="section-rule"></div>
 
         <p>Wraps a <code>@pure @total</code> function in a <code>Map</code>-based memoization cache at compile time. Results are cached after the first call; subsequent calls with the same arguments return instantly.</p>
@@ -1396,7 +1420,10 @@
       <!-- ── @exhaustive ───────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-exhaustive">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@exhaustive</code></h2>
+        <h2 class="section-title">Exhaustiveness</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@exhaustive</span>
+        </div>
         <div class="section-rule"></div>
 
         <p>Opt-in exhaustiveness checking for functions whose body is a <code>match</code> expression. Place <code>@exhaustive</code> on the line(s) <em>above</em> the function — the checker verifies that all variants of a tagged union are covered.</p>
@@ -1410,7 +1437,10 @@
       <!-- ── @test ─────────────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-test">
         <div class="section-eyebrow">Annotations</div>
-        <h2 class="section-title"><code>@test</code></h2>
+        <h2 class="section-title">Tests</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@test</span>
+        </div>
         <div class="section-rule"></div>
 
         <p>Top-level inline test declarations. Tests are registered in <code>__synth_tests</code> at runtime and can be run via <code>__runSynthTests()</code> in the browser, or the CLI <code>--test</code> flag.</p>
@@ -1429,7 +1459,10 @@
       <!-- ── @throws ──────────────────────────────────────────────────────── -->
       <section class="doc-section" id="ann-throws">
         <div class="section-eyebrow">Annotations · v0.6</div>
-        <h2 class="section-title"><code>@throws</code></h2>
+        <h2 class="section-title">Fallible Functions</h2>
+        <div class="ann-heading-tags">
+          <span class="pill pill-cyan">@throws</span>
+        </div>
         <div class="section-rule"></div>
         <p>
           Mark a function as fallible. <code>@throws fn f() -&gt; Result&lt;T&gt;</code> signals
