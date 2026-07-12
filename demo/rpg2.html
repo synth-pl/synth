@@ -414,12 +414,10 @@ async function loadPartyAssets() {
   }
 }
 
-function drawLoadingScreen(dt) {
-  loadState.t += dt
+function drawOpeningScene(view) {
   const t = loadState.t
   const compact = isCompactUi()
 
-  // Real plains as soon as it arrives; dusk fallback before that
   if (!drawCoverImage(battleBgs[TITLE_BG])) {
     const sky = ctx.createLinearGradient(0, 0, 0, H)
     sky.addColorStop(0, '#0c1024')
@@ -429,28 +427,26 @@ function drawLoadingScreen(dt) {
     ctx.fillRect(0, 0, W, H)
   }
 
-  // Soft mist wash over the plains
   const mist = ctx.createLinearGradient(0, 0, 0, H)
-  mist.addColorStop(0, 'rgba(18,20,32,0.5)')
-  mist.addColorStop(0.4, 'rgba(24,26,36,0.28)')
-  mist.addColorStop(1, 'rgba(12,14,22,0.62)')
+  mist.addColorStop(0, 'rgba(18,20,32,0.55)')
+  mist.addColorStop(0.35, 'rgba(24,26,36,0.28)')
+  mist.addColorStop(0.65, 'rgba(20,22,30,0.35)')
+  mist.addColorStop(1, 'rgba(12,14,22,0.72)')
   ctx.fillStyle = mist
   ctx.fillRect(0, 0, W, H)
 
-  // Drifting haze
-  for (let i = 0; i < 4; i++) {
-    const y = H * (0.25 + i * 0.14) + Math.sin(t * 0.45 + i) * 8
-    const drift = ((t * (10 + i * 4)) % (W + 180)) - 90
-    ctx.fillStyle = `rgba(210,220,230,${0.045 + i * 0.02})`
+  for (let i = 0; i < 3; i++) {
+    const y = H * (0.28 + i * 0.16) + Math.sin(t * 0.5 + i) * 8
+    const drift = ((t * (8 + i * 3)) % (W + 160)) - 80
+    ctx.fillStyle = `rgba(210,220,230,${0.04 + i * 0.02})`
     ctx.beginPath()
-    ctx.ellipse(drift, y, 170 + i * 20, 20 + i * 3, 0, 0, Math.PI * 2)
+    ctx.ellipse(drift, y, 180, 22, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.beginPath()
-    ctx.ellipse(drift + 110, y + 10, 130, 15, 0, 0, Math.PI * 2)
+    ctx.ellipse(drift + 120, y + 10, 140, 16, 0, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Gold mote dust
   for (let i = 0; i < 14; i++) {
     const px = ((i * 83 + t * (10 + (i % 4) * 4)) % (W + 30)) - 15
     const py = 40 + ((i * 47 + t * 14) % (H * 0.55))
@@ -463,49 +459,73 @@ function drawLoadingScreen(dt) {
 
   ctx.textAlign = 'center'
   ctx.fillStyle = '#e8d5a3'
-  ctx.font = 'bold ' + (compact ? 36 : 44) + 'px Courier New'
-  ctx.shadowColor = 'rgba(232,213,163,0.55)'
-  ctx.shadowBlur = 10 + Math.sin(t * 1.8) * 3
-  ctx.fillText('MISTWOOD', W / 2, compact ? 150 : 160)
+  ctx.font = 'bold ' + (compact ? 40 : 48) + 'px Courier New'
+  ctx.shadowColor = 'rgba(232,213,163,0.5)'
+  ctx.shadowBlur = 12 + Math.sin(t * 1.8) * 2
+  ctx.fillText('MISTWOOD', W / 2, compact ? 168 : 178)
   ctx.shadowBlur = 0
 
-  ctx.fillStyle = 'rgba(220,210,195,0.88)'
-  ctx.font = (compact ? 14 : 13) + 'px Courier New'
-  ctx.fillText(
-    loadState.failed ? 'The path is unclear — continuing anyway' : 'The mist gathers…',
-    W / 2,
-    compact ? 182 : 194
-  )
+  ctx.fillStyle = 'rgba(230,224,210,0.92)'
+  ctx.font = (compact ? 15 : 15) + 'px Courier New'
+  ctx.fillText('Theron · Aria · Lyra — into the mist', W / 2, compact ? 208 : 220)
 
-  const barW = compact ? 300 : 340
-  const barH = compact ? 10 : 8
-  const barX = (W - barW) / 2
-  const barY = compact ? H - 120 : H - 100
-  const p = loadState.failed ? 1 : loadProgress()
-  ctx.fillStyle = 'rgba(20,18,28,0.75)'
-  roundRect(barX, barY, barW, barH, 3)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(232,213,163,0.45)'
-  ctx.lineWidth = 1
-  roundRect(barX, barY, barW, barH, 3)
-  ctx.stroke()
-  if (p > 0) {
-    const fill = ctx.createLinearGradient(barX, 0, barX + barW, 0)
-    fill.addColorStop(0, '#c4a574')
-    fill.addColorStop(0.5, '#e8d5a3')
-    fill.addColorStop(1, '#f0e6c8')
-    ctx.fillStyle = fill
-    const inner = Math.max(3, (barW - 4) * p)
-    roundRect(barX + 2, barY + 2, inner, barH - 4, 2)
+  // Only the lower strip changes: progress while loading, start prompt when ready
+  const stripY = compact ? 300 : 310
+  if (!loadState.ready) {
+    const barW = compact ? 300 : 340
+    const barH = compact ? 10 : 8
+    const barX = (W - barW) / 2
+    const barY = stripY - 6
+    const p = loadState.failed ? 1 : loadProgress()
+    ctx.fillStyle = 'rgba(20,18,28,0.75)'
+    roundRect(barX, barY, barW, barH, 3)
     ctx.fill()
+    ctx.strokeStyle = 'rgba(232,213,163,0.45)'
+    ctx.lineWidth = 1
+    roundRect(barX, barY, barW, barH, 3)
+    ctx.stroke()
+    if (p > 0) {
+      const fill = ctx.createLinearGradient(barX, 0, barX + barW, 0)
+      fill.addColorStop(0, '#c4a574')
+      fill.addColorStop(0.5, '#e8d5a3')
+      fill.addColorStop(1, '#f0e6c8')
+      ctx.fillStyle = fill
+      roundRect(barX + 2, barY + 2, Math.max(3, (barW - 4) * p), barH - 4, 2)
+      ctx.fill()
+    }
+    const pulse = 0.55 + Math.sin(t * 2.4) * 0.35
+    ctx.globalAlpha = pulse
+    ctx.fillStyle = '#e8d5a3'
+    ctx.font = (compact ? 13 : 12) + 'px Courier New'
+    ctx.fillText(
+      loadState.failed ? 'The path is unclear' : Math.round(p * 100) + '%',
+      W / 2,
+      barY + (compact ? 32 : 28)
+    )
+    ctx.globalAlpha = 1
+  } else {
+    const pulse = 0.65 + Math.sin(t * 2.6) * 0.35
+    ctx.globalAlpha = pulse
+    ctx.fillStyle = '#e8d5a3'
+    ctx.font = (compact ? 16 : 14) + 'px Courier New'
+    ctx.fillText(
+      (view && view.hint) || (compact ? 'Tap to begin' : 'Press Z / Enter to begin'),
+      W / 2,
+      stripY
+    )
+    ctx.globalAlpha = 1
+    ctx.fillStyle = 'rgba(160,155,140,0.85)'
+    ctx.font = (compact ? 13 : 12) + 'px Courier New'
+    ctx.fillText('A quiet road through fog and fang', W / 2, compact ? 340 : 348)
   }
+}
 
-  const pulse = 0.55 + Math.sin(t * 2.4) * 0.35
-  ctx.globalAlpha = pulse
-  ctx.fillStyle = '#e8d5a3'
-  ctx.font = (compact ? 13 : 12) + 'px Courier New'
-  ctx.fillText(loadState.ready ? 'The path opens' : Math.round(p * 100) + '%', W / 2, barY + (compact ? 32 : 28))
-  ctx.globalAlpha = 1
+function drawLoadingScreen(_dt) {
+  drawOpeningScene(null)
+}
+
+function drawTitle(view) {
+  drawOpeningScene(view)
 }
 
 function heroSpriteId(h) {
@@ -1225,60 +1245,6 @@ function foeKind(id) {
   return 'foe'
 }
 
-function drawTitle(view) {
-  if (!drawCoverImage(battleBgs[TITLE_BG])) {
-    ctx.fillStyle = '#121018'
-    ctx.fillRect(0, 0, W, H)
-  }
-
-  // Soft mist wash — readable without crushing the plains
-  const mist = ctx.createLinearGradient(0, 0, 0, H)
-  mist.addColorStop(0, 'rgba(18,20,32,0.55)')
-  mist.addColorStop(0.35, 'rgba(24,26,36,0.28)')
-  mist.addColorStop(0.65, 'rgba(20,22,30,0.35)')
-  mist.addColorStop(1, 'rgba(12,14,22,0.72)')
-  ctx.fillStyle = mist
-  ctx.fillRect(0, 0, W, H)
-
-  // Gentle drifting haze bands
-  const t = performance.now() / 1000
-  for (let i = 0; i < 3; i++) {
-    const y = H * (0.28 + i * 0.16) + Math.sin(t * 0.5 + i) * 8
-    const drift = ((t * (8 + i * 3)) % (W + 160)) - 80
-    ctx.fillStyle = `rgba(210,220,230,${0.04 + i * 0.02})`
-    ctx.beginPath()
-    ctx.ellipse(drift, y, 180, 22, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(drift + 120, y + 10, 140, 16, 0, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  const compact = isCompactUi()
-  ctx.textAlign = 'center'
-  ctx.fillStyle = '#e8d5a3'
-  ctx.font = 'bold ' + (compact ? 40 : 48) + 'px Courier New'
-  ctx.shadowColor = 'rgba(232,213,163,0.5)'
-  ctx.shadowBlur = 14
-  ctx.fillText('MISTWOOD', W / 2, compact ? 168 : 178)
-  ctx.shadowBlur = 0
-
-  ctx.fillStyle = 'rgba(230,224,210,0.92)'
-  ctx.font = (compact ? 15 : 15) + 'px Courier New'
-  ctx.fillText('Theron · Aria · Lyra — into the mist', W / 2, compact ? 208 : 220)
-
-  const pulse = 0.65 + Math.sin(performance.now() / 380) * 0.35
-  ctx.globalAlpha = pulse
-  ctx.fillStyle = '#e8d5a3'
-  ctx.font = (compact ? 16 : 14) + 'px Courier New'
-  ctx.fillText(view.hint || (compact ? 'Tap to begin' : 'Press Z / Enter to begin'), W / 2, compact ? 300 : 310)
-  ctx.globalAlpha = 1
-
-  ctx.fillStyle = 'rgba(160,155,140,0.85)'
-  ctx.font = (compact ? 13 : 12) + 'px Courier New'
-  ctx.fillText('A quiet road through fog and fang', W / 2, compact ? 340 : 348)
-}
-
 function drawVictoryModal(view) {
   // Dim the field
   ctx.fillStyle = 'rgba(7,7,26,0.55)'
@@ -1646,22 +1612,16 @@ function dipAlpha() {
 
 function draw(dt) {
   syncCanvasSize()
+  loadState.t += dt
   if (!loadState.ready) {
-    drawLoadingScreen(dt)
+    drawOpeningScene(null)
     return
-  }
-  if (loadState.fade > 0) {
-    loadState.fade = Math.max(0, loadState.fade - dt * 1.5)
   }
   const live = get_view()
   updateDip(dt, live)
   const under = (dip.phase === 'out' && dip.holdView) ? dip.holdView : live
   drawScene(under, dt)
   drawDipOverlay(dipAlpha())
-  if (loadState.fade > 0.001) {
-    ctx.fillStyle = `rgba(7,7,26,${Math.min(1, loadState.fade)})`
-    ctx.fillRect(0, 0, W, H)
-  }
 }
 
 let flashIdx = -1
@@ -1669,7 +1629,7 @@ let flashUntil = 0
 let confirmAt = 0
 
 function assetsBlocking() {
-  return !loadState.ready || loadState.fade > 0.55
+  return !loadState.ready
 }
 
 function onConfirm() { if (!assetsBlocking() && !dipBlocking()) menu_confirm() }
