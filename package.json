@@ -70,5 +70,8 @@
     "build-rpg-standalone": "node tools/synth_bootstrap_cli.js examples/rpg/main.syn demo/rpg.synth.js && node tools/embed_rpg.js && node tools/build_standalone_rpg.js",
     "rebuild-demos": "node tools/rebuild_demos.js"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
 }
