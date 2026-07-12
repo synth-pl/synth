@@ -206,7 +206,7 @@
   </div>
 
   <footer>
-    <span>Drag handles to resize · Snap to nearest (S) · click = append · Shift-drag = new box · Space = play</span>
+    <span>Click box to select · Add selected → timeline · drag handles · Snap (S) · Shift-drag new box · Space play</span>
     <span id="footerStatus"></span>
   </footer>
 </div>
@@ -1223,9 +1223,10 @@
     const drag = boxDrag
     boxDrag = null
     if (drag.mode === 'pending-click' && !drag.moved) {
-      // Click = append to timeline (same as before)
+      // Click = select only
       selectedDetect = drag.index
-      appendTimelineBox(detectBoxes[drag.index])
+      syncBoxNudge()
+      drawSheet()
       return
     }
     const kept = detectBoxes[drag.index]
@@ -1464,6 +1465,9 @@
     } else if (ev.key === 's' || ev.key === 'S') {
       ev.preventDefault()
       snapSelectedToNearest()
+    } else if (ev.key === 'Enter' || ev.key === 'a' || ev.key === 'A') {
+      ev.preventDefault()
+      $('btnAddSelected').click()
     }
   })
 
