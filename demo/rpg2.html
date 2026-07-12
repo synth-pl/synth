@@ -254,13 +254,24 @@ function chromaKeyToCanvas(img, chroma) {
   const d = data.data
   const kr = chroma.r, kg = chroma.g, kb = chroma.b
   const tight = !!chroma.tight
-  const tol = chroma.tolerance != null ? chroma.tolerance : (tight ? 110 : 140)
+  const darkMode = chroma.mode === 'dark'
+  const tol = chroma.tolerance != null ? chroma.tolerance : (tight ? 110 : (darkMode ? 42 : 140))
   for (let i = 0; i < d.length; i += 4) {
     const r = d[i], g = d[i + 1], b = d[i + 2]
     const dist = Math.abs(r - kr) + Math.abs(g - kg) + Math.abs(b - kb)
     let keyed = false
     let soft = false
-    if (tight) {
+    if (darkMode) {
+      // Near-black sheet void (new party sheets). Keep dark armor/hair by
+      // requiring proximity to the sampled sheet bg, not just low luminance.
+      const lum = r + g + b
+      keyed = dist <= tol || (lum <= 36 && dist <= tol + 18)
+      if (!keyed && lum <= 55 && dist <= tol + 28) {
+        const t = Math.min(1, (tol + 28 - dist) / 28)
+        d[i + 3] = Math.round(d[i + 3] * (1 - t * 0.92))
+        if (d[i + 3] < 10) keyed = true
+      }
+    } else if (tight) {
       // Near-screen only — keeps purple character art (Shadow Wyrm).
       const brightScreen = r >= 210 && b >= 165 && g <= 70 && dist < tol + 70
       const darkScreen = r >= 190 && b >= 150 && g <= 55 && Math.abs(r - b) < 80 && dist < tol + 90
@@ -275,7 +286,7 @@ function chromaKeyToCanvas(img, chroma) {
         if (d[i + 3] < 8) keyed = true
       }
     } else {
-      // Wide magenta key for party / most foes.
+      // Wide magenta key for most foes.
       const mag = Math.min(r, b) - g
       const bright = r >= 170 && b >= 150 && g <= 110
       const dark = r >= 100 && b >= 100 && g <= 45 && Math.abs(r - b) <= 55
@@ -313,7 +324,7 @@ async function loadPartyAssets() {
     await Promise.all(Object.keys(heroes).map(async id => {
       const h = heroes[id]
       const sheet = await loadImage(ASSET_BASE + h.sheet)
-      heroSheets[id] = chromaKeyToCanvas(sheet, chroma)
+      heroSheets[id] = chromaKeyToCanvas(sheet, h.chroma || chroma)
       if (h.portrait) {
         heroPortraits[id] = await loadImage(ASSET_BASE + h.portrait)
       }
