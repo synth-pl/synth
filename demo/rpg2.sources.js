@@ -159,6 +159,24 @@ const first_alive_foe = () => {
 };
 
 /**
+ * @returns {number}
+ */
+const sole_alive_foe = () => {
+  let found = 0 - 1;
+  let i = 0;
+  while (i < foes.length) {
+    if (foes[i].alive) {
+      if (found >= 0) {
+        return 0 - 1;
+      }
+      found = i;
+    }
+    i = i + 1;
+  }
+  return found;
+};
+
+/**
  * @returns {*}
  */
 const clear_defending = () => party = $map(party, (h) => ({...h, defending: false, guarding: 0 - 1}));
@@ -550,13 +568,43 @@ const do_potion = (actor, ally_i) => {
 };
 
 /**
+ * @param {number} ti
+ * @returns {*}
+ */
+const apply_pending_to_enemy = (ti) => {
+  if (pending.cmd == "fight") {
+    return do_fight(Game.active, ti);
+  } else if (pending.cmd == "magic") {
+    if (pending.skill == "fire") {
+      return do_fire(Game.active, ti);
+    } else if (pending.skill == "bolt") {
+      return do_bolt(Game.active, ti);
+    }
+  } else if (pending.cmd == "skill") {
+    return do_pierce(Game.active, ti);
+  }
+};
+
+/**
+ * @returns {*}
+ */
+const begin_enemy_target = () => {
+  let sole = sole_alive_foe();
+  if (sole >= 0) {
+    return apply_pending_to_enemy(sole);
+  } else {
+    return open_mode("target_enemy");
+  }
+};
+
+/**
  * @param {*} row
  * @returns {*}
  */
 const confirm_command_row = (row) => {
   if (row.id == "fight") {
     pending = {cmd: "fight", skill: ""};
-    return open_mode("target_enemy");
+    return begin_enemy_target();
   } else if (row.id == "defend") {
     return do_defend(Game.active);
   } else if (row.id == "guard") {
@@ -578,10 +626,10 @@ const confirm_command_row = (row) => {
 const confirm_magic_row = (row) => {
   if (row.id == "fire") {
     pending = {cmd: "magic", skill: "fire"};
-    return open_mode("target_enemy");
+    return begin_enemy_target();
   } else if (row.id == "bolt") {
     pending = {cmd: "magic", skill: "bolt"};
-    return open_mode("target_enemy");
+    return begin_enemy_target();
   } else if (row.id == "cure") {
     pending = {cmd: "magic", skill: "cure"};
     return open_mode("target_ally");
@@ -595,7 +643,7 @@ const confirm_magic_row = (row) => {
 const confirm_skill_row = (row) => {
   if (row.id == "pierce") {
     pending = {cmd: "skill", skill: "pierce"};
-    return open_mode("target_enemy");
+    return begin_enemy_target();
   } else if (row.id == "rain") {
     return do_rain(Game.active);
   }
@@ -625,17 +673,7 @@ const confirm_target_row = (row) => {
     if (ti < 0 || ti >= foes.length || !foes[ti].alive) {
       return undefined;
     }
-    if (pending.cmd == "fight") {
-      return do_fight(Game.active, ti);
-    } else if (pending.cmd == "magic") {
-      if (pending.skill == "fire") {
-        return do_fire(Game.active, ti);
-      } else if (pending.skill == "bolt") {
-        return do_bolt(Game.active, ti);
-      }
-    } else if (pending.cmd == "skill") {
-      return do_pierce(Game.active, ti);
-    }
+    return apply_pending_to_enemy(ti);
   } else if (Game.menu_mode == "target_ally") {
     if (ti < 0 || ti >= party.length || !party[ti].alive) {
       return undefined;

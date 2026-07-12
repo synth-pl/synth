@@ -167,6 +167,19 @@ fn first_alive_foe() -> int {
   0 - 1
 }
 
+fn sole_alive_foe() -> int {
+  let mut found = 0 - 1
+  let mut i = 0
+  while i < foes.length {
+    if foes[i].alive {
+      if found >= 0 { return 0 - 1 }
+      found = i
+    }
+    i = i + 1
+  }
+  found
+}
+
 fn clear_defending() {
   party = party.map(h => { ...h, defending: false, guarding: 0 - 1 })
 }
@@ -498,10 +511,30 @@ fn do_potion(actor: int, ally_i: int) {
   }
 }
 
+fn apply_pending_to_enemy(ti: int) {
+  if pending.cmd == "fight" {
+    do_fight(Game.active, ti)
+  } else if pending.cmd == "magic" {
+    if pending.skill == "fire" { do_fire(Game.active, ti) }
+    else if pending.skill == "bolt" { do_bolt(Game.active, ti) }
+  } else if pending.cmd == "skill" {
+    do_pierce(Game.active, ti)
+  }
+}
+
+fn begin_enemy_target() {
+  let sole = sole_alive_foe()
+  if sole >= 0 {
+    apply_pending_to_enemy(sole)
+  } else {
+    open_mode("target_enemy")
+  }
+}
+
 fn confirm_command_row(row: any) {
   if row.id == "fight" {
     pending = { cmd: "fight", skill: "" }
-    open_mode("target_enemy")
+    begin_enemy_target()
   } else if row.id == "defend" {
     do_defend(Game.active)
   } else if row.id == "guard" {
@@ -519,10 +552,10 @@ fn confirm_command_row(row: any) {
 fn confirm_magic_row(row: any) {
   if row.id == "fire" {
     pending = { cmd: "magic", skill: "fire" }
-    open_mode("target_enemy")
+    begin_enemy_target()
   } else if row.id == "bolt" {
     pending = { cmd: "magic", skill: "bolt" }
-    open_mode("target_enemy")
+    begin_enemy_target()
   } else if row.id == "cure" {
     pending = { cmd: "magic", skill: "cure" }
     open_mode("target_ally")
@@ -532,7 +565,7 @@ fn confirm_magic_row(row: any) {
 fn confirm_skill_row(row: any) {
   if row.id == "pierce" {
     pending = { cmd: "skill", skill: "pierce" }
-    open_mode("target_enemy")
+    begin_enemy_target()
   } else if row.id == "rain" {
     do_rain(Game.active)
   }
@@ -550,14 +583,7 @@ fn confirm_target_row(row: any) {
   if ti == null { return }
   if Game.menu_mode == "target_enemy" {
     if ti < 0 or ti >= foes.length or not foes[ti].alive { return }
-    if pending.cmd == "fight" {
-      do_fight(Game.active, ti)
-    } else if pending.cmd == "magic" {
-      if pending.skill == "fire" { do_fire(Game.active, ti) }
-      else if pending.skill == "bolt" { do_bolt(Game.active, ti) }
-    } else if pending.cmd == "skill" {
-      do_pierce(Game.active, ti)
-    }
+    apply_pending_to_enemy(ti)
   } else if Game.menu_mode == "target_ally" {
     if ti < 0 or ti >= party.length or not party[ti].alive { return }
     if pending.cmd == "guard" {
