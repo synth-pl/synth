@@ -1,0 +1,232 @@
+{
+  "kind": "Program",
+  "body": [
+    {
+      "kind": "TypeAlias",
+      "name": "HeroName",
+      "typeParams": [],
+      "type": {
+        "name": "string",
+        "isArray": false,
+        "isOptional": false
+      },
+      "constraint": {
+        "kind": "LengthConstraint",
+        "op": ">",
+        "value": 0
+      },
+      "line": 3
+    },
+    {
+      "kind": "TypeAlias",
+      "name": "ClassName",
+      "typeParams": [],
+      "type": {
+        "name": "string",
+        "isArray": false,
+        "isOptional": false
+      },
+      "constraint": {
+        "kind": "LengthConstraint",
+        "op": ">",
+        "value": 0
+      },
+      "line": 3
+    },
+    {
+      "kind": "TypeAlias",
+      "name": "Gold",
+      "typeParams": [],
+      "type": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "constraint": {
+        "kind": "CompareConstraint",
+        "op": ">=",
+        "value": 0
+      },
+      "line": 4
+    },
+    {
+      "kind": "TypeAlias",
+      "name": "XP",
+      "typeParams": [],
+      "type": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "constraint": {
+        "kind": "CompareConstraint",
+        "op": ">=",
+        "value": 0
+      },
+      "line": 4
+    },
+    {
+      "kind": "FnDecl",
+      "name": "greet",
+      "typeParams": [],
+      "params": [
+        {
+          "name": "name",
+          "type": {
+            "name": "HeroName",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        },
+        {
+          "name": "klass",
+          "type": {
+            "name": "ClassName",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        }
+      ],
+      "returnType": {
+        "name": "string",
+        "isArray": false,
+        "isOptional": false
+      },
+      "annotations": [],
+      "body": {
+        "kind": "BinaryExpr",
+        "op": "+",
+        "left": {
+          "kind": "BinaryExpr",
+          "op": "+",
+          "left": {
+            "kind": "Identifier",
+            "name": "name"
+          },
+          "right": {
+            "kind": "StringLit",
+            "value": " the ",
+            "raw": "\" the \""
+          }
+        },
+        "right": {
+          "kind": "Identifier",
+          "name": "klass"
+        }
+      },
+      "line": 6
+    },
+    {
+      "kind": "FnDecl",
+      "name": "purse",
+      "typeParams": [],
+      "params": [
+        {
+          "name": "g",
+          "type": {
+            "name": "Gold",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        },
+        {
+          "name": "x",
+          "type": {
+            "name": "XP",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        }
+      ],
+      "returnType": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "annotations": [],
+      "body": {
+        "kind": "BinaryExpr",
+        "op": "+",
+        "left": {
+          "kind": "Identifier",
+          "name": "g"
+        },
+        "right": {
+          "kind": "Identifier",
+          "name": "x"
+        }
+      },
+      "line": 10
+    },
+    {
+      "kind": "TestDecl",
+      "description": "validators accept non-empty names",
+      "body": {
+        "kind": "BinaryExpr",
+        "op": "==",
+        "left": {
+          "kind": "CallExpr",
+          "callee": {
+            "kind": "Identifier",
+            "name": "greet"
+          },
+          "args": [
+            {
+              "kind": "StringLit",
+              "value": "Ada",
+              "raw": "\"Ada\""
+            },
+            {
+              "kind": "StringLit",
+              "value": "Mage",
+              "raw": "\"Mage\""
+            }
+          ]
+        },
+        "right": {
+          "kind": "StringLit",
+          "value": "Ada the Mage",
+          "raw": "\"Ada the Mage\""
+        }
+      },
+      "line": 14
+    },
+    {
+      "kind": "TestDecl",
+      "description": "gold and xp share constraint shape",
+      "body": {
+        "kind": "BinaryExpr",
+        "op": "==",
+        "left": {
+          "kind": "CallExpr",
+          "callee": {
+            "kind": "Identifier",
+            "name": "purse"
+          },
+          "args": [
+            {
+              "kind": "NumberLit",
+              "value": 3,
+              "raw": "3"
+            },
+            {
+              "kind": "NumberLit",
+              "value": 7,
+              "raw": "7"
+            }
+          ]
+        },
+        "right": {
+          "kind": "NumberLit",
+          "value": 10,
+          "raw": "10"
+        }
+      },
+      "line": 18
+    }
+  ]
+}

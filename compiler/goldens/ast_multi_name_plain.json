@@ -1,0 +1,71 @@
+{
+  "kind": "Program",
+  "body": [
+    {
+      "kind": "TypeAlias",
+      "name": "A",
+      "typeParams": [],
+      "type": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "line": 1
+    },
+    {
+      "kind": "TypeAlias",
+      "name": "B",
+      "typeParams": [],
+      "type": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "line": 1
+    },
+    {
+      "kind": "FnDecl",
+      "name": "add",
+      "typeParams": [],
+      "params": [
+        {
+          "name": "x",
+          "type": {
+            "name": "A",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        },
+        {
+          "name": "y",
+          "type": {
+            "name": "B",
+            "isArray": false,
+            "isOptional": false
+          },
+          "spread": false
+        }
+      ],
+      "returnType": {
+        "name": "int",
+        "isArray": false,
+        "isOptional": false
+      },
+      "annotations": [],
+      "body": {
+        "kind": "BinaryExpr",
+        "op": "+",
+        "left": {
+          "kind": "Identifier",
+          "name": "x"
+        },
+        "right": {
+          "kind": "Identifier",
+          "name": "y"
+        }
+      },
+      "line": 3
+    }
+  ]
+}
