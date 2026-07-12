@@ -418,6 +418,55 @@
 
     .doc-table tr:hover td { background: rgba(176,96,255,0.03); }
 
+    /* Soft in-body links — purple wash, no browser-blue underline */
+    .main a {
+      color: var(--purple);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(176, 96, 255, 0.35);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .main a:hover {
+      color: var(--pink);
+      border-bottom-color: rgba(255, 45, 120, 0.55);
+    }
+    .main a code {
+      color: inherit;
+    }
+
+    /* Annotation roster — chip + role, sits with the keyword pills */
+    .ann-roster {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 16px 0 24px;
+    }
+    .ann-row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .main a.ann-row {
+      border-bottom: 1px solid transparent;
+      color: var(--text-muted);
+    }
+    .main a.ann-row:hover {
+      color: var(--text);
+      background: rgba(176, 96, 255, 0.06);
+      border-color: var(--border-card);
+      border-bottom-color: var(--border-card);
+    }
+    .ann-row .pill { flex-shrink: 0; }
+    .ann-role {
+      font-size: 13.5px;
+      line-height: 1.45;
+    }
+
     /* ── Feature pills ───────────────────────────────────────────────────── */
     .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
 
@@ -2015,19 +2064,16 @@ $ synth --check src/main.syn
           Written above <code>fn</code> (house style). Not keywords — they are <code>@</code>-prefixed
           attributes checked or recorded by the compiler.
         </p>
-        <div class="doc-table-wrap"><table class="doc-table">
-          <thead><tr><th>Annotation</th><th>Role</th></tr></thead>
-          <tbody>
-            <tr><td><code>@pure</code></td><td><a href="#ann-pure">No effectful globals</a></td></tr>
-            <tr><td><code>@total</code></td><td><a href="#ann-pure">Total / always-defined intent</a></td></tr>
-            <tr><td><code>@intent</code></td><td><a href="#ann-intent">Machine-readable purpose string</a></td></tr>
-            <tr><td><code>@effects</code></td><td><a href="#ann-effects">Documented async effects (required on <code>async fn</code>)</a></td></tr>
-            <tr><td><code>@memo</code></td><td><a href="#ann-memo">Memoize pure results</a></td></tr>
-            <tr><td><code>@exhaustive</code></td><td><a href="#ann-exhaustive">Require full match coverage</a></td></tr>
-            <tr><td><code>@test</code></td><td><a href="#ann-test">Runnable test declaration</a></td></tr>
-            <tr><td><code>@throws</code></td><td><a href="#ann-throws">Fallible <code>Result</code>-returning function</a></td></tr>
-          </tbody>
-        </table></div>
+        <div class="ann-roster">
+          <a class="ann-row" href="#ann-pure"><span class="pill pill-cyan">@pure</span><span class="ann-role">No effectful globals</span></a>
+          <a class="ann-row" href="#ann-pure"><span class="pill pill-cyan">@total</span><span class="ann-role">Total / always-defined intent</span></a>
+          <a class="ann-row" href="#ann-intent"><span class="pill pill-cyan">@intent</span><span class="ann-role">Machine-readable purpose string</span></a>
+          <a class="ann-row" href="#ann-effects"><span class="pill pill-cyan">@effects</span><span class="ann-role">Documented async effects (required on <code>async fn</code>)</span></a>
+          <a class="ann-row" href="#ann-memo"><span class="pill pill-cyan">@memo</span><span class="ann-role">Memoize pure results</span></a>
+          <a class="ann-row" href="#ann-exhaustive"><span class="pill pill-cyan">@exhaustive</span><span class="ann-role">Require full match coverage</span></a>
+          <a class="ann-row" href="#ann-test"><span class="pill pill-cyan">@test</span><span class="ann-role">Runnable test declaration</span></a>
+          <a class="ann-row" href="#ann-throws"><span class="pill pill-cyan">@throws</span><span class="ann-role">Fallible <code>Result</code>-returning function</span></a>
+        </div>
 
         <h3 class="subsection-title">Built-in type names</h3>
         <p>
