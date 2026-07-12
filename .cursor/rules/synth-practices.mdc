@@ -1,0 +1,63 @@
+---
+description: Living Synth language practices (invented with Danny — little external training data). Apply when editing .syn files, demos, compiler, or tools in this repo.
+globs: "**/*.syn,examples/**,demo/**,compiler/**,tools/**"
+alwaysApply: false
+---
+
+# Synth practices
+
+Synth (`synth-pl/synth`) has almost no public training corpus. Prefer patterns validated in demos over borrowed TS/Rust/FP defaults. Extend this rule when a practice is confirmed or vetoed.
+
+Canonical copy for agents working in this repo. Mist also keeps a mirror under `C:\dev\mist\.cursor\rules\synth-practices.mdc` — keep them in sync when practices change.
+
+## Mindset
+
+- Propose structure; say when you're importing a metaphor; accept vetoes.
+- Do not stuff every language feature into a demo. Fit > coverage.
+- Preserve host contracts (HTML/JS call sites) even when rewriting Synth structure.
+
+## Structure
+
+- **Constants:** records + tables (`ARENA`, `GRID`, `ROW_STYLES`), not scattered magic `let`s or twin `match` tables.
+- **Hot state:** `let mut` records; mutate fields in place each frame. No new object per bounce/tick.
+- **Rare resets:** new/serve records OK; copy into the live mut body when needed.
+- **Getters:** small snapshots for renderers are fine.
+- **Group by change rate:** tune-once specs vs frame-mutated bodies. Flat scalars OK for tiny demos; records when fields travel together.
+- **Pure query vs mutation:** split find/apply when collision logic grows.
+
+## Constrained types (`where`)
+
+- Prefer on **boundaries** (params/returns that shouldn't lie): scores, levels, indices — see RPG/Controls.
+- Avoid sprinkling on every hot-path param if validation noise/cost isn't worth it; `store` fields in demos are still mostly bare `int`/`string`.
+- Training bias defaults to unconstrained ints in game loops — push back when a contract would actually catch bugs.
+- Don't use top-level `let x: T[] = […]` until the checker hang is fixed; untyped array + `record` shape is the workaround.
+
+## Annotations
+
+- **House style:** annotations go **above** `fn` (not inside the body). Documented on the website; prefer this in new Synth.
+- Outside or inside still parse the same; short `fn f() = expr` requires prefix.
+- Match surrounding file when editing older examples that still use inside-body annotations.
+- **Authoring:** `@memo` belongs on hot `@pure`/`@total` formulas with stable keys (scalars / simple records) — fit > sprinkling. Preserve existing `@memo` on damage/stats helpers unless removing it is deliberate.
+- **Agent-time (use the contracts — don't just rewrite past them):**
+  1. Before rewriting or re-validating annotated modules, run `synth --spec` (or read the annotations on the fns you touch).
+  2. `@intent` = one-line contract; prefer it over re-deriving “what does this do?” from the body.
+  3. `@pure` / `@total` ⇒ same inputs → same result; safe to cache mentally / skip re-proving unless changing the fn. (`@total` is still documentation-only in the checker — trust the cluster, downgrade if checker warns.)
+  4. `@memo` ⇒ runtime already caches; don't re-open the body to “check the formula” for unchanged args; don't strip memo without a reason.
+  5. `@effects` ⇒ must re-execute / re-test side paths (DOM, timers, RNG host). Not memo material.
+  6. Lying `@pure` demos exist on purpose (`debug_*`) — if `@intent` says the annotation is false, **don't** treat as cacheable.
+
+## Known traps
+
+- Avoid top-level `let x: T[] = [ … ]` — can hang the checker; use untyped array lets.
+- Prefer `found: bool` records over optional (`T?`) for simple game-loop presence.
+- Use `//` comments unless `///` is formally supported.
+- `--check` does **not** catch unbound names today — smoke-load demos / read generated JS for free identifiers after structural edits.
+
+## Breakout
+
+- `examples/breakout/main.syn` — canonical demo wired to `demo/breakout.html`.
+- `examples/breakout/bak/` — prior versions (including former `breakout_showcase.syn` structural twin).
+
+## IDE note
+
+Roadmap "IDE" = LSP hosted by the VS Code/Cursor extension — not a fork or custom IDE.
