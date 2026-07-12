@@ -69,6 +69,7 @@ let mut foes = []
 let mut anim = { kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero" }
 let mut pending = { cmd: "", skill: "" }
 let mut enemy_cursor = 0
+let mut turn_order = [0, 1, 2]
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -200,14 +201,55 @@ fn first_alive_from(start: int) -> int {
   found
 }
 
-fn next_alive_after(cur: int) -> int {
-  let n = party.length
-  let mut i = cur + 1
-  while i < n {
-    if party[i].alive { return i }
-    i = i + 1
+fn reshuffle_turn_order() {
+  let mut order = [0, 1, 2]
+  let mut i = order.length - 1
+  while i > 0 {
+    let j = random_int(0, i)
+    let tmp = order[i]
+    order = set_at(order, i, order[j])
+    order = set_at(order, j, tmp)
+    i = i - 1
+  }
+  turn_order = order
+}
+
+fn first_in_turn_order() -> int {
+  let mut k = 0
+  while k < turn_order.length {
+    let hi = turn_order[k]
+    if hi >= 0 and hi < party.length and party[hi].alive {
+      return hi
+    }
+    k = k + 1
   }
   0 - 1
+}
+
+fn next_in_turn_order(after_idx: int) -> int {
+  let mut pos = 0
+  let mut found = false
+  while pos < turn_order.length {
+    if turn_order[pos] == after_idx {
+      found = true
+      break
+    }
+    pos = pos + 1
+  }
+  let start = found ? pos + 1 : 0
+  let mut k = start
+  while k < turn_order.length {
+    let hi = turn_order[k]
+    if hi >= 0 and hi < party.length and party[hi].alive {
+      return hi
+    }
+    k = k + 1
+  }
+  0 - 1
+}
+
+fn next_alive_after(cur: int) -> int {
+  next_in_turn_order(cur)
 }
 
 fn first_alive_foe() -> int {
@@ -282,6 +324,8 @@ fn start_encounter(n: int) {
   foes = encounter_foes(n)
   anim = { kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero" }
   pending = { cmd: "", skill: "" }
+  reshuffle_turn_order()
+  let first = first_in_turn_order()
   let pots = n == 0 ? 3 : Game.potions
   Game.set({
     scene: "battle",
@@ -291,11 +335,11 @@ fn start_encounter(n: int) {
     log1: encounter_hint(n),
     log2: "",
     phase: "hero_command",
-    active: 0,
+    active: first < 0 ? 0 : first,
     menu_mode: "command",
     menu_index: 0
   })
-  begin_hero_turn(first_alive_from(0))
+  begin_hero_turn(first)
 }
 
 fn start_game() {
@@ -776,7 +820,7 @@ fn run_next_enemy(start: int) {
   // all enemies acted
   finish_battle_check()
   if Game.scene == "battle" and Game.phase != "battle_clear" {
-    begin_hero_turn(first_alive_from(0))
+    begin_hero_turn(first_in_turn_order())
   }
 }
 

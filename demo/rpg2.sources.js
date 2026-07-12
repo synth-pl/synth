@@ -40,6 +40,7 @@ let foes = [];
 let anim = {kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero"};
 let pending = {cmd: "", skill: ""};
 let enemy_cursor = 0;
+let turn_order = [0, 1, 2];
 
 const phys_damage = (() => {
   const __cache = new Map();
@@ -133,20 +134,67 @@ const first_alive_from = (start) => {
 };
 
 /**
- * @param {number} cur
+ * @returns {*}
+ */
+const reshuffle_turn_order = () => {
+  let order = [0, 1, 2];
+  let i = order.length - 1;
+  while (i > 0) {
+    let j = $random_int(0, i);
+    let tmp = order[i];
+    order = $set_at(order, i, order[j]);
+    order = $set_at(order, j, tmp);
+    i = i - 1;
+  }
+  return turn_order = order;
+};
+
+/**
  * @returns {number}
  */
-const next_alive_after = (cur) => {
-  let n = party.length;
-  let i = cur + 1;
-  while (i < n) {
-    if (party[i].alive) {
-      return i;
+const first_in_turn_order = () => {
+  let k = 0;
+  while (k < turn_order.length) {
+    let hi = turn_order[k];
+    if (hi >= 0 && hi < party.length && party[hi].alive) {
+      return hi;
     }
-    i = i + 1;
+    k = k + 1;
   }
   return 0 - 1;
 };
+
+/**
+ * @param {number} after_idx
+ * @returns {number}
+ */
+const next_in_turn_order = (after_idx) => {
+  let pos = 0;
+  let found = false;
+  while (pos < turn_order.length) {
+    if (turn_order[pos] == after_idx) {
+      found = true;
+      break;
+    }
+    pos = pos + 1;
+  }
+  let start = found ? pos + 1 : 0;
+  let k = start;
+  while (k < turn_order.length) {
+    let hi = turn_order[k];
+    if (hi >= 0 && hi < party.length && party[hi].alive) {
+      return hi;
+    }
+    k = k + 1;
+  }
+  return 0 - 1;
+};
+
+/**
+ * @param {number} cur
+ * @returns {number}
+ */
+const next_alive_after = (cur) => next_in_turn_order(cur);
 
 /**
  * @returns {number}
@@ -251,9 +299,11 @@ const start_encounter = (n) => {
   foes = encounter_foes(n);
   anim = {kind: "none", timer: 0.0, actor: -1, target: -1, amount: 0, text: "", side: "hero"};
   pending = {cmd: "", skill: ""};
+  reshuffle_turn_order();
+  let first = first_in_turn_order();
   let pots = n == 0 ? 3 : Game.potions;
-  Game.set({scene: "battle", encounter: n, potions: pots, log0: encounter_title(n), log1: encounter_hint(n), log2: "", phase: "hero_command", active: 0, menu_mode: "command", menu_index: 0});
-  return begin_hero_turn(first_alive_from(0));
+  Game.set({scene: "battle", encounter: n, potions: pots, log0: encounter_title(n), log1: encounter_hint(n), log2: "", phase: "hero_command", active: first < 0 ? 0 : first, menu_mode: "command", menu_index: 0});
+  return begin_hero_turn(first);
 };
 
 /**
@@ -842,7 +892,7 @@ const run_next_enemy = (start) => {
   }
   finish_battle_check();
   if (Game.scene == "battle" && Game.phase != "battle_clear") {
-    return begin_hero_turn(first_alive_from(0));
+    return begin_hero_turn(first_in_turn_order());
   }
 };
 
