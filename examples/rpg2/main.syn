@@ -137,17 +137,22 @@ fn encounter_foes(n: int) {
       { id: "bandit", name: "Dust Cutthroat", hp: 50, maxHp: 50, atk: 14, def: 4, weakness: "fire",  alive: true, color: "#ff6e3a" },
       { id: "archer", name: "Ruin Watcher",  hp: 40, maxHp: 40, atk: 15, def: 3, weakness: "light",  alive: true, color: "#b84fff" }
     ]
-    // Plains — approaches to the Wyrm
+    // Plains — mixed foes on the road to the Wyrm (no boss yet)
     | 6 => [
+      { id: "slime",  name: "Pale Ooze",     hp: 34, maxHp: 34, atk: 9,  def: 3, weakness: "light",  alive: true, color: "#e8e0ff" },
       { id: "goblin", name: "Field Stalker", hp: 46, maxHp: 46, atk: 12, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" },
-      { id: "bandit", name: "Road Thief",    hp: 54, maxHp: 54, atk: 13, def: 5, weakness: "nature", alive: true, color: "#ffd166" }
+      { id: "archer", name: "Hedge Bowman",  hp: 42, maxHp: 42, atk: 14, def: 3, weakness: "fire",   alive: true, color: "#ff6e3a" }
     ]
     | 7 => [
       { id: "bandit", name: "Goldfield Outlaw", hp: 58, maxHp: 58, atk: 14, def: 6, weakness: "nature", alive: true, color: "#ffd166" },
       { id: "archer", name: "Mist Marksman",    hp: 48, maxHp: 48, atk: 16, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" },
-      { id: "slime",  name: "Pale Ooze",        hp: 36, maxHp: 36, atk: 10, def: 4, weakness: "light",  alive: true, color: "#e8e0ff" }
+      { id: "goblin", name: "Road Ambusher",    hp: 44, maxHp: 44, atk: 13, def: 4, weakness: "light",  alive: true, color: "#ffd166" },
+      { id: "slime",  name: "Mire Jelly",       hp: 36, maxHp: 36, atk: 10, def: 4, weakness: "light",  alive: true, color: "#ff2d78" }
     ]
-    // Boss
+    // Sole boss fight
+    | 8 => [
+      { id: "wyrm", name: "Shadow Wyrm", hp: 160, maxHp: 160, atk: 16, def: 9, weakness: "arcane", alive: true, color: "#b84fff" }
+    ]
     | _ => [
       { id: "wyrm", name: "Shadow Wyrm", hp: 160, maxHp: 160, atk: 16, def: 9, weakness: "arcane", alive: true, color: "#b84fff" }
     ]
@@ -888,6 +893,10 @@ fn get_view() {
 
 @test "final encounter is the wyrm" {
   encounter_foes(8).length == 1 and encounter_foes(8)[0].id == "wyrm"
+}
+
+@test "plains approaches have no wyrm" {
+  not encounter_foes(6).any(e => e.id == "wyrm") and not encounter_foes(7).any(e => e.id == "wyrm")
 }
 
 @test "nine encounter titles" {
