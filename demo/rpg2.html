@@ -784,20 +784,32 @@ function withDepth(slot) {
   }
 }
 
-function foeSlot(i, boss) {
+function foeSlot(i, boss, count) {
+  const n = count > 0 ? count : 1
   const bw = boss ? 140 : 90
   const bh = boss ? 130 : 100
-  // Diagonal enemy line: front-right toward party, trailing back-left
-  // (mirrors heroSlot’s forward-left / back-right stagger)
-  return withDepth({
-    x: 170 - i * 52 - (boss ? 24 : 0),
-    y: 70 + i * 70 - (boss ? 22 : 0),
-    w: bw,
-    h: bh
-  })
+  let x
+  let y
+  if (boss || n <= 2) {
+    // Diagonal line: front-right toward party, trailing back-left
+    x = 170 - i * 52 - (boss ? 24 : 0)
+    y = 70 + i * 70 - (boss ? 22 : 0)
+  } else if (n === 3) {
+    // Two on the diagonal; third to the right, vertically between them
+    if (i === 0) { x = 145; y = 58 }
+    else if (i === 1) { x = 95; y = 128 }
+    else { x = 235; y = 93 }
+  } else {
+    // 4+: left diagonal pair + right pair (keeps HP bars above the HUD)
+    if (i === 0) { x = 115; y = 52 }
+    else if (i === 1) { x = 65; y = 122 }
+    else if (i === 2) { x = 215; y = 62 }
+    else { x = 195; y = 132 }
+  }
+  return withDepth({ x, y, w: bw, h: bh })
 }
-function foeAnchor(i, boss) {
-  const s = foeSlot(i, !!boss)
+function foeAnchor(i, boss, count) {
+  const s = foeSlot(i, !!boss, count)
   return { x: s.x + s.w * 0.55, y: s.y + s.h * 0.5 }
 }
 function heroSlot(i) {
