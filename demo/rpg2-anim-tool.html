@@ -701,18 +701,59 @@
     }
   }
 
-  function commitDetectBoxes() {
+  function sortDetectBoxesRowMajor() {
+    detectBoxes.sort((a, b) => {
+      const row = a.y - b.y
+      if (Math.abs(row) > Math.min(a.h, b.h) * 0.45) return row
+      return a.x - b.x
+    })
+  }
+
+  /** Keep detect + timeline indices contiguous after add/delete/reorder. */
+  function reindexFrames(preferDetectBox) {
+    if (preferDetectBox) {
+      sortDetectBoxesRowMajor()
+      selectedDetect = detectBoxes.findIndex(
+        (b) =>
+          b.x === preferDetectBox.x &&
+          b.y === preferDetectBox.y &&
+          b.w === preferDetectBox.w &&
+          b.h === preferDetectBox.h
+      )
+    } else if (detectBoxes.length) {
+      sortDetectBoxesRowMajor()
+      if (selectedDetect >= detectBoxes.length) selectedDetect = detectBoxes.length - 1
+    } else {
+      selectedDetect = -1
+    }
+
+    const tl = active().timeline
+    if (!tl.length) {
+      selectedTl = -1
+      playFrame = 0
+    } else {
+      if (selectedTl >= tl.length) selectedTl = tl.length - 1
+      if (selectedTl < 0) selectedTl = 0
+      if (playFrame >= tl.length) playFrame = Math.max(0, tl.length - 1)
+    }
+
     active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
     updateDetectStatus()
+    renderTabs()
     redrawAll()
+  }
+
+  function commitDetectBoxes() {
+    reindexFrames(selectedDetect >= 0 ? detectBoxes[selectedDetect] : null)
   }
 
   function insertDetectBox(box, afterIndex) {
     const at = afterIndex >= 0 ? afterIndex + 1 : detectBoxes.length
-    detectBoxes.splice(at, 0, { ...box })
+    const added = { ...box }
+    detectBoxes.splice(at, 0, added)
     selectedDetect = at
-    commitDetectBoxes()
-    setFooter(`Detect box ${at} added — nudge x/y/w/h if needed`)
+    reindexFrames(added)
+    setFooter(`Detect box ${selectedDetect} added — nudge or Snap to nearest`)
   }
 
   function renderTimeline() {
@@ -749,6 +790,7 @@
       const idx = document.createElement('div')
       idx.className = 'idx'
       idx.textContent = String(i)
+      idx.title = `Frame ${i}`
       cell.appendChild(c)
       cell.appendChild(idx)
       cell.addEventListener('click', (e) => {
@@ -772,8 +814,7 @@
         s.timeline.splice(to, 0, item)
         selectedTl = to
         dragTlFrom = -1
-        renderTimeline()
-        refreshExport()
+        reindexFrames()
       })
       el.appendChild(cell)
     })
@@ -861,8 +902,7 @@
   function appendTimelineBox(box) {
     active().timeline.push({ x: box.x, y: box.y, w: box.w, h: box.h })
     selectedTl = active().timeline.length - 1
-    renderTabs()
-    redrawAll()
+    reindexFrames()
   }
 
   function loadImageFile(file) {
@@ -1188,10 +1228,8 @@
       appendTimelineBox(detectBoxes[drag.index])
       return
     }
-    active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
-    syncBoxNudge()
-    updateDetectStatus()
-    redrawAll()
+    const kept = detectBoxes[drag.index]
+    reindexFrames(kept)
   })
 
   $('dropZone').addEventListener('click', () => $('fileInput').click())
@@ -1256,14 +1294,13 @@
   $('btnAddAll').addEventListener('click', () => {
     detectBoxes.forEach((b) => active().timeline.push({ ...b }))
     selectedTl = active().timeline.length - 1
-    renderTabs()
-    redrawAll()
+    reindexFrames()
   })
   $('btnClearTl').addEventListener('click', () => {
     active().timeline = []
     selectedTl = -1
-    renderTabs()
-    redrawAll()
+    playFrame = 0
+    reindexFrames()
   })
   $('btnDup').addEventListener('click', () => {
     const s = active()
@@ -1271,16 +1308,14 @@
     const box = { ...s.timeline[selectedTl] }
     s.timeline.splice(selectedTl + 1, 0, box)
     selectedTl++
-    renderTabs()
-    redrawAll()
+    reindexFrames()
   })
   $('btnDel').addEventListener('click', () => {
     const s = active()
     if (selectedTl < 0) return
     s.timeline.splice(selectedTl, 1)
     if (selectedTl >= s.timeline.length) selectedTl = s.timeline.length - 1
-    renderTabs()
-    redrawAll()
+    reindexFrames()
   })
 
   ;['boxX', 'boxY', 'boxW', 'boxH'].forEach((id) => {
@@ -1340,7 +1375,7 @@
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) return
     detectBoxes.splice(selectedDetect, 1)
     if (selectedDetect >= detectBoxes.length) selectedDetect = detectBoxes.length - 1
-    commitDetectBoxes()
+    reindexFrames(selectedDetect >= 0 ? detectBoxes[selectedDetect] : null)
   })
 
   $('btnPlay').addEventListener('click', () => {
