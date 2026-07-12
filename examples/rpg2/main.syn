@@ -20,6 +20,7 @@ record Hero {
   def: int
   alive: bool
   defending: bool
+  guarding: int
   color: string
 }
 
@@ -99,9 +100,9 @@ fn push_log(msg: string) {
 
 fn make_party() {
   [
-    { id: "theron", name: "Theron", heroClass: "knight", hp: 92, maxHp: 92, mp: 12, maxMp: 12, atk: 14, def: 12, alive: true, defending: false, color: "#00e5ff" },
-    { id: "aria",   name: "Aria",   heroClass: "mage",   hp: 68, maxHp: 68, mp: 36, maxMp: 36, atk: 8,  def: 6,  alive: true, defending: false, color: "#b84fff" },
-    { id: "lyra",   name: "Lyra",   heroClass: "ranger", hp: 78, maxHp: 78, mp: 22, maxMp: 22, atk: 12, def: 8,  alive: true, defending: false, color: "#06d6a0" }
+    { id: "theron", name: "Theron", heroClass: "knight", hp: 92, maxHp: 92, mp: 12, maxMp: 12, atk: 14, def: 12, alive: true, defending: false, guarding: 0 - 1, color: "#00e5ff" },
+    { id: "aria",   name: "Aria",   heroClass: "mage",   hp: 68, maxHp: 68, mp: 36, maxMp: 36, atk: 8,  def: 6,  alive: true, defending: false, guarding: 0 - 1, color: "#b84fff" },
+    { id: "lyra",   name: "Lyra",   heroClass: "ranger", hp: 78, maxHp: 78, mp: 22, maxMp: 22, atk: 12, def: 8,  alive: true, defending: false, guarding: 0 - 1, color: "#06d6a0" }
   ]
 }
 
@@ -167,7 +168,7 @@ fn first_alive_foe() -> int {
 }
 
 fn clear_defending() {
-  party = party.map(h => { ...h, defending: false })
+  party = party.map(h => { ...h, defending: false, guarding: 0 - 1 })
 }
 
 fn set_hero(i: int, h: any) {
@@ -183,7 +184,7 @@ fn begin_hero_turn(idx: int) {
     begin_enemy_phase()
   } else {
     let h = party[idx]
-    set_hero(idx, { ...h, defending: false })
+    set_hero(idx, { ...h, defending: false, guarding: 0 - 1 })
     pending = { cmd: "", skill: "" }
     Game.set({ active: idx, phase: "hero_command", menu_mode: "command", menu_index: 0 })
   }
@@ -202,7 +203,7 @@ fn finish_battle_check() {
       push_log("Shadow Wyrm falls! The party prevails!")
       Game.set({ scene: "victory" })
     } else {
-      push_log("Victory! Press Z to continue.")
+      push_log("Victory! Click to continue.")
       Game.set({ phase: "battle_clear" })
     }
   } else if not party_alive() {
@@ -294,11 +295,13 @@ fn target_enemy_menu() -> any[] =
     .map(i => { id: "enemy", label: foes[i].name, index: i })
     .concat([{ id: "back", label: "← Back" }])
 
-fn target_ally_menu() -> any[] =
+fn target_ally_menu() -> any[] {
+  let exclude = pending.cmd == "guard" ? Game.active : (0 - 1)
   range(0, party.length)
-    .filter(i => party[i].alive)
+    .filter(i => party[i].alive and i != exclude)
     .map(i => { id: "ally", label: party[i].name, index: i })
     .concat([{ id: "back", label: "← Back" }])
+}
 
 fn current_menu() -> any[] {
   if Game.scene != "battle" or party.length == 0 {
@@ -378,15 +381,19 @@ fn do_defend(actor: int) {
   start_resolve("defend", actor, actor, 0, "{h.name} raises a guard.", "hero")
 }
 
-fn do_guard(actor: int) {
+fn do_guard(actor: int, ally_i: int) {
   let h = party[actor]
   if h.mp < 3 {
     push_log("Not enough MP!")
     Game.set({ phase: "hero_command", menu_mode: "command", menu_index: 0 })
+  } else if ally_i < 0 or ally_i >= party.length or not party[ally_i].alive or ally_i == actor {
+    push_log("Guard needs another ally!")
+    Game.set({ phase: "hero_command", menu_mode: "command", menu_index: 0 })
   } else {
+    let a = party[ally_i]
     pending = { cmd: "", skill: "" }
-    set_hero(actor, { ...h, mp: h.mp - 3, defending: true })
-    start_resolve("guard", actor, actor, 0, "{h.name} steels the line!", "hero")
+    set_hero(actor, { ...h, mp: h.mp - 3, defending: true, guarding: ally_i })
+    start_resolve("guard", actor, ally_i, 0, "{h.name} guards {a.name}!", "hero")
   }
 }
 
@@ -496,7 +503,8 @@ fn confirm_command_row(row: any) {
   } else if row.id == "defend" {
     do_defend(Game.active)
   } else if row.id == "guard" {
-    do_guard(Game.active)
+    pending = { cmd: "guard", skill: "" }
+    open_mode("target_ally")
   } else if row.id == "magic" {
     open_mode("magic")
   } else if row.id == "skill" {
@@ -550,7 +558,9 @@ fn confirm_target_row(row: any) {
     }
   } else if Game.menu_mode == "target_ally" {
     if ti < 0 or ti >= party.length or not party[ti].alive { return }
-    if pending.cmd == "magic" and pending.skill == "cure" {
+    if pending.cmd == "guard" {
+      do_guard(Game.active, ti)
+    } else if pending.cmd == "magic" and pending.skill == "cure" {
       do_cure(Game.active, ti)
     } else if pending.cmd == "item" {
       do_potion(Game.active, ti)
@@ -633,6 +643,18 @@ fn after_hero_resolve() {
   }
 }
 
+fn find_cover(target: int) -> int {
+  let mut i = 0
+  while i < party.length {
+    let h = party[i]
+    if h.alive and h.guarding == target and i != target {
+      return i
+    }
+    i = i + 1
+  }
+  0 - 1
+}
+
 fn enemy_strike(ei: int) {
   let e = foes[ei]
   if not e.alive {
@@ -644,14 +666,22 @@ fn enemy_strike(ei: int) {
     finish_battle_check()
     return
   }
-  let ti = targets[floor(random() * targets.length)]
+  let intended = targets[floor(random() * targets.length)]
+  let cover = find_cover(intended)
+  let ti = cover >= 0 ? cover : intended
   let h = party[ti]
-  let dmg = phys_damage(e.atk, h.def, h.defending)
+  let intended_h = party[intended]
+  // Covering knight always braces; otherwise use the target's defend stance.
+  let braced = cover >= 0 ? true : h.defending
+  let dmg = phys_damage(e.atk, h.def, braced)
   let nhp = h.hp - dmg
   let dead = nhp <= 0
   set_hero(ti, { ...h, hp: dead ? 0 : nhp, alive: not dead, defending: false })
   enemy_cursor = ei + 1
-  start_resolve("enemy", ei, ti, dmg, "{e.name} hits {h.name} for {dmg}!", "enemy")
+  let msg = cover >= 0
+    ? "{e.name} strikes at {intended_h.name} — {h.name} intercepts! ({dmg})"
+    : "{e.name} hits {h.name} for {dmg}!"
+  start_resolve("enemy", ei, ti, dmg, msg, "enemy")
 }
 
 fn run_next_enemy(start: int) {
@@ -708,8 +738,8 @@ fn get_view() {
     party: party.map(h => h),
     foes: foes.map(e => e),
     hint: Game.scene == "title" ? "Press Z / Enter / Tap to start" :
-      (Game.scene == "victory" or Game.scene == "gameover" ? "Press Z / Enter for title" :
-      (Game.phase == "battle_clear" ? "Press Z / Enter for next fight" :
+      (Game.scene == "victory" or Game.scene == "gameover" ? "Click to return to title" :
+      (Game.phase == "battle_clear" ? "" :
         "↑↓ / WS select · Z/Enter confirm · X/Esc back"))
   }
 }

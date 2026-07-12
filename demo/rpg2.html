@@ -133,11 +133,14 @@ function drawBar(x, y, w, h, ratio, color) {
 // ── Party sprites / portraits / battle backgrounds ───────────────────────────
 const ASSET_BASE = 'assets/rpg2/'
 let partyMeta = null
+let enemyMeta = null
 let spritesReady = false
 const heroSheets = {}   // id -> keyed canvas
+const enemySheets = {}  // id -> keyed canvas
 const heroPortraits = {} // id -> Image
 const battleBgs = {}     // filename -> Image
 const heroAnim = {}      // id -> { name, frame, timer, oneShot }
+const foeAnim = {}       // foeIndex -> { name, frame, timer, oneShot }
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -157,13 +160,48 @@ function chromaKeyToCanvas(img, chroma) {
   const data = cctx.getImageData(0, 0, c.width, c.height)
   const d = data.data
   const kr = chroma.r, kg = chroma.g, kb = chroma.b
-  const tol = chroma.tolerance != null ? chroma.tolerance : 90
+  const tight = !!chroma.tight
+  const tol = chroma.tolerance != null ? chroma.tolerance : (tight ? 110 : 140)
   for (let i = 0; i < d.length; i += 4) {
     const r = d[i], g = d[i + 1], b = d[i + 2]
-    // Magenta-ish key (art uses ~240,4,218 not pure FF00FF)
-    const magenta = r > 200 && b > 180 && g < 90
     const dist = Math.abs(r - kr) + Math.abs(g - kg) + Math.abs(b - kb)
-    if (magenta || dist < tol) d[i + 3] = 0
+    let keyed = false
+    let soft = false
+    if (tight) {
+      // Near-screen only — keeps purple character art (Shadow Wyrm).
+      const brightScreen = r >= 210 && b >= 165 && g <= 70 && dist < tol + 70
+      const darkScreen = r >= 190 && b >= 150 && g <= 55 && Math.abs(r - b) < 80 && dist < tol + 90
+      keyed = dist < tol || brightScreen || darkScreen
+      soft = !keyed && dist < tol + 50 && g < 100 && Math.min(r, b) > 160
+      if (soft) {
+        const t = Math.min(1, (tol + 50 - dist) / 50)
+        const spill = Math.min(r, b) * t * 0.45
+        d[i] = Math.max(0, Math.round(r - spill))
+        d[i + 2] = Math.max(0, Math.round(b - spill))
+        d[i + 3] = Math.round(d[i + 3] * (1 - t * 0.85))
+        if (d[i + 3] < 8) keyed = true
+      }
+    } else {
+      // Wide magenta key for party / most foes.
+      const mag = Math.min(r, b) - g
+      const bright = r >= 170 && b >= 150 && g <= 110
+      const dark = r >= 100 && b >= 100 && g <= 45 && Math.abs(r - b) <= 55
+      const fringe = mag >= 50 && Math.min(r, b) >= 100 && g <= 145
+      const hotPink = Math.min(r, b) >= 200 && g <= 160 && mag >= 40
+      keyed = bright || dark || fringe || hotPink || dist < tol
+      if (!keyed && mag >= 25 && Math.min(r, b) >= 85 && g < 160) {
+        const t = Math.min(1, (mag - 25) / 55)
+        const spill = Math.min(r, b) * t * 0.55
+        d[i] = Math.max(0, Math.round(r - spill))
+        d[i + 2] = Math.max(0, Math.round(b - spill))
+        d[i + 3] = Math.round(d[i + 3] * (1 - t * 0.9))
+        if (d[i + 3] < 8) keyed = true
+      }
+    }
+    if (keyed) {
+      d[i] = d[i + 1] = d[i + 2] = 0
+      d[i + 3] = 0
+    }
   }
   cctx.putImageData(data, 0, 0)
   return c
@@ -171,9 +209,13 @@ function chromaKeyToCanvas(img, chroma) {
 
 async function loadPartyAssets() {
   try {
-    const res = await fetch(ASSET_BASE + 'party.json')
-    partyMeta = await res.json()
-    const chroma = partyMeta.chroma || { r: 240, g: 4, b: 218, tolerance: 90 }
+    const [partyRes, enemyRes] = await Promise.all([
+      fetch(ASSET_BASE + 'party.json'),
+      fetch(ASSET_BASE + 'enemies.json')
+    ])
+    partyMeta = await partyRes.json()
+    enemyMeta = await enemyRes.json()
+    const chroma = partyMeta.chroma || enemyMeta.chroma || { r: 240, g: 4, b: 218, tolerance: 140 }
     const heroes = partyMeta.heroes || {}
     await Promise.all(Object.keys(heroes).map(async id => {
       const h = heroes[id]
@@ -183,6 +225,13 @@ async function loadPartyAssets() {
         heroPortraits[id] = await loadImage(ASSET_BASE + h.portrait)
       }
       heroAnim[id] = { name: 'idle', frame: 0, timer: 0, oneShot: false }
+    }))
+    const enemies = enemyMeta.enemies || {}
+    const enemyChroma = enemyMeta.chroma || chroma
+    await Promise.all(Object.keys(enemies).map(async id => {
+      const e = enemies[id]
+      const sheet = await loadImage(ASSET_BASE + e.sheet)
+      enemySheets[id] = chromaKeyToCanvas(sheet, e.chroma || enemyChroma)
     }))
     const bgs = partyMeta.backgrounds || {}
     await Promise.all(Object.keys(bgs).map(async k => {
@@ -220,7 +269,7 @@ function pickHeroAnimName(h, i, view) {
       return 'attack'
     }
   }
-  if (h.defending) return 'defend'
+  if (h.defending || (typeof h.guarding === 'number' && h.guarding >= 0)) return 'defend'
   return 'idle'
 }
 
@@ -285,6 +334,87 @@ function drawHeroSprite(h, i, x, y, drawW, drawH, flash) {
   ctx.restore()
 }
 
+function pickFoeAnimName(e, i, view) {
+  if (!e.alive) return 'down'
+  const anim = view.anim || { kind: 'none' }
+  if (anim.kind && anim.kind !== 'none' && anim.timer > 0) {
+    if (anim.side === 'hero' && anim.target === i) return 'hit'
+    if (anim.side === 'enemy' && anim.actor === i) {
+      if (anim.kind === 'magic' || anim.kind === 'skill') return 'attack'
+      return 'attack'
+    }
+  }
+  return 'idle'
+}
+
+function syncFoeAnims(view, dt) {
+  if (!spritesReady || !enemyMeta) return
+  const foes = view.foes || []
+  foes.forEach((e, i) => {
+    const id = e && e.id
+    if (!id || !enemyMeta.enemies[id]) return
+    const want = pickFoeAnimName(e, i, view)
+    let st = foeAnim[i]
+    if (!st) { st = foeAnim[i] = { name: 'idle', frame: 0, timer: 0, oneShot: false } }
+    const def = enemyMeta.enemies[id].anims[want] || enemyMeta.enemies[id].anims.idle
+    const n = (def.frames && def.frames.length) || 1
+    if (st.name !== want) {
+      st.name = want
+      st.frame = 0
+      st.timer = 0
+      st.oneShot = !def.loop
+    }
+    const fps = def.fps || 8
+    st.timer += dt
+    const frameDur = 1 / fps
+    while (st.timer >= frameDur) {
+      st.timer -= frameDur
+      if (st.oneShot) {
+        if (st.frame < n - 1) st.frame++
+      } else {
+        st.frame = (st.frame + 1) % n
+      }
+    }
+  })
+}
+
+function drawFoeSprite(e, i, x, y, drawW, drawH, flash) {
+  const id = e && e.id
+  if (!spritesReady || !id || !enemySheets[id] || !enemyMeta || !enemyMeta.enemies[id]) {
+    drawSilhouette(x, y, drawW, drawH, flash ? '#ffffff' : (e.color || '#e8e0ff'), foeKind(id))
+    return
+  }
+  const meta = enemyMeta.enemies[id]
+  const st = foeAnim[i] || { name: 'idle', frame: 0 }
+  const anim = meta.anims[st.name] || meta.anims.idle
+  const boxes = anim.frames || []
+  const box = boxes[Math.min(st.frame, boxes.length - 1)]
+  if (!box) return
+  const sheet = enemySheets[id]
+  let scale = Math.min(drawW / box.w, drawH / box.h)
+  // Shadow Wyrm frames vary a lot in bbox size — keep a steady on-screen
+  // height by scaling shorter frames up to the tallest in the anim.
+  if (id === 'wyrm' && boxes.length > 1) {
+    let maxW = box.w
+    let maxH = box.h
+    for (let fi = 0; fi < boxes.length; fi++) {
+      if (boxes[fi].w > maxW) maxW = boxes[fi].w
+      if (boxes[fi].h > maxH) maxH = boxes[fi].h
+    }
+    const base = Math.min(drawW / maxW, drawH / maxH)
+    scale = base * (maxH / Math.max(box.h, 1))
+  }
+  const dw = box.w * scale
+  const dh = box.h * scale
+  const ox = (drawW - dw) / 2
+  const oy = drawH - dh
+  ctx.save()
+  if (flash) ctx.globalAlpha = Math.min(ctx.globalAlpha, 1) * 0.85
+  // Sheets face right toward the party — no flip
+  ctx.drawImage(sheet, box.x, box.y, box.w, box.h, x + ox, y + oy, dw, dh)
+  ctx.restore()
+}
+
 function drawBattleBackground(encounter) {
   const file = partyMeta && partyMeta.backgrounds
     ? partyMeta.backgrounds[String(encounter)] || partyMeta.backgrounds['0']
@@ -344,17 +474,53 @@ let particles = []
 let fxBeams = []
 let lastFxKey = ''
 
-function foeAnchor(i) {
-  return { x: 80 + (i % 2) * 110 + 35, y: 95 + Math.floor(i / 2) * 88 + 42 }
+function depthScale(footY) {
+  // Faux perspective: higher on the field = farther = smaller
+  const farY = 140
+  const nearY = 280
+  const t = Math.max(0, Math.min(1, (footY - farY) / (nearY - farY)))
+  return 0.86 + t * 0.2 // ~0.86 far → ~1.06 near
+}
+
+function withDepth(slot) {
+  const footY = slot.y + slot.h
+  const z = depthScale(footY)
+  const w = slot.w * z
+  const h = slot.h * z
+  const cx = slot.x + slot.w * 0.5
+  return {
+    x: cx - w * 0.5,
+    y: footY - h,
+    w,
+    h,
+    z
+  }
+}
+
+function foeSlot(i, boss) {
+  const bw = boss ? 140 : 90
+  const bh = boss ? 130 : 100
+  // Diagonal enemy line: front-right toward party, trailing back-left
+  // (mirrors heroSlot’s forward-left / back-right stagger)
+  return withDepth({
+    x: 170 - i * 52 - (boss ? 24 : 0),
+    y: 70 + i * 70 - (boss ? 22 : 0),
+    w: bw,
+    h: bh
+  })
+}
+function foeAnchor(i, boss) {
+  const s = foeSlot(i, !!boss)
+  return { x: s.x + s.w * 0.55, y: s.y + s.h * 0.5 }
 }
 function heroSlot(i) {
   // Diagonal party line: front-left toward foes, trailing back-right
-  return {
+  return withDepth({
     x: 545 + i * 52,
     y: 70 + i * 70,
     w: 100,
     h: 90
-  }
+  })
 }
 function heroAnchor(i) {
   const s = heroSlot(i)
@@ -382,8 +548,9 @@ function spawnStrikeFx(anim, party, foes) {
   if (kind !== 'attack' && kind !== 'magic' && kind !== 'skill') return
   const actor = Math.max(0, anim.actor | 0)
   const target = Math.max(0, anim.target | 0)
-  const from = anim.side === 'enemy' ? foeAnchor(actor) : heroAnchor(actor)
-  const to = anim.side === 'enemy' ? heroAnchor(target) : foeAnchor(target)
+  const foeBoss = (i) => !!(foes[i] && foes[i].id === 'wyrm')
+  const from = anim.side === 'enemy' ? foeAnchor(actor, foeBoss(actor)) : heroAnchor(actor)
+  const to = anim.side === 'enemy' ? heroAnchor(target) : foeAnchor(target, foeBoss(target))
   const text = String(anim.text || '')
 
   if (kind === 'attack') {
@@ -402,7 +569,7 @@ function spawnStrikeFx(anim, party, foes) {
       : [target]
     if (targets.length === 0) targets.push(target)
     targets.forEach((ti, n) => {
-      const hit = foeAnchor(ti)
+      const hit = foeAnchor(ti, foeBoss(ti))
       const delay = n * 0.04
       fxBeams.push({
         style: 'arrow', x0: from.x - 20, y0: from.y, x1: hit.x, y1: hit.y,
@@ -795,12 +962,23 @@ function foeKind(id) {
 }
 
 function drawTitle(view) {
-  ctx.fillStyle = '#07071a'
-  ctx.fillRect(0, 0, W, H)
-  const g = ctx.createLinearGradient(0, 0, W, H)
-  g.addColorStop(0, 'rgba(184,79,255,0.25)')
-  g.addColorStop(0.5, 'rgba(0,229,255,0.08)')
-  g.addColorStop(1, 'rgba(255,45,120,0.2)')
+  const img = battleBgs['plains.png']
+  if (img) {
+    const iw = img.naturalWidth || img.width
+    const ih = img.naturalHeight || img.height
+    const scale = Math.max(W / iw, H / ih)
+    const dw = iw * scale
+    const dh = ih * scale
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh)
+  } else {
+    ctx.fillStyle = '#07071a'
+    ctx.fillRect(0, 0, W, H)
+  }
+  // Readable overlay for title text
+  const g = ctx.createLinearGradient(0, 0, 0, H)
+  g.addColorStop(0, 'rgba(7,7,26,0.55)')
+  g.addColorStop(0.45, 'rgba(7,7,26,0.35)')
+  g.addColorStop(1, 'rgba(7,7,26,0.7)')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
 
@@ -822,6 +1000,38 @@ function drawTitle(view) {
   ctx.fillText('Vertical slice sequel to RPG Adventure', W / 2, 360)
 }
 
+function drawVictoryModal(view) {
+  // Dim the field
+  ctx.fillStyle = 'rgba(7,7,26,0.55)'
+  ctx.fillRect(0, 0, W, H)
+
+  const mw = 340
+  const mh = 132
+  const mx = (W - mw) / 2
+  const my = 140
+  drawPanel(mx, my, mw, mh, 'rgba(16,16,40,0.96)', 'rgba(6,214,160,0.55)')
+
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#06d6a0'
+  ctx.font = 'bold 22px Courier New'
+  ctx.shadowColor = '#06d6a0'
+  ctx.shadowBlur = 14
+  ctx.fillText('VICTORY!', W / 2, my + 42)
+  ctx.shadowBlur = 0
+
+  ctx.fillStyle = '#e8e0ff'
+  ctx.font = '12px Courier New'
+  const cleared = view.title || 'Encounter cleared'
+  ctx.fillText(cleared, W / 2, my + 68)
+
+  const pulse = 0.65 + Math.sin(performance.now() / 320) * 0.35
+  ctx.globalAlpha = pulse
+  ctx.fillStyle = '#00e5ff'
+  ctx.font = '13px Courier New'
+  ctx.fillText('Click to continue', W / 2, my + 102)
+  ctx.globalAlpha = 1
+}
+
 function drawEnd(view, title, color) {
   ctx.fillStyle = '#07071a'
   ctx.fillRect(0, 0, W, H)
@@ -835,12 +1045,19 @@ function drawEnd(view, title, color) {
   ctx.fillStyle = '#e8e0ff'
   ctx.font = '14px Courier New'
   ctx.fillText(view.hint || '', W / 2, 280)
+  const pulse = 0.65 + Math.sin(performance.now() / 320) * 0.35
+  ctx.globalAlpha = pulse
+  ctx.fillStyle = '#00e5ff'
+  ctx.font = '13px Courier New'
+  ctx.fillText('Click to continue', W / 2, 320)
+  ctx.globalAlpha = 1
 }
 
 function drawBattle(view, dt) {
   const dtSafe = typeof dt === 'number' ? dt : 1 / 60
   drawBattleBackground(view.encounter ?? 0)
   syncHeroAnims(view, dtSafe)
+  syncFoeAnims(view, dtSafe)
 
   // Title strip
   ctx.fillStyle = '#ffd166'
@@ -864,14 +1081,15 @@ function drawBattle(view, dt) {
     if (!e.alive && !(anim.side === 'hero' && foeHitKinds[anim.kind] && anim.target === i && anim.timer > 0)) return
     const shake = foeHitKinds[anim.kind] && anim.side === 'hero' && anim.target === i ? pulse : 0
     const boss = e.id === 'wyrm'
-    const bw = boss ? 110 : 70
-    const bh = boss ? 115 : 90
-    const x = 80 + (i % 2) * 110 + shake - (boss ? 20 : 0)
-    const y = 95 + Math.floor(i / 2) * 88 - (boss ? 18 : 0)
+    const slot = foeSlot(i, boss)
+    const x = slot.x + shake
+    const y = slot.y
+    const bw = slot.w
+    const bh = slot.h
     const alpha = e.alive ? 1 : 0.35
     ctx.globalAlpha = alpha
     const flash = foeHitKinds[anim.kind] && anim.side === 'hero' && anim.target === i && anim.timer > 0.2
-    drawSilhouette(x, y, bw, bh, flash ? '#ffffff' : e.color, foeKind(e.id))
+    drawFoeSprite(e, i, x, y, bw, bh, flash)
     ctx.globalAlpha = 1
     ctx.fillStyle = '#e8e0ff'
     ctx.font = '12px Courier New'
@@ -985,7 +1203,7 @@ function drawBattle(view, dt) {
     ctx.font = '12px Courier New'
     ctx.fillText(view.phase === 'resolve' ? '…resolving' :
       view.phase === 'enemy_act' ? 'Enemy turn…' :
-      view.phase === 'battle_clear' ? 'Victory! Confirm to continue' : view.phase, 32, 490)
+      view.phase === 'battle_clear' ? '' : view.phase, 32, 490)
   }
 
   // Party status strip
@@ -1014,30 +1232,121 @@ function drawBattle(view, dt) {
   ctx.textAlign = 'right'
   ctx.fillText('Potions x' + (view.potions ?? 0), W - 20, 28)
   ctx.fillText(view.hint || '', W - 20, 48)
+
+  if (view.phase === 'battle_clear') drawVictoryModal(view)
 }
 
 // Menu geometry for click hit-testing (kept in sync with drawBattle)
 const MENU_HIT = { x0: 16, x1: 296, y0: 368, rowH: 22 }
 
-function draw(dt) {
-  const view = get_view()
+function drawScene(view, dt) {
   if (view.scene === 'title') drawTitle(view)
   else if (view.scene === 'victory') drawEnd(view, 'VICTORY', '#06d6a0')
   else if (view.scene === 'gameover') drawEnd(view, 'GAME OVER', '#ff2d78')
   else drawBattle(view, dt)
 }
 
+function sceneKey(view) {
+  if (!view) return ''
+  if (view.scene === 'battle') return 'battle:' + (view.encounter ?? 0)
+  return String(view.scene || '')
+}
+
+// Dip-to-black between title / battles / end screens
+const dip = {
+  phase: 'idle', // idle | out | hold | in
+  t: 0,
+  outDur: 0.22,
+  holdDur: 0.08,
+  inDur: 0.28,
+  holdView: null,
+  lastKey: null
+}
+
+function dipBlocking() {
+  return dip.phase !== 'idle'
+}
+
+function drawDipOverlay(alpha) {
+  if (alpha <= 0.001) return
+  ctx.save()
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+}
+
+function updateDip(dt, live) {
+  const key = sceneKey(live)
+  if (dip.phase === 'idle') {
+    if (dip.lastKey === null) {
+      // First frame: optional fade-in from black
+      dip.holdView = live
+      dip.lastKey = key
+      dip.phase = 'in'
+      dip.t = 0
+    } else if (key !== dip.lastKey) {
+      dip.phase = 'out'
+      dip.t = 0
+      // holdView still previous scene from last idle frame
+    } else {
+      dip.holdView = live
+      dip.lastKey = key
+    }
+    return
+  }
+
+  dip.t += dt
+  if (dip.phase === 'out') {
+    if (dip.t >= dip.outDur) {
+      dip.phase = 'hold'
+      dip.t = 0
+      dip.holdView = live
+      dip.lastKey = key
+    }
+  } else if (dip.phase === 'hold') {
+    dip.holdView = live
+    dip.lastKey = key
+    if (dip.t >= dip.holdDur) {
+      dip.phase = 'in'
+      dip.t = 0
+    }
+  } else if (dip.phase === 'in') {
+    dip.holdView = live
+    dip.lastKey = key
+    if (dip.t >= dip.inDur) {
+      dip.phase = 'idle'
+      dip.t = 0
+    }
+  }
+}
+
+function dipAlpha() {
+  if (dip.phase === 'out') return Math.min(1, dip.t / dip.outDur)
+  if (dip.phase === 'hold') return 1
+  if (dip.phase === 'in') return 1 - Math.min(1, dip.t / dip.inDur)
+  return 0
+}
+
+function draw(dt) {
+  const live = get_view()
+  updateDip(dt, live)
+  const under = (dip.phase === 'out' && dip.holdView) ? dip.holdView : live
+  drawScene(under, dt)
+  drawDipOverlay(dipAlpha())
+}
+
 let flashIdx = -1
 let flashUntil = 0
 let confirmAt = 0
 
-function onConfirm() { menu_confirm() }
-function onCancel() { menu_cancel() }
-function onUp() { menu_move(-1) }
-function onDown() { menu_move(1) }
+function onConfirm() { if (!dipBlocking()) menu_confirm() }
+function onCancel() { if (!dipBlocking()) menu_cancel() }
+function onUp() { if (!dipBlocking()) menu_move(-1) }
+function onDown() { if (!dipBlocking()) menu_move(1) }
 
 document.addEventListener('keydown', e => {
-  if (confirmAt) return
+  if (confirmAt || dipBlocking()) return
   if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); onUp() }
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); onDown() }
   else if (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'Space') { e.preventDefault(); onConfirm() }
@@ -1045,7 +1354,7 @@ document.addEventListener('keydown', e => {
 })
 
 canvas.addEventListener('click', e => {
-  if (confirmAt) return
+  if (confirmAt || dipBlocking()) return
   const view = get_view()
   if (view.scene !== 'battle') { onConfirm(); return }
   if (view.phase === 'battle_clear') { onConfirm(); return }
@@ -1071,10 +1380,14 @@ function loop(now) {
   const dt = Math.min((now - prev) / 1000, 0.05)
   prev = now
   if (confirmAt && now >= confirmAt) {
-    confirmAt = 0
-    menu_confirm()
+    if (dipBlocking()) {
+      // Wait until the dip finishes before confirming
+    } else {
+      confirmAt = 0
+      menu_confirm()
+    }
   }
-  tick(dt)
+  if (!dipBlocking()) tick(dt)
   draw(dt)
   requestAnimationFrame(loop)
 }

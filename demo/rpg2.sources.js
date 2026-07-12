@@ -5,7 +5,7 @@ const __validate_MP = (v) => (v >= 0) && (v <= 99);
 /** @param {number} v @returns {boolean} */
 const __validate_Stat = (v) => (v >= 1) && (v <= 50);
 
-const Hero = (id, name, heroClass, hp, maxHp, mp, maxMp, atk, def, alive, defending, color) => ({ id, name, heroClass, hp, maxHp, mp, maxMp, atk, def, alive, defending, color });
+const Hero = (id, name, heroClass, hp, maxHp, mp, maxMp, atk, def, alive, defending, guarding, color) => ({ id, name, heroClass, hp, maxHp, mp, maxMp, atk, def, alive, defending, guarding, color });
 
 const Foe = (id, name, hp, maxHp, atk, def, weakness, alive, color) => ({ id, name, hp, maxHp, atk, def, weakness, alive, color });
 
@@ -94,7 +94,7 @@ const push_log = (msg) => Game.set({log2: Game.log1, log1: Game.log0, log0: msg}
 /**
  * @returns {*}
  */
-const make_party = () => [{id: "theron", name: "Theron", heroClass: "knight", hp: 92, maxHp: 92, mp: 12, maxMp: 12, atk: 14, def: 12, alive: true, defending: false, color: "#00e5ff"}, {id: "aria", name: "Aria", heroClass: "mage", hp: 68, maxHp: 68, mp: 36, maxMp: 36, atk: 8, def: 6, alive: true, defending: false, color: "#b84fff"}, {id: "lyra", name: "Lyra", heroClass: "ranger", hp: 78, maxHp: 78, mp: 22, maxMp: 22, atk: 12, def: 8, alive: true, defending: false, color: "#06d6a0"}];
+const make_party = () => [{id: "theron", name: "Theron", heroClass: "knight", hp: 92, maxHp: 92, mp: 12, maxMp: 12, atk: 14, def: 12, alive: true, defending: false, guarding: 0 - 1, color: "#00e5ff"}, {id: "aria", name: "Aria", heroClass: "mage", hp: 68, maxHp: 68, mp: 36, maxMp: 36, atk: 8, def: 6, alive: true, defending: false, guarding: 0 - 1, color: "#b84fff"}, {id: "lyra", name: "Lyra", heroClass: "ranger", hp: 78, maxHp: 78, mp: 22, maxMp: 22, atk: 12, def: 8, alive: true, defending: false, guarding: 0 - 1, color: "#06d6a0"}];
 
 /**
  * @param {number} n
@@ -161,7 +161,7 @@ const first_alive_foe = () => {
 /**
  * @returns {*}
  */
-const clear_defending = () => party = $map(party, (h) => ({...h, defending: false}));
+const clear_defending = () => party = $map(party, (h) => ({...h, defending: false, guarding: 0 - 1}));
 
 /**
  * @param {number} i
@@ -186,7 +186,7 @@ const begin_hero_turn = (idx) => {
     return begin_enemy_phase();
   } else {
     let h = party[idx];
-    set_hero(idx, {...h, defending: false});
+    set_hero(idx, {...h, defending: false, guarding: 0 - 1});
     pending = {cmd: "", skill: ""};
     return Game.set({active: idx, phase: "hero_command", menu_mode: "command", menu_index: 0});
   }
@@ -211,7 +211,7 @@ const finish_battle_check = () => {
       push_log("Shadow Wyrm falls! The party prevails!");
       return Game.set({scene: "victory"});
     } else {
-      push_log("Victory! Press Z to continue.");
+      push_log("Victory! Click to continue.");
       return Game.set({phase: "battle_clear"});
     }
   } else if (!party_alive()) {
@@ -268,7 +268,13 @@ const item_menu = () => {
 
 const target_enemy_menu = () => $map($filter($range(0, foes.length), (i) => foes[i].alive), (i) => ({id: "enemy", label: foes[i].name, index: i})).concat([{id: "back", label: "← Back"}]);
 
-const target_ally_menu = () => $map($filter($range(0, party.length), (i) => party[i].alive), (i) => ({id: "ally", label: party[i].name, index: i})).concat([{id: "back", label: "← Back"}]);
+/**
+ * @returns {*}
+ */
+const target_ally_menu = () => {
+  let exclude = pending.cmd == "guard" ? Game.active : 0 - 1;
+  return $map($filter($range(0, party.length), (i) => party[i].alive && i != exclude), (i) => ({id: "ally", label: party[i].name, index: i})).concat([{id: "back", label: "← Back"}]);
+};
 
 /**
  * @returns {*}
@@ -396,17 +402,22 @@ const do_defend = (actor) => {
 
 /**
  * @param {number} actor
+ * @param {number} ally_i
  * @returns {*}
  */
-const do_guard = (actor) => {
+const do_guard = (actor, ally_i) => {
   let h = party[actor];
   if (h.mp < 3) {
     push_log("Not enough MP!");
     return Game.set({phase: "hero_command", menu_mode: "command", menu_index: 0});
+  } else if (ally_i < 0 || ally_i >= party.length || !party[ally_i].alive || ally_i == actor) {
+    push_log("Guard needs another ally!");
+    return Game.set({phase: "hero_command", menu_mode: "command", menu_index: 0});
   } else {
+    let a = party[ally_i];
     pending = {cmd: "", skill: ""};
-    set_hero(actor, {...h, mp: h.mp - 3, defending: true});
-    return start_resolve("guard", actor, actor, 0, `${h.name} steels the line!`, "hero");
+    set_hero(actor, {...h, mp: h.mp - 3, defending: true, guarding: ally_i});
+    return start_resolve("guard", actor, ally_i, 0, `${h.name} guards ${a.name}!`, "hero");
   }
 };
 
@@ -549,7 +560,8 @@ const confirm_command_row = (row) => {
   } else if (row.id == "defend") {
     return do_defend(Game.active);
   } else if (row.id == "guard") {
-    return do_guard(Game.active);
+    pending = {cmd: "guard", skill: ""};
+    return open_mode("target_ally");
   } else if (row.id == "magic") {
     return open_mode("magic");
   } else if (row.id == "skill") {
@@ -628,7 +640,9 @@ const confirm_target_row = (row) => {
     if (ti < 0 || ti >= party.length || !party[ti].alive) {
       return undefined;
     }
-    if (pending.cmd == "magic" && pending.skill == "cure") {
+    if (pending.cmd == "guard") {
+      return do_guard(Game.active, ti);
+    } else if (pending.cmd == "magic" && pending.skill == "cure") {
       return do_cure(Game.active, ti);
     } else if (pending.cmd == "item") {
       return do_potion(Game.active, ti);
@@ -726,6 +740,22 @@ const after_hero_resolve = () => {
 };
 
 /**
+ * @param {number} target
+ * @returns {number}
+ */
+const find_cover = (target) => {
+  let i = 0;
+  while (i < party.length) {
+    let h = party[i];
+    if (h.alive && h.guarding == target && i != target) {
+      return i;
+    }
+    i = i + 1;
+  }
+  return 0 - 1;
+};
+
+/**
  * @param {number} ei
  * @returns {*}
  */
@@ -740,14 +770,19 @@ const enemy_strike = (ei) => {
     finish_battle_check();
     return undefined;
   }
-  let ti = targets[$floor($random() * targets.length)];
+  let intended = targets[$floor($random() * targets.length)];
+  let cover = find_cover(intended);
+  let ti = cover >= 0 ? cover : intended;
   let h = party[ti];
-  let dmg = phys_damage(e.atk, h.def, h.defending);
+  let intended_h = party[intended];
+  let braced = cover >= 0 ? true : h.defending;
+  let dmg = phys_damage(e.atk, h.def, braced);
   let nhp = h.hp - dmg;
   let dead = nhp <= 0;
   set_hero(ti, {...h, hp: dead ? 0 : nhp, alive: !dead, defending: false});
   enemy_cursor = ei + 1;
-  return start_resolve("enemy", ei, ti, dmg, `${e.name} hits ${h.name} for ${dmg}!`, "enemy");
+  let msg = cover >= 0 ? `${e.name} strikes at ${intended_h.name} — ${h.name} intercepts! (${dmg})` : `${e.name} hits ${h.name} for ${dmg}!`;
+  return start_resolve("enemy", ei, ti, dmg, msg, "enemy");
 };
 
 /**
@@ -805,7 +840,7 @@ const tick = (dt) => {
 /**
  * @returns {*}
  */
-const get_view = () => ({scene: Game.scene, encounter: Game.encounter, title: encounter_title(Game.encounter), phase: Game.phase, menu_mode: Game.menu_mode, menu_index: Game.menu_index, menu: current_menu(), active: Game.active, potions: Game.potions, logs: [Game.log0, Game.log1, Game.log2], anim: anim, party: $map(party, (h) => h), foes: $map(foes, (e) => e), hint: Game.scene == "title" ? "Press Z / Enter / Tap to start" : Game.scene == "victory" || Game.scene == "gameover" ? "Press Z / Enter for title" : Game.phase == "battle_clear" ? "Press Z / Enter for next fight" : "↑↓ / WS select · Z/Enter confirm · X/Esc back"});
+const get_view = () => ({scene: Game.scene, encounter: Game.encounter, title: encounter_title(Game.encounter), phase: Game.phase, menu_mode: Game.menu_mode, menu_index: Game.menu_index, menu: current_menu(), active: Game.active, potions: Game.potions, logs: [Game.log0, Game.log1, Game.log2], anim: anim, party: $map(party, (h) => h), foes: $map(foes, (e) => e), hint: Game.scene == "title" ? "Press Z / Enter / Tap to start" : Game.scene == "victory" || Game.scene == "gameover" ? "Click to return to title" : Game.phase == "battle_clear" ? "" : "↑↓ / WS select · Z/Enter confirm · X/Esc back"});
 
 __synth_tests.push({ desc: "phys_damage respects defend half", fn: () => phys_damage(10, 4, false) == 16 && phys_damage(10, 4, true) == 8 });
 
