@@ -347,8 +347,18 @@ let lastFxKey = ''
 function foeAnchor(i) {
   return { x: 80 + (i % 2) * 110 + 35, y: 95 + Math.floor(i / 2) * 88 + 42 }
 }
+function heroSlot(i) {
+  // Diagonal party line: front-left toward foes, trailing back-right
+  return {
+    x: 545 + i * 52,
+    y: 50 + i * 70,
+    w: 100,
+    h: 90
+  }
+}
 function heroAnchor(i) {
-  return { x: 650, y: 70 + i * 78 + 45 }
+  const s = heroSlot(i)
+  return { x: s.x + s.w * 0.45, y: s.y + s.h * 0.55 }
 }
 
 function pushSpark(x, y, vx, vy, life, size, color, shape) {
@@ -875,14 +885,15 @@ function drawBattle(view, dt) {
     }
   })
 
-  // Party right — sprite sheets
+  // Party right — staggered diagonal (front left → back right)
   const allyFxKinds = { heal: 1, item: 1, defend: 1, guard: 1 }
   party.forEach((h, i) => {
     const shake = anim.side === 'enemy' && anim.target === i ? pulse : 0
-    const x = 600 + shake * -0.5
-    const y = 70 + i * 78
-    const drawW = 100
-    const drawH = 90
+    const slot = heroSlot(i)
+    const x = slot.x + shake * -0.5
+    const y = slot.y
+    const drawW = slot.w
+    const drawH = slot.h
     const active = view.phase !== 'enemy_act' && view.phase !== 'resolve' && view.active === i
     ctx.globalAlpha = h.alive ? 1 : 0.45
     if (active) {
