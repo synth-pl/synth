@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Synth Fantasy — Classic Turn Battle</title>
 <style>
   :root {
@@ -52,11 +52,23 @@
     background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.05) 3px, rgba(0,0,0,.05) 4px);
     pointer-events: none; z-index: 2;
   }
-  canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+  canvas { display: block; width: 100%; height: 100%; cursor: pointer; touch-action: manipulation; }
   .controls-hint {
     font-size: .68rem; color: var(--muted); text-align: center; line-height: 1.5;
   }
   .controls-hint a { color: var(--cyan); text-decoration: none; }
+  .controls-hint .desk { display: inline; }
+  .controls-hint .mob { display: none; }
+  @media (max-width: 640px) {
+    .wrap { padding: 10px 10px 16px; gap: 8px; }
+    .hdr { flex-direction: column; align-items: flex-start; gap: 6px; padding-bottom: 8px; }
+    .hdr-right { text-align: left; font-size: .58rem; }
+    .logo { font-size: .92rem; letter-spacing: .14em; }
+    .controls-hint { font-size: .78rem; line-height: 1.55; padding: 0 4px; }
+    .controls-hint .desk { display: none; }
+    .controls-hint .mob { display: inline; }
+    .canvas-wrap { border-radius: 6px; }
+  }
 </style>
 <link rel="stylesheet" href="game-mobile.css">
 <link rel="stylesheet" href="site-footer.css">
@@ -74,7 +86,8 @@
     <canvas id="c" width="800" height="520"></canvas>
   </div>
   <div class="controls-hint">
-    ↑↓ / W S select · Z / Enter confirm · X / Esc / ← Back cancel · Tap menu rows on mobile<br>
+    <span class="desk">↑↓ / W S select · Z / Enter confirm · X / Esc / ← Back cancel · Tap menu rows</span>
+    <span class="mob">Tap a menu row to choose · Tap the screen to continue</span><br>
     Sequel to <a href="rpg.standalone.html">RPG Adventure</a> — Aria · Theron · Lyra
   </div>
 </div>
@@ -96,6 +109,40 @@
 const canvas = document.getElementById('c')
 const ctx = canvas.getContext('2d')
 const W = 800, H = 520
+
+function isCompactUi() {
+  return canvas.clientWidth < 560
+    || window.matchMedia('(hover: none) and (pointer: coarse)').matches
+}
+
+function hudLayout() {
+  const compact = isCompactUi()
+  // Taller menu rows + bigger type on phones so taps and text stay usable
+  return {
+    compact,
+    fieldH: compact ? 292 : 308,
+    logY: compact ? 292 : 308,
+    logH: compact ? 30 : 28,
+    menuX: 16,
+    menuY: compact ? 326 : 342,
+    menuW: 280,
+    menuH: compact ? 178 : 162,
+    menuTitleY: compact ? 348 : 362,
+    menuRow0: compact ? 372 : 382,
+    menuRowH: compact ? 30 : 22,
+    menuHitPad: compact ? 4 : 0,
+    menuFont: compact ? 15 : 12,
+    menuTitleFont: compact ? 14 : 12,
+    partyX: 312,
+    partyY: compact ? 326 : 342,
+    partyW: 472,
+    partyH: compact ? 178 : 162,
+    nameFont: compact ? 15 : 13,
+    metaFont: compact ? 13 : 11,
+    titleFont: compact ? 15 : 13,
+    logFont: compact ? 13 : 11
+  }
+}
 
 function roundRect(x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2)
@@ -416,13 +463,14 @@ function drawFoeSprite(e, i, x, y, drawW, drawH, flash) {
 }
 
 function drawBattleBackground(encounter) {
+  const hud = hudLayout()
   const file = partyMeta && partyMeta.backgrounds
     ? partyMeta.backgrounds[String(encounter)] || partyMeta.backgrounds['0']
     : null
   const img = file ? battleBgs[file] : null
   if (img) {
     // Cover field area above HUD
-    const fieldH = 308
+    const fieldH = hud.fieldH
     const iw = img.naturalWidth || img.width
     const ih = img.naturalHeight || img.height
     const scale = Math.max(W / iw, fieldH / ih)
@@ -982,22 +1030,23 @@ function drawTitle(view) {
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
 
+  const compact = isCompactUi()
   ctx.fillStyle = '#ffd166'
-  ctx.font = 'bold 42px Courier New'
+  ctx.font = 'bold ' + (compact ? 36 : 42) + 'px Courier New'
   ctx.textAlign = 'center'
   ctx.shadowColor = '#ffd166'
   ctx.shadowBlur = 18
-  ctx.fillText('SYNTH FANTASY', W / 2, 180)
+  ctx.fillText('SYNTH FANTASY', W / 2, compact ? 170 : 180)
   ctx.shadowBlur = 0
   ctx.fillStyle = '#e8e0ff'
-  ctx.font = '16px Courier New'
-  ctx.fillText('A classic turn-based battle — Aria · Theron · Lyra', W / 2, 220)
+  ctx.font = (compact ? 15 : 16) + 'px Courier New'
+  ctx.fillText('A classic turn-based battle — Aria · Theron · Lyra', W / 2, compact ? 210 : 220)
   ctx.fillStyle = '#00e5ff'
-  ctx.font = '14px Courier New'
-  ctx.fillText(view.hint || 'Press Z / Enter to start', W / 2, 320)
+  ctx.font = (compact ? 16 : 14) + 'px Courier New'
+  ctx.fillText(view.hint || (compact ? 'Tap to start' : 'Press Z / Enter to start'), W / 2, compact ? 310 : 320)
   ctx.fillStyle = '#6a6490'
-  ctx.font = '12px Courier New'
-  ctx.fillText('Vertical slice sequel to RPG Adventure', W / 2, 360)
+  ctx.font = (compact ? 13 : 12) + 'px Courier New'
+  ctx.fillText('Vertical slice sequel to RPG Adventure', W / 2, compact ? 350 : 360)
 }
 
 function drawVictoryModal(view) {
@@ -1011,57 +1060,60 @@ function drawVictoryModal(view) {
   const my = 140
   drawPanel(mx, my, mw, mh, 'rgba(16,16,40,0.96)', 'rgba(6,214,160,0.55)')
 
+  const compact = isCompactUi()
   ctx.textAlign = 'center'
   ctx.fillStyle = '#06d6a0'
-  ctx.font = 'bold 22px Courier New'
+  ctx.font = 'bold ' + (compact ? 26 : 22) + 'px Courier New'
   ctx.shadowColor = '#06d6a0'
   ctx.shadowBlur = 14
   ctx.fillText('VICTORY!', W / 2, my + 42)
   ctx.shadowBlur = 0
 
   ctx.fillStyle = '#e8e0ff'
-  ctx.font = '12px Courier New'
+  ctx.font = (compact ? 14 : 12) + 'px Courier New'
   const cleared = view.title || 'Encounter cleared'
   ctx.fillText(cleared, W / 2, my + 68)
 
   const pulse = 0.65 + Math.sin(performance.now() / 320) * 0.35
   ctx.globalAlpha = pulse
   ctx.fillStyle = '#00e5ff'
-  ctx.font = '13px Courier New'
-  ctx.fillText('Click to continue', W / 2, my + 102)
+  ctx.font = (compact ? 16 : 13) + 'px Courier New'
+  ctx.fillText(compact ? 'Tap to continue' : 'Click to continue', W / 2, my + 102)
   ctx.globalAlpha = 1
 }
 
 function drawEnd(view, title, color) {
+  const compact = isCompactUi()
   ctx.fillStyle = '#07071a'
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = color
-  ctx.font = 'bold 40px Courier New'
+  ctx.font = 'bold ' + (compact ? 36 : 40) + 'px Courier New'
   ctx.textAlign = 'center'
   ctx.shadowColor = color
   ctx.shadowBlur = 20
   ctx.fillText(title, W / 2, 220)
   ctx.shadowBlur = 0
   ctx.fillStyle = '#e8e0ff'
-  ctx.font = '14px Courier New'
+  ctx.font = (compact ? 15 : 14) + 'px Courier New'
   ctx.fillText(view.hint || '', W / 2, 280)
   const pulse = 0.65 + Math.sin(performance.now() / 320) * 0.35
   ctx.globalAlpha = pulse
   ctx.fillStyle = '#00e5ff'
-  ctx.font = '13px Courier New'
-  ctx.fillText('Click to continue', W / 2, 320)
+  ctx.font = (compact ? 16 : 13) + 'px Courier New'
+  ctx.fillText(compact ? 'Tap to continue' : 'Click to continue', W / 2, 320)
   ctx.globalAlpha = 1
 }
 
 function drawBattle(view, dt) {
   const dtSafe = typeof dt === 'number' ? dt : 1 / 60
+  const hud = hudLayout()
   drawBattleBackground(view.encounter ?? 0)
   syncHeroAnims(view, dtSafe)
   syncFoeAnims(view, dtSafe)
 
   // Title strip
   ctx.fillStyle = '#ffd166'
-  ctx.font = 'bold 13px Courier New'
+  ctx.font = 'bold ' + hud.titleFont + 'px Courier New'
   ctx.textAlign = 'left'
   ctx.shadowColor = 'rgba(0,0,0,0.65)'
   ctx.shadowBlur = 4
@@ -1092,7 +1144,7 @@ function drawBattle(view, dt) {
     drawFoeSprite(e, i, x, y, bw, bh, flash)
     ctx.globalAlpha = 1
     ctx.fillStyle = '#e8e0ff'
-    ctx.font = '12px Courier New'
+    ctx.font = (hud.compact ? 13 : 12) + 'px Courier New'
     ctx.textAlign = 'center'
     ctx.fillText(e.name, x + bw / 2, y + bh + 14)
     drawBar(x + (bw - 70) / 2, y + bh + 18, 70, 7, e.maxHp ? e.hp / e.maxHp : 0, '#ff2d78')
@@ -1148,17 +1200,17 @@ function drawBattle(view, dt) {
   drawStrikeFx()
 
   // Battle log — bottom strip above menus (moved off the field)
-  drawPanel(16, 308, 768, 28, 'rgba(10,6,24,0.85)', 'rgba(255,209,102,0.35)')
+  drawPanel(16, hud.logY, 768, hud.logH, 'rgba(10,6,24,0.85)', 'rgba(255,209,102,0.35)')
   const logs = view.logs || []
-  ctx.font = '11px Courier New'
+  ctx.font = hud.logFont + 'px Courier New'
   ctx.textAlign = 'left'
   ctx.fillStyle = '#ffd166'
-  ctx.fillText(logs[0] || '', 28, 326)
+  ctx.fillText(logs[0] || '', 28, hud.logY + hud.logH * 0.68)
 
   // Command / menu window
-  drawPanel(16, 342, 280, 162, 'rgba(16,16,40,0.92)', 'rgba(184,79,255,0.45)')
+  drawPanel(hud.menuX, hud.menuY, hud.menuW, hud.menuH, 'rgba(16,16,40,0.92)', 'rgba(184,79,255,0.45)')
   ctx.fillStyle = '#b84fff'
-  ctx.font = 'bold 12px Courier New'
+  ctx.font = 'bold ' + hud.menuTitleFont + 'px Courier New'
   ctx.textAlign = 'left'
   const modeLabel = view.menu_mode === 'command' ? 'COMMAND' :
     view.menu_mode === 'magic' ? 'MAGIC' :
@@ -1168,55 +1220,59 @@ function drawBattle(view, dt) {
     view.menu_mode === 'target_ally' ? 'ALLY' : String(view.menu_mode || '').toUpperCase()
   const actor = party[view.active]
   const actorName = actor ? actor.name : ''
-  ctx.fillText(modeLabel + (actorName ? ' — ' + actorName : ''), 28, 362)
+  ctx.fillText(modeLabel + (actorName ? ' — ' + actorName : ''), 28, hud.menuTitleY)
 
   const menu = view.menu || []
   const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
   const nowMs = performance.now()
+  const rowBoxH = hud.menuRowH - 2
   menu.forEach((row, i) => {
-    const yy = 382 + i * 22
+    const yy = hud.menuRow0 + i * hud.menuRowH
     const selected = canPick && i === view.menu_index
     const flashed = canPick && i === flashIdx && nowMs < flashUntil
+    const boxY = yy - Math.floor(rowBoxH * 0.7)
     if (flashed) {
       ctx.fillStyle = 'rgba(255,209,102,0.45)'
-      ctx.fillRect(24, yy - 14, 260, 20)
+      ctx.fillRect(24, boxY, 260, rowBoxH)
       ctx.strokeStyle = '#ffd166'
       ctx.lineWidth = 1.5
-      ctx.strokeRect(24.5, yy - 13.5, 259, 19)
+      ctx.strokeRect(24.5, boxY + 0.5, 259, rowBoxH - 1)
       ctx.fillStyle = '#ffd166'
+      ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
       ctx.fillText('▸ ' + row.label, 32, yy)
     } else if (selected) {
       ctx.fillStyle = 'rgba(0,229,255,0.22)'
-      ctx.fillRect(24, yy - 14, 260, 20)
+      ctx.fillRect(24, boxY, 260, rowBoxH)
       ctx.strokeStyle = 'rgba(0,229,255,0.7)'
       ctx.lineWidth = 1
-      ctx.strokeRect(24.5, yy - 13.5, 259, 19)
+      ctx.strokeRect(24.5, boxY + 0.5, 259, rowBoxH - 1)
       ctx.fillStyle = '#00e5ff'
+      ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
       ctx.fillText('▸ ' + row.label, 32, yy)
     } else {
       ctx.fillStyle = '#c8c0e8'
+      ctx.font = hud.menuFont + 'px Courier New'
       ctx.fillText('  ' + row.label, 32, yy)
     }
   })
   if (!canPick) {
     ctx.fillStyle = '#6a6490'
-    ctx.font = '12px Courier New'
+    ctx.font = hud.menuFont + 'px Courier New'
     ctx.fillText(view.phase === 'resolve' ? '…resolving' :
       view.phase === 'enemy_act' ? 'Enemy turn…' :
-      view.phase === 'battle_clear' ? '' : view.phase, 32, 490)
+      view.phase === 'battle_clear' ? '' : view.phase, 32, hud.menuY + hud.menuH - 16)
   }
 
   // Party status strip
-  const partyBox = { x: 312, y: 342, w: 472, h: 162 }
+  const partyBox = { x: hud.partyX, y: hud.partyY, w: hud.partyW, h: hud.partyH }
   const padX = 14
-  const padY = 12
+  const padY = hud.compact ? 10 : 12
   drawPanel(partyBox.x, partyBox.y, partyBox.w, partyBox.h, 'rgba(16,16,40,0.92)', 'rgba(0,229,255,0.35)')
   const rowH = (partyBox.h - padY * 2) / 3
   const contentL = partyBox.x + padX
   const contentR = partyBox.x + partyBox.w - padX
-  const portraitSize = 36
+  const portraitSize = hud.compact ? 40 : 36
   const afterPortrait = contentL + portraitSize + 12
-  // Even columns: name · class · HP · MP (equal bar widths, shared right edge)
   const barW = 96
   const mpX = contentR - barW
   const hpX = mpX - 14 - barW
@@ -1229,22 +1285,22 @@ function drawBattle(view, dt) {
     const id = heroSpriteId(h)
     drawPortrait(id, contentL, midY - portraitSize * 0.5, portraitSize, h.alive)
     ctx.fillStyle = h.alive ? h.color : '#6a6490'
-    ctx.font = 'bold 13px Courier New'
+    ctx.font = 'bold ' + hud.nameFont + 'px Courier New'
     ctx.textAlign = 'left'
     ctx.fillText(h.name, nameX, textY)
     ctx.fillStyle = '#6a6490'
-    ctx.font = '11px Courier New'
+    ctx.font = hud.metaFont + 'px Courier New'
     ctx.fillText(h.heroClass.toUpperCase(), classX, textY)
     ctx.fillStyle = '#e8e0ff'
     ctx.fillText('HP ' + h.hp + '/' + h.maxHp, hpX, textY - 2)
-    drawBar(hpX, midY + 6, barW, 6, h.maxHp ? h.hp / h.maxHp : 0, '#ff2d78')
+    drawBar(hpX, midY + 6, barW, hud.compact ? 7 : 6, h.maxHp ? h.hp / h.maxHp : 0, '#ff2d78')
     ctx.fillStyle = '#e8e0ff'
     ctx.fillText('MP ' + h.mp + '/' + h.maxMp, mpX, textY - 2)
-    drawBar(mpX, midY + 6, barW, 6, h.maxMp ? h.mp / h.maxMp : 0, '#00e5ff')
+    drawBar(mpX, midY + 6, barW, hud.compact ? 7 : 6, h.maxMp ? h.mp / h.maxMp : 0, '#00e5ff')
   })
 
   ctx.fillStyle = '#6a6490'
-  ctx.font = '11px Courier New'
+  ctx.font = hud.metaFont + 'px Courier New'
   ctx.textAlign = 'right'
   ctx.fillText('Potions x' + (view.potions ?? 0), W - 20, 28)
   ctx.fillText(view.hint || '', W - 20, 48)
@@ -1252,8 +1308,16 @@ function drawBattle(view, dt) {
   if (view.phase === 'battle_clear') drawVictoryModal(view)
 }
 
-// Menu geometry for click hit-testing (kept in sync with drawBattle)
-const MENU_HIT = { x0: 16, x1: 296, y0: 368, rowH: 22 }
+// Menu geometry for click hit-testing (kept in sync with drawBattle / hudLayout)
+function menuHit() {
+  const hud = hudLayout()
+  return {
+    x0: hud.menuX,
+    x1: hud.menuX + hud.menuW,
+    y0: hud.menuRow0 - Math.floor((hud.menuRowH - 2) * 0.7) - hud.menuHitPad,
+    rowH: hud.menuRowH
+  }
+}
 
 function drawScene(view, dt) {
   if (view.scene === 'title') drawTitle(view)
@@ -1380,8 +1444,9 @@ canvas.addEventListener('click', e => {
   const x = (e.clientX - rect.left) * W / rect.width
   const y = (e.clientY - rect.top) * H / rect.height
   const menu = view.menu || []
-  if (x >= MENU_HIT.x0 && x <= MENU_HIT.x1 && y >= MENU_HIT.y0) {
-    const idx = Math.floor((y - MENU_HIT.y0) / MENU_HIT.rowH)
+  const hit = menuHit()
+  if (x >= hit.x0 && x <= hit.x1 && y >= hit.y0) {
+    const idx = Math.floor((y - hit.y0) / hit.rowH)
     if (idx >= 0 && idx < menu.length) {
       menu_set_index(idx)
       flashIdx = idx
