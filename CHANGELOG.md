@@ -1,5 +1,15 @@
 # Synth Changelog
 
+## Unreleased
+
+### Checker
+
+- **Unbound names are errors** — `synth --check` / `check_source` resolve identifiers against scope (lets, params, imports, stores, union variants, stdlib/host allowlist). Catches missing tables like `LEVEL_BLURBS` that used to pass check and fail only at runtime.
+- **Parse errors surface through `--check`** — `parse_program` keeps parser diagnostics; `check_source` / `compile` prepend them (severity `error`).
+- Binding analysis understands lambda string params, destructuring renames (`bonus: hitBonus`), and block-local forward refs for sibling `let`s.
+- Annotation purity / exhaustiveness remain **warnings** (exit 0 unless an error is present).
+- Tests: `npm run test:bindings`; fixture `compiler/checker_fixtures/unbound_name.syn`.
+
 ## v1.2.0 — Spec Extraction
 
 ### Tooling

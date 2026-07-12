@@ -843,6 +843,627 @@ const check_top_level = (st, decl) => {
   return s;
 };
 
+const BindState = (diagnostics, frames, line, reported) => ({ diagnostics, frames, line, reported });
+
+/**
+ * @param {BindState} st
+ * @param {string} message
+ * @param {number} line
+ * @returns {BindState}
+ */
+const bind_err = (st, message, line) => {
+  let d = {severity: "error", message: message, line: line};
+  return BindState(st.diagnostics.concat([d]), st.frames, st.line, st.reported);
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_stdlib = (name) => {
+  if (name == "map" || name == "filter" || name == "fold" || name == "pipe" || name == "zip") {
+    return true;
+  } else if (name == "range" || name == "first" || name == "last" || name == "sum" || name == "count") {
+    return true;
+  } else if (name == "any" || name == "all" || name == "flat" || name == "flat_map") {
+    return true;
+  } else if (name == "sort_by" || name == "sort_by_desc" || name == "find" || name == "find_index") {
+    return true;
+  } else if (name == "trim" || name == "split" || name == "starts_with" || name == "ends_with" || name == "contains") {
+    return true;
+  } else if (name == "to_upper" || name == "to_lower" || name == "replace_all" || name == "pad_start" || name == "pad_end") {
+    return true;
+  } else if (name == "min" || name == "max" || name == "min_by" || name == "max_by" || name == "take" || name == "drop") {
+    return true;
+  } else if (name == "uniq" || name == "chunk" || name == "set_at" || name == "reverse" || name == "sum_by") {
+    return true;
+  } else if (name == "clamp" || name == "abs" || name == "round" || name == "floor" || name == "ceil") {
+    return true;
+  } else if (name == "pow" || name == "sqrt" || name == "random" || name == "random_int") {
+    return true;
+  } else if (name == "parse_int" || name == "parse_float") {
+    return true;
+  } else if (name == "ok" || name == "err" || name == "is_ok" || name == "is_err" || name == "unwrap" || name == "unwrap_or") {
+    return true;
+  } else if (name == "delay" || name == "println" || name == "print" || name == "likely_best" || name == "embed") {
+    return true;
+  } else if (name == "_" || name == "Math") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_host = (name) => {
+  if (name == "document" || name == "window" || name == "console" || name == "globalThis") {
+    return true;
+  } else if (name == "Object" || name == "Array" || name == "String" || name == "Number" || name == "Boolean") {
+    return true;
+  } else if (name == "Error" || name == "Map" || name == "Set" || name == "JSON" || name == "Promise" || name == "Date") {
+    return true;
+  } else if (name == "Math" || name == "parseInt" || name == "parseFloat" || name == "isNaN" || name == "isFinite") {
+    return true;
+  } else if (name == "undefined" || name == "NaN" || name == "Infinity" || name == "null") {
+    return true;
+  } else if (name == "setTimeout" || name == "setInterval" || name == "clearTimeout" || name == "clearInterval") {
+    return true;
+  } else if (name == "fetch" || name == "localStorage" || name == "sessionStorage") {
+    return true;
+  } else if (name == "Float32Array" || name == "Int32Array" || name == "Uint8Array") {
+    return true;
+  } else if (name == "Node" || name == "Element" || name == "Event") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_builtin = (name) => {
+  if (name.length > 2 && name.slice(0, 2) == "__") {
+    return true;
+  } else if (bind_is_stdlib(name)) {
+    return true;
+  } else if (bind_is_host(name)) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} frame
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_frame_has = (frame, name) => arr_has(frame, name);
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_defined = (st, name) => {
+  if (bind_is_builtin(name)) {
+    return true;
+  } else {
+    let i = 0;
+    while (i < st.frames.length) {
+      if (bind_frame_has(st.frames[i], name)) {
+        return true;
+      }
+      i = i + 1;
+    }
+    return false;
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} frame
+ * @returns {BindState}
+ */
+const bind_replace_top = (st, frame) => {
+  let frames = [];
+  let i = 0;
+  while (i < st.frames.length - 1) {
+    frames = frames.concat([st.frames[i]]);
+    i = i + 1;
+  }
+  frames = frames.concat([frame]);
+  return BindState(st.diagnostics, frames, st.line, st.reported);
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {BindState}
+ */
+const bind_define = (st, name) => {
+  if (name == "" || name == "_") {
+    return st;
+  } else if (st.frames.length == 0) {
+    return st;
+  } else {
+    let top = st.frames[st.frames.length - 1];
+    if (bind_frame_has(top, name)) {
+      return st;
+    } else {
+      return bind_replace_top(st, top.concat([name]));
+    }
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @returns {BindState}
+ */
+const bind_enter = (st) => BindState(st.diagnostics, st.frames.concat([[]]), st.line, st.reported);
+
+/**
+ * @param {BindState} st
+ * @returns {BindState}
+ */
+const bind_exit = (st) => {
+  if (st.frames.length == 0) {
+    return st;
+  } else {
+    let frames = [];
+    let i = 0;
+    while (i < st.frames.length - 1) {
+      frames = frames.concat([st.frames[i]]);
+      i = i + 1;
+    }
+    return BindState(st.diagnostics, frames, st.line, st.reported);
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {number} line
+ * @returns {BindState}
+ */
+const bind_set_line = (st, line) => BindState(st.diagnostics, st.frames, line, st.reported);
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {BindState}
+ */
+const bind_use = (st, name) => {
+  if (bind_defined(st, name)) {
+    return st;
+  } else if (arr_has(st.reported, name)) {
+    return st;
+  } else {
+    let line = st.line;
+    let next = bind_err(st, "Unbound name '" + name + "' — not defined in this scope", line);
+    return BindState(next.diagnostics, next.frames, next.line, next.reported.concat([name]));
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} params
+ * @returns {BindState}
+ */
+const bind_define_params = (st, params) => {
+  let s = st;
+  let i = 0;
+  while (i < params.length) {
+    let p = params[i];
+    if (p.name != null) {
+      if (p.destructure == true) {
+        s = bind_define_destructure_name(s, p.name);
+      } else {
+        s = bind_define(s, p.name);
+      }
+    } else {
+      s = bind_define(s, p);
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {string} raw
+ * @returns {string}
+ */
+const bind_binding_name = (raw) => {
+  let i = 0;
+  while (i < raw.length) {
+    if (raw.slice(i, i + 1) == ":") {
+      return $trim(raw.slice(i + 1, raw.length));
+    }
+    i = i + 1;
+  }
+  return $trim(raw);
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} raw
+ * @returns {BindState}
+ */
+const bind_define_destructure_name = (st, raw) => {
+  let inner = raw;
+  if (inner.length >= 2 && inner.slice(0, 1) == "[") {
+    inner = inner.slice(1, inner.length - 1);
+  }
+  let s = st;
+  let part = "";
+  let i = 0;
+  while (i < inner.length) {
+    let ch = inner.slice(i, i + 1);
+    if (ch == ",") {
+      s = bind_define(s, bind_binding_name(part));
+      part = "";
+    } else {
+      part = part + ch;
+    }
+    i = i + 1;
+  }
+  if ($trim(part).length > 0) {
+    s = bind_define(s, bind_binding_name(part));
+  }
+  return s;
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} pat
+ * @returns {BindState}
+ */
+const bind_pat = (st, pat) => {
+  if (pat == null) {
+    return st;
+  } else if (pat.kind == "IdentPat" && !starts_with_upper(pat.name)) {
+    return bind_define(st, pat.name);
+  } else if (pat.kind == "TagPat") {
+    let s = st;
+    if (pat.fields != null) {
+      let i = 0;
+      while (i < pat.fields.length) {
+        s = bind_pat(s, pat.fields[i]);
+        i = i + 1;
+      }
+    }
+    return s;
+  } else {
+    return st;
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} expr
+ * @returns {BindState}
+ */
+const bind_expr = (st, expr) => {
+  if (expr == null) {
+    return st;
+  } else {
+    let k = expr.kind;
+    if (k == "Identifier") {
+      return bind_use(st, expr.name);
+    } else if (k == "BinaryExpr") {
+      let s = bind_expr(st, expr.left);
+      return bind_expr(s, expr.right);
+    } else if (k == "UnaryExpr") {
+      return bind_expr(st, expr.operand);
+    } else if (k == "TernaryExpr") {
+      let s = bind_expr(st, expr.test);
+      s = bind_expr(s, expr.consequent);
+      return bind_expr(s, expr.alternate);
+    } else if (k == "CallExpr") {
+      let s = bind_expr(st, expr.callee);
+      let i = 0;
+      while (i < expr.args.length) {
+        s = bind_expr(s, expr.args[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "NewExpr") {
+      let s = bind_expr(st, expr.callee);
+      let i = 0;
+      while (i < expr.args.length) {
+        s = bind_expr(s, expr.args[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "MemberExpr") {
+      return bind_expr(st, expr.object);
+    } else if (k == "IndexExpr") {
+      let s = bind_expr(st, expr.object);
+      return bind_expr(s, expr.index);
+    } else if (k == "SpreadExpr") {
+      return bind_expr(st, expr.argument);
+    } else if (k == "ObjectLit") {
+      let s = st;
+      let i = 0;
+      while (i < expr.properties.length) {
+        s = bind_expr(s, expr.properties[i].value);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "ArrayLit") {
+      let s = st;
+      let i = 0;
+      while (i < expr.elements.length) {
+        s = bind_expr(s, expr.elements[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "LambdaExpr") {
+      let s = bind_enter(st);
+      s = bind_define_params(s, expr.params);
+      s = bind_expr(s, expr.body);
+      return bind_exit(s);
+    } else if (k == "PipelineExpr") {
+      let s = st;
+      let i = 0;
+      while (i < expr.steps.length) {
+        let step = expr.steps[i];
+        if (step.kind == "PipeAs") {
+          s = bind_define(s, step.name);
+        } else {
+          s = bind_expr(s, step);
+        }
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "MatchExpr") {
+      let s = bind_expr(st, expr.subject);
+      let i = 0;
+      while (i < expr.arms.length) {
+        let arm = expr.arms[i];
+        let arm_s = bind_enter(s);
+        arm_s = bind_pat(arm_s, arm.pattern);
+        if (arm.guard != null) {
+          arm_s = bind_expr(arm_s, arm.guard);
+        }
+        arm_s = bind_expr(arm_s, arm.body);
+        s = BindState(arm_s.diagnostics, s.frames, s.line, arm_s.reported);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "BlockExpr") {
+      return bind_block(st, expr);
+    } else if (k == "ResultPropagateExpr" || k == "AwaitExpr") {
+      return bind_expr(st, expr.value);
+    } else if (k == "TemplateLit") {
+      let s = st;
+      if (expr.parts != null) {
+        let i = 0;
+        while (i < expr.parts.length) {
+          let part = expr.parts[i];
+          if (part.kind != null) {
+            s = bind_expr(s, part);
+          } else if (part.expr != null) {
+            s = bind_expr(s, part.expr);
+          }
+          i = i + 1;
+        }
+      }
+      if (expr.exprs != null) {
+        let j = 0;
+        while (j < expr.exprs.length) {
+          s = bind_expr(s, expr.exprs[j]);
+          j = j + 1;
+        }
+      }
+      return s;
+    } else if (k == "DoExpr") {
+      return bind_expr(st, expr.body);
+    } else {
+      return st;
+    }
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} block
+ * @returns {BindState}
+ */
+const bind_block = (st, block) => {
+  let s = bind_enter(st);
+  let i = 0;
+  while (i < block.stmts.length) {
+    let stmt = block.stmts[i];
+    if (stmt.kind == "LetStmt") {
+      s = bind_define(s, stmt.name);
+    } else if (stmt.kind == "DestructureStmt" && stmt.names != null) {
+      let ni = 0;
+      while (ni < stmt.names.length) {
+        s = bind_define(s, bind_binding_name(stmt.names[ni]));
+        ni = ni + 1;
+      }
+    }
+    i = i + 1;
+  }
+  i = 0;
+  while (i < block.stmts.length) {
+    let stmt = block.stmts[i];
+    let sk = stmt.kind;
+    if (sk == "LetStmt") {
+      if (stmt.value != null) {
+        s = bind_expr(s, stmt.value);
+      }
+    } else if (sk == "DestructureStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "ReturnStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "ExprStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "IfStmt") {
+      s = bind_expr(s, stmt.test);
+      s = bind_block(s, stmt.then);
+      if (stmt.else_ != null) {
+        s = bind_block(s, stmt.else_);
+      }
+    } else if (sk == "WhileStmt") {
+      s = bind_expr(s, stmt.test);
+      s = bind_block(s, stmt.body);
+    } else if (sk == "ForRangeStmt") {
+      s = bind_expr(s, stmt.lo);
+      s = bind_expr(s, stmt.hi);
+      let fs = bind_enter(s);
+      let vname = (() => {
+        if (stmt.varName != null) {
+          return stmt.varName;
+        } else {
+          return stmt.name;
+        }
+})();
+      fs = bind_define(fs, vname);
+      fs = bind_block(fs, stmt.body);
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported);
+    } else if (sk == "ForInStmt") {
+      s = bind_expr(s, stmt.iter);
+      let fs = bind_enter(s);
+      let vname = (() => {
+        if (stmt.varName != null) {
+          return stmt.varName;
+        } else {
+          return stmt.name;
+        }
+})();
+      fs = bind_define(fs, vname);
+      fs = bind_block(fs, stmt.body);
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported);
+    }
+    i = i + 1;
+  }
+  return bind_exit(s);
+};
+
+/**
+ * @param {BindState} st
+ * @param {Program} program
+ * @returns {BindState}
+ */
+const bind_collect_globals = (st, program) => {
+  let s = st;
+  let i = 0;
+  while (i < program.body.length) {
+    let decl = program.body[i];
+    let k = decl.kind;
+    if (k == "TopLevelLet") {
+      s = bind_define(s, decl.name);
+    } else if (k == "FnDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "StoreDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "RecordDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "InterfaceDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "TypeAliasDecl" || k == "TypeDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "TaggedUnionDecl") {
+      s = bind_define(s, decl.name);
+      let vi = 0;
+      while (vi < decl.variants.length) {
+        s = bind_define(s, decl.variants[vi].name);
+        vi = vi + 1;
+      }
+    } else if (k == "ImportDecl") {
+      let ni = 0;
+      while (ni < decl.names.length) {
+        s = bind_define(s, decl.names[ni]);
+        ni = ni + 1;
+      }
+    } else if (k == "ExportDecl") {
+      let nested = {kind: "Program", body: [decl.decl]};
+      s = bind_collect_globals(s, nested);
+    } else if (k == "ModuleDecl") {
+      let nested = {kind: "Program", body: decl.body};
+      s = bind_collect_globals(s, nested);
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} fndecl
+ * @returns {BindState}
+ */
+const bind_check_fn = (st, fndecl) => {
+  let s = bind_set_line(st, fndecl.line);
+  s = bind_enter(s);
+  s = bind_define_params(s, fndecl.params);
+  s = bind_expr(s, fndecl.body);
+  return bind_exit(s);
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} decl
+ * @returns {BindState}
+ */
+const bind_check_top = (st, decl) => {
+  let k = decl.kind;
+  if (k == "FnDecl") {
+    return bind_check_fn(st, decl);
+  } else if (k == "TopLevelLet") {
+    let s = bind_set_line(st, decl.line);
+    return bind_expr(s, decl.value);
+  } else if (k == "TopLevelExpr") {
+    return bind_expr(st, decl.expr);
+  } else if (k == "TestDecl") {
+    let s = bind_set_line(st, decl.line);
+    return bind_expr(s, decl.body);
+  } else if (k == "StoreDecl") {
+    let s = st;
+    let i = 0;
+    while (i < decl.fields.length) {
+      if (decl.fields[i].defaultValue != null) {
+        s = bind_expr(s, decl.fields[i].defaultValue);
+      }
+      i = i + 1;
+    }
+    return s;
+  } else if (k == "ExportDecl") {
+    return bind_check_top(st, decl.decl);
+  } else if (k == "ModuleDecl") {
+    let s = st;
+    let i = 0;
+    while (i < decl.body.length) {
+      s = bind_check_top(s, decl.body[i]);
+      i = i + 1;
+    }
+    return s;
+  } else {
+    return st;
+  }
+};
+
+/**
+ * @param {Program} program
+ * @returns {*}
+ */
+const check_bindings = (program) => {
+  let st = BindState([], [[]], 0, []);
+  st = bind_collect_globals(st, program);
+  let i = 0;
+  while (i < program.body.length) {
+    st = bind_check_top(st, program.body[i]);
+    i = i + 1;
+  }
+  return st.diagnostics;
+};
+
 /**
  * @param {Program} program
  * @returns {*}
@@ -855,6 +1476,6 @@ const check = (program) => {
     st = check_top_level(st, program.body[i]);
     i = i + 1;
   }
-  return st.diagnostics;
+  return st.diagnostics.concat(check_bindings(program));
 };
 

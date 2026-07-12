@@ -1,0 +1,7 @@
+[
+  {
+    "severity": "error",
+    "message": "Unbound name 'LEVEL_BLURBS' — not defined in this scope",
+    "line": 2
+  }
+]

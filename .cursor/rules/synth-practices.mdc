@@ -51,7 +51,7 @@ Canonical copy for agents working in this repo. Mist also keeps a mirror under `
 - Avoid top-level `let x: T[] = [ … ]` — can hang the checker; use untyped array lets.
 - Prefer `found: bool` records over optional (`T?`) for simple game-loop presence.
 - Use `//` comments unless `///` is formally supported.
-- `--check` does **not** catch unbound names today — smoke-load demos / read generated JS for free identifiers after structural edits.
+- --check reports **unbound names as errors** (fails the check). Annotation purity issues remain warnings.
 
 ## Breakout
 

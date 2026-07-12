@@ -2484,10 +2484,16 @@ const ps_parse_lambda_body = (st) => {
 
 /**
  * @param {Token} tokens
+ * @returns {*}
+ */
+const parse_program = (tokens) => {
+  let got = ps_parse(ParserState(tokens, 0, false, []));
+  return {program: got.value, errors: got.st.errors};
+};
+
+/**
+ * @param {Token} tokens
  * @returns {Program}
  */
-const parse = (tokens) => {
-  let st = ParserState(tokens, 0, false, []);
-  return ps_parse(st).value;
-};
+const parse = (tokens) => parse_program(tokens).program;
 

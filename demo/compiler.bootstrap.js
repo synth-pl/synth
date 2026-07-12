@@ -4,12 +4,12 @@
 // API: SynthCompiler.compile(src) → { js, errors, warnings }
 //      SynthCompiler.check(src)   → { warnings, errors }
 //      SynthCompiler.stdlib       → stdlib JS string
-//      SynthCompiler.version      → "1.1.0"
+//      SynthCompiler.version      → "1.2.0"
 //      SynthCompiler.backend      → "bootstrap"
 (function (global) {
   "use strict";
 
-  const SYNTH_STDLIB = "\n\nconst $map = (xs, fn) => xs.map(fn);\nconst $filter = (xs, pred) => xs.filter(pred);\nconst $fold = (xs, init, fn) => xs.reduce(fn, init);\nconst $pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x);\nconst $zip = (xs, ys) => xs.map((x, i) => [x, ys[i]]);\nconst $range = (start, end) => Array.from({ length: Math.max(0, end - start) }, (_, i) => start + i);\nconst $first = (xs) => xs[0];\nconst $last = (xs) => xs[xs.length - 1];\nconst $sum = (xs) => xs.reduce((a, b) => a + b, 0);\nconst $count = (xs, pred) => pred ? xs.filter(pred).length : xs.length;\nconst $any = (xs, pred) => xs.some(pred);\nconst $all = (xs, pred) => xs.every(pred);\nconst $flat = (xs) => xs.flat();\nconst $groupBy = (xs, keyFn) => xs.reduce((m, x) => { const k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); return m; }, new Map());\nconst $pick = (obj, keys) => Object.fromEntries(keys.filter(k => k in obj).map(k => [k, obj[k]]));\nconst $omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));\nconst $sort_by = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka < kb ? -1 : ka > kb ? 1 : 0; });\nconst $sort_by_desc = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka > kb ? -1 : ka < kb ? 1 : 0; });\nconst $trim = (s) => s.trim();\nconst $split = (s, sep) => s.split(sep);\nconst $starts_with = (s, prefix) => s.startsWith(prefix);\nconst $ends_with = (s, suffix) => s.endsWith(suffix);\nconst $contains = (s, sub) => s.includes(sub);\nconst $to_upper = (s) => s.toUpperCase();\nconst $to_lower = (s) => s.toLowerCase();\nconst $replace_all = (s, from, to) => s.replaceAll(from, to);\nconst $pad_start = (s, len, padChar = ' ') => s.padStart(len, padChar);\nconst $pad_end = (s, len, padChar = ' ') => s.padEnd(len, padChar);\nconst $min = (xs) => xs.reduce((a, b) => a < b ? a : b);\nconst $max = (xs) => xs.reduce((a, b) => a > b ? a : b);\nconst $min_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) <= keyFn(b) ? a : b);\nconst $max_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) >= keyFn(b) ? a : b);\nconst $take = (xs, n) => xs.slice(0, n);\nconst $drop = (xs, n) => xs.slice(n);\nconst $uniq = (xs) => [...new Set(xs)];\nconst $chunk = (xs, n) => { const out = []; for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n)); return out; };\nconst $flat_map = (xs, fn) => xs.flatMap(fn);\nconst $set_at = (xs, i, val) => [...xs.slice(0, i), val, ...xs.slice(i + 1)];\nconst $reverse = (xs) => [...xs].reverse();\nconst $sum_by = (xs, keyFn) => xs.reduce((acc, x) => acc + keyFn(x), 0);\nconst $clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));\nconst $abs = (x) => Math.abs(x);\nconst $round = (x) => Math.round(x);\nconst $floor = (x) => Math.floor(x);\nconst $ceil = (x) => Math.ceil(x);\nconst $pow = (x, exp) => Math.pow(x, exp);\nconst $sqrt = (x) => Math.sqrt(x);\nconst $random = () => Math.random();\nconst $random_int = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;\nconst __synth_presets = {\n  email:   /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,\n  url:     /^https?:\\/\\//,\n  uuid:    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,\n  alpha:   /^[a-zA-Z]+$/,\n  alnum:   /^[a-zA-Z0-9]+$/,\n  numeric: /^[0-9]+$/,\n  slug:    /^[a-z0-9-]+$/,\n  hex:     /^#?[0-9a-fA-F]{3,8}$/,\n};\nconst $find = (xs, pred) => xs.find(pred);\nconst $find_index = (xs, pred) => xs.findIndex(pred);\nconst $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };\nconst $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };\nconst $ok = (value) => ({ tag: 'Ok', value });\nconst $err = (message) => ({ tag: 'Err', message });\nconst $is_ok = (r) => r != null && r.tag === 'Ok';\nconst $is_err = (r) => r != null && r.tag === 'Err';\nconst $unwrap = (r) => { if (r != null && r.tag === 'Ok') return r.value; throw new Error(r != null ? r.message : 'unwrap called on null'); };\nconst $unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fallback;\nconst $delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));\nconst $println = (...args) => { console.log(...args); console.log(''); };\n\n// ── likely / embedding host API (v1.1) ───────────────────────────────────────\n// Hosts may plug in a real embedder:\n//   globalThis.__synth_embed = (text) => Float32Array | number[]\n// Without a host embedder, a tiny hashed bag-of-words vector is used so demos\n// work offline. Similarity is cosine; $likely_best returns the best claim index\n// above `threshold`, or -1.\n\nconst __synth_default_embed = (text) => {\n  const s = String(text ?? '').toLowerCase();\n  const dim = 64;\n  const v = new Float32Array(dim);\n  const toks = s.split(/[^a-z0-9]+/).filter(Boolean);\n  for (const t of toks) {\n    let h = 2166136261;\n    for (let i = 0; i < t.length; i++) {\n      h ^= t.charCodeAt(i);\n      h = Math.imul(h, 16777619);\n    }\n    v[(h >>> 0) % dim] += 1;\n    if (t.length >= 3) {\n      for (let i = 0; i < t.length - 2; i++) {\n        const tri = t.slice(i, i + 3);\n        let th = 2166136261;\n        for (let j = 0; j < tri.length; j++) {\n          th ^= tri.charCodeAt(j);\n          th = Math.imul(th, 16777619);\n        }\n        v[(th >>> 0) % dim] += 0.5;\n      }\n    }\n  }\n  let norm = 0;\n  for (let i = 0; i < dim; i++) norm += v[i] * v[i];\n  norm = Math.sqrt(norm) || 1;\n  for (let i = 0; i < dim; i++) v[i] /= norm;\n  return v;\n};\n\nconst $embed = (text) => {\n  const host = (typeof globalThis !== 'undefined') ? globalThis.__synth_embed : null;\n  if (typeof host === 'function') return host(String(text ?? ''));\n  return __synth_default_embed(text);\n};\n\nconst $cosine = (a, b) => {\n  if (!a || !b) return 0;\n  const n = Math.min(a.length, b.length);\n  let dot = 0, na = 0, nb = 0;\n  for (let i = 0; i < n; i++) {\n    const x = a[i] || 0, y = b[i] || 0;\n    dot += x * y; na += x * x; nb += y * y;\n  }\n  const d = Math.sqrt(na) * Math.sqrt(nb);\n  return d > 0 ? dot / d : 0;\n};\n\nconst $likely_best = (subject, claims, threshold = 0.28) => {\n  const sv = $embed(subject);\n  let best = -1, bestScore = threshold;\n  for (let i = 0; i < claims.length; i++) {\n    const score = $cosine(sv, $embed(claims[i]));\n    if (score > bestScore) { bestScore = score; best = i; }\n  }\n  return best;\n};\n\nif (typeof globalThis !== 'undefined') {\n  globalThis.SynthRuntime = globalThis.SynthRuntime || {};\n  globalThis.SynthRuntime.embed = $embed;\n  globalThis.SynthRuntime.likelyBest = $likely_best;\n  globalThis.SynthRuntime.setEmbed = (fn) => { globalThis.__synth_embed = fn; };\n}\n\nconst __synth_tests = [];\nconst __runSynthTests = () => {\n  let passed = 0, failed = 0;\n  const results = [];\n  for (const t of __synth_tests) {\n    try {\n      const isOk = !!t.fn();\n      if (isOk) { passed++; results.push({ ok: true, desc: t.desc }); }\n      else { failed++; results.push({ ok: false, desc: t.desc, error: 'assertion returned false' }); }\n    } catch(e) { failed++; results.push({ ok: false, desc: t.desc, error: String(e) }); }\n  }\n  return { passed, failed, total: passed + failed, results };\n};\nif (typeof globalThis !== 'undefined') { globalThis.__synth_tests = __synth_tests; globalThis.__runSynthTests = __runSynthTests; }\n";
+  const SYNTH_STDLIB = "\n\r\nconst $map = (xs, fn) => xs.map(fn);\r\nconst $filter = (xs, pred) => xs.filter(pred);\r\nconst $fold = (xs, init, fn) => xs.reduce(fn, init);\r\nconst $pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x);\r\nconst $zip = (xs, ys) => xs.map((x, i) => [x, ys[i]]);\r\nconst $range = (start, end) => Array.from({ length: Math.max(0, end - start) }, (_, i) => start + i);\r\nconst $first = (xs) => xs[0];\r\nconst $last = (xs) => xs[xs.length - 1];\r\nconst $sum = (xs) => xs.reduce((a, b) => a + b, 0);\r\nconst $count = (xs, pred) => pred ? xs.filter(pred).length : xs.length;\r\nconst $any = (xs, pred) => xs.some(pred);\r\nconst $all = (xs, pred) => xs.every(pred);\r\nconst $flat = (xs) => xs.flat();\r\nconst $groupBy = (xs, keyFn) => xs.reduce((m, x) => { const k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); return m; }, new Map());\r\nconst $pick = (obj, keys) => Object.fromEntries(keys.filter(k => k in obj).map(k => [k, obj[k]]));\r\nconst $omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));\r\nconst $sort_by = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka < kb ? -1 : ka > kb ? 1 : 0; });\r\nconst $sort_by_desc = (xs, keyFn) => [...xs].sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return ka > kb ? -1 : ka < kb ? 1 : 0; });\r\nconst $trim = (s) => s.trim();\r\nconst $split = (s, sep) => s.split(sep);\r\nconst $starts_with = (s, prefix) => s.startsWith(prefix);\r\nconst $ends_with = (s, suffix) => s.endsWith(suffix);\r\nconst $contains = (s, sub) => s.includes(sub);\r\nconst $to_upper = (s) => s.toUpperCase();\r\nconst $to_lower = (s) => s.toLowerCase();\r\nconst $replace_all = (s, from, to) => s.replaceAll(from, to);\r\nconst $pad_start = (s, len, padChar = ' ') => s.padStart(len, padChar);\r\nconst $pad_end = (s, len, padChar = ' ') => s.padEnd(len, padChar);\r\nconst $min = (xs) => xs.reduce((a, b) => a < b ? a : b);\r\nconst $max = (xs) => xs.reduce((a, b) => a > b ? a : b);\r\nconst $min_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) <= keyFn(b) ? a : b);\r\nconst $max_by = (xs, keyFn) => xs.reduce((a, b) => keyFn(a) >= keyFn(b) ? a : b);\r\nconst $take = (xs, n) => xs.slice(0, n);\r\nconst $drop = (xs, n) => xs.slice(n);\r\nconst $uniq = (xs) => [...new Set(xs)];\r\nconst $chunk = (xs, n) => { const out = []; for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n)); return out; };\r\nconst $flat_map = (xs, fn) => xs.flatMap(fn);\r\nconst $set_at = (xs, i, val) => [...xs.slice(0, i), val, ...xs.slice(i + 1)];\r\nconst $reverse = (xs) => [...xs].reverse();\r\nconst $sum_by = (xs, keyFn) => xs.reduce((acc, x) => acc + keyFn(x), 0);\r\nconst $clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));\r\nconst $abs = (x) => Math.abs(x);\r\nconst $round = (x) => Math.round(x);\r\nconst $floor = (x) => Math.floor(x);\r\nconst $ceil = (x) => Math.ceil(x);\r\nconst $pow = (x, exp) => Math.pow(x, exp);\r\nconst $sqrt = (x) => Math.sqrt(x);\r\nconst $random = () => Math.random();\r\nconst $random_int = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;\r\nconst __synth_presets = {\r\n  email:   /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,\r\n  url:     /^https?:\\/\\//,\r\n  uuid:    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,\r\n  alpha:   /^[a-zA-Z]+$/,\r\n  alnum:   /^[a-zA-Z0-9]+$/,\r\n  numeric: /^[0-9]+$/,\r\n  slug:    /^[a-z0-9-]+$/,\r\n  hex:     /^#?[0-9a-fA-F]{3,8}$/,\r\n};\r\nconst $find = (xs, pred) => xs.find(pred);\r\nconst $find_index = (xs, pred) => xs.findIndex(pred);\r\nconst $parse_int = (s, radix = 10) => { const n = parseInt(s, radix); return isNaN(n) ? null : n; };\r\nconst $parse_float = (s) => { const n = parseFloat(s); return isNaN(n) ? null : n; };\r\nconst $ok = (value) => ({ tag: 'Ok', value });\r\nconst $err = (message) => ({ tag: 'Err', message });\r\nconst $is_ok = (r) => r != null && r.tag === 'Ok';\r\nconst $is_err = (r) => r != null && r.tag === 'Err';\r\nconst $unwrap = (r) => { if (r != null && r.tag === 'Ok') return r.value; throw new Error(r != null ? r.message : 'unwrap called on null'); };\r\nconst $unwrap_or = (r, fallback) => (r != null && r.tag === 'Ok') ? r.value : fallback;\r\nconst $delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));\r\nconst $println = (...args) => { console.log(...args); console.log(''); };\r\n\r\n// ── likely / embedding host API (v1.1) ───────────────────────────────────────\r\n// Hosts may plug in a real embedder:\r\n//   globalThis.__synth_embed = (text) => Float32Array | number[]\r\n// Without a host embedder, a tiny hashed bag-of-words vector is used so demos\r\n// work offline. Similarity is cosine; $likely_best returns the best claim index\r\n// above `threshold`, or -1.\r\n\r\nconst __synth_default_embed = (text) => {\r\n  const s = String(text ?? '').toLowerCase();\r\n  const dim = 64;\r\n  const v = new Float32Array(dim);\r\n  const toks = s.split(/[^a-z0-9]+/).filter(Boolean);\r\n  for (const t of toks) {\r\n    let h = 2166136261;\r\n    for (let i = 0; i < t.length; i++) {\r\n      h ^= t.charCodeAt(i);\r\n      h = Math.imul(h, 16777619);\r\n    }\r\n    v[(h >>> 0) % dim] += 1;\r\n    if (t.length >= 3) {\r\n      for (let i = 0; i < t.length - 2; i++) {\r\n        const tri = t.slice(i, i + 3);\r\n        let th = 2166136261;\r\n        for (let j = 0; j < tri.length; j++) {\r\n          th ^= tri.charCodeAt(j);\r\n          th = Math.imul(th, 16777619);\r\n        }\r\n        v[(th >>> 0) % dim] += 0.5;\r\n      }\r\n    }\r\n  }\r\n  let norm = 0;\r\n  for (let i = 0; i < dim; i++) norm += v[i] * v[i];\r\n  norm = Math.sqrt(norm) || 1;\r\n  for (let i = 0; i < dim; i++) v[i] /= norm;\r\n  return v;\r\n};\r\n\r\nconst $embed = (text) => {\r\n  const host = (typeof globalThis !== 'undefined') ? globalThis.__synth_embed : null;\r\n  if (typeof host === 'function') return host(String(text ?? ''));\r\n  return __synth_default_embed(text);\r\n};\r\n\r\nconst $cosine = (a, b) => {\r\n  if (!a || !b) return 0;\r\n  const n = Math.min(a.length, b.length);\r\n  let dot = 0, na = 0, nb = 0;\r\n  for (let i = 0; i < n; i++) {\r\n    const x = a[i] || 0, y = b[i] || 0;\r\n    dot += x * y; na += x * x; nb += y * y;\r\n  }\r\n  const d = Math.sqrt(na) * Math.sqrt(nb);\r\n  return d > 0 ? dot / d : 0;\r\n};\r\n\r\nconst $likely_best = (subject, claims, threshold = 0.28) => {\r\n  const sv = $embed(subject);\r\n  let best = -1, bestScore = threshold;\r\n  for (let i = 0; i < claims.length; i++) {\r\n    const score = $cosine(sv, $embed(claims[i]));\r\n    if (score > bestScore) { bestScore = score; best = i; }\r\n  }\r\n  return best;\r\n};\r\n\r\n/** Score every claim against subject. best is -1 when nothing beats threshold. */\r\nconst $score_claims = (subject, claims, threshold = 0.28) => {\r\n  const sv = $embed(subject);\r\n  const scores = [];\r\n  let best = -1, bestScore = threshold;\r\n  for (let i = 0; i < claims.length; i++) {\r\n    const score = $cosine(sv, $embed(claims[i]));\r\n    scores.push(score);\r\n    if (score > bestScore) { bestScore = score; best = i; }\r\n  }\r\n  return { scores, best, bestScore: best < 0 ? 0 : bestScore };\r\n};\r\n\r\nif (typeof globalThis !== 'undefined') {\r\n  globalThis.SynthRuntime = globalThis.SynthRuntime || {};\r\n  globalThis.SynthRuntime.embed = $embed;\r\n  globalThis.SynthRuntime.likelyBest = $likely_best;\r\n  globalThis.SynthRuntime.scoreClaims = $score_claims;\r\n  globalThis.SynthRuntime.setEmbed = (fn) => { globalThis.__synth_embed = fn; };\r\n}\r\n\r\nconst __synth_tests = [];\r\nconst __runSynthTests = () => {\r\n  let passed = 0, failed = 0;\r\n  const results = [];\r\n  for (const t of __synth_tests) {\r\n    try {\r\n      const isOk = !!t.fn();\r\n      if (isOk) { passed++; results.push({ ok: true, desc: t.desc }); }\r\n      else { failed++; results.push({ ok: false, desc: t.desc, error: 'assertion returned false' }); }\r\n    } catch(e) { failed++; results.push({ ok: false, desc: t.desc, error: String(e) }); }\r\n  }\r\n  return { passed, failed, total: passed + failed, results };\r\n};\r\nif (typeof globalThis !== 'undefined') { globalThis.__synth_tests = __synth_tests; globalThis.__runSynthTests = __runSynthTests; }\r\n";
 
   const __synth_compiler = (function () {
 const $map = (xs, fn) => xs.map(fn);
@@ -3398,12 +3398,18 @@ const ps_parse_lambda_body = (st) => {
 
 /**
  * @param {Token} tokens
+ * @returns {*}
+ */
+const parse_program = (tokens) => {
+  let got = ps_parse(ParserState(tokens, 0, false, []));
+  return {program: got.value, errors: got.st.errors};
+};
+
+/**
+ * @param {Token} tokens
  * @returns {Program}
  */
-const parse = (tokens) => {
-  let st = ParserState(tokens, 0, false, []);
-  return ps_parse(st).value;
-};
+const parse = (tokens) => parse_program(tokens).program;
 
 
 
@@ -4254,6 +4260,627 @@ const check_top_level = (st, decl) => {
   return s;
 };
 
+const BindState = (diagnostics, frames, line, reported) => ({ diagnostics, frames, line, reported });
+
+/**
+ * @param {BindState} st
+ * @param {string} message
+ * @param {number} line
+ * @returns {BindState}
+ */
+const bind_err = (st, message, line) => {
+  let d = {severity: "error", message: message, line: line};
+  return BindState(st.diagnostics.concat([d]), st.frames, st.line, st.reported);
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_stdlib = (name) => {
+  if (name == "map" || name == "filter" || name == "fold" || name == "pipe" || name == "zip") {
+    return true;
+  } else if (name == "range" || name == "first" || name == "last" || name == "sum" || name == "count") {
+    return true;
+  } else if (name == "any" || name == "all" || name == "flat" || name == "flat_map") {
+    return true;
+  } else if (name == "sort_by" || name == "sort_by_desc" || name == "find" || name == "find_index") {
+    return true;
+  } else if (name == "trim" || name == "split" || name == "starts_with" || name == "ends_with" || name == "contains") {
+    return true;
+  } else if (name == "to_upper" || name == "to_lower" || name == "replace_all" || name == "pad_start" || name == "pad_end") {
+    return true;
+  } else if (name == "min" || name == "max" || name == "min_by" || name == "max_by" || name == "take" || name == "drop") {
+    return true;
+  } else if (name == "uniq" || name == "chunk" || name == "set_at" || name == "reverse" || name == "sum_by") {
+    return true;
+  } else if (name == "clamp" || name == "abs" || name == "round" || name == "floor" || name == "ceil") {
+    return true;
+  } else if (name == "pow" || name == "sqrt" || name == "random" || name == "random_int") {
+    return true;
+  } else if (name == "parse_int" || name == "parse_float") {
+    return true;
+  } else if (name == "ok" || name == "err" || name == "is_ok" || name == "is_err" || name == "unwrap" || name == "unwrap_or") {
+    return true;
+  } else if (name == "delay" || name == "println" || name == "print" || name == "likely_best" || name == "embed") {
+    return true;
+  } else if (name == "_" || name == "Math") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_host = (name) => {
+  if (name == "document" || name == "window" || name == "console" || name == "globalThis") {
+    return true;
+  } else if (name == "Object" || name == "Array" || name == "String" || name == "Number" || name == "Boolean") {
+    return true;
+  } else if (name == "Error" || name == "Map" || name == "Set" || name == "JSON" || name == "Promise" || name == "Date") {
+    return true;
+  } else if (name == "Math" || name == "parseInt" || name == "parseFloat" || name == "isNaN" || name == "isFinite") {
+    return true;
+  } else if (name == "undefined" || name == "NaN" || name == "Infinity" || name == "null") {
+    return true;
+  } else if (name == "setTimeout" || name == "setInterval" || name == "clearTimeout" || name == "clearInterval") {
+    return true;
+  } else if (name == "fetch" || name == "localStorage" || name == "sessionStorage") {
+    return true;
+  } else if (name == "Float32Array" || name == "Int32Array" || name == "Uint8Array") {
+    return true;
+  } else if (name == "Node" || name == "Element" || name == "Event") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_is_builtin = (name) => {
+  if (name.length > 2 && name.slice(0, 2) == "__") {
+    return true;
+  } else if (bind_is_stdlib(name)) {
+    return true;
+  } else if (bind_is_host(name)) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/**
+ * @param {string} frame
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_frame_has = (frame, name) => arr_has(frame, name);
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {boolean}
+ */
+const bind_defined = (st, name) => {
+  if (bind_is_builtin(name)) {
+    return true;
+  } else {
+    let i = 0;
+    while (i < st.frames.length) {
+      if (bind_frame_has(st.frames[i], name)) {
+        return true;
+      }
+      i = i + 1;
+    }
+    return false;
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} frame
+ * @returns {BindState}
+ */
+const bind_replace_top = (st, frame) => {
+  let frames = [];
+  let i = 0;
+  while (i < st.frames.length - 1) {
+    frames = frames.concat([st.frames[i]]);
+    i = i + 1;
+  }
+  frames = frames.concat([frame]);
+  return BindState(st.diagnostics, frames, st.line, st.reported);
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {BindState}
+ */
+const bind_define = (st, name) => {
+  if (name == "" || name == "_") {
+    return st;
+  } else if (st.frames.length == 0) {
+    return st;
+  } else {
+    let top = st.frames[st.frames.length - 1];
+    if (bind_frame_has(top, name)) {
+      return st;
+    } else {
+      return bind_replace_top(st, top.concat([name]));
+    }
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @returns {BindState}
+ */
+const bind_enter = (st) => BindState(st.diagnostics, st.frames.concat([[]]), st.line, st.reported);
+
+/**
+ * @param {BindState} st
+ * @returns {BindState}
+ */
+const bind_exit = (st) => {
+  if (st.frames.length == 0) {
+    return st;
+  } else {
+    let frames = [];
+    let i = 0;
+    while (i < st.frames.length - 1) {
+      frames = frames.concat([st.frames[i]]);
+      i = i + 1;
+    }
+    return BindState(st.diagnostics, frames, st.line, st.reported);
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {number} line
+ * @returns {BindState}
+ */
+const bind_set_line = (st, line) => BindState(st.diagnostics, st.frames, line, st.reported);
+
+/**
+ * @param {BindState} st
+ * @param {string} name
+ * @returns {BindState}
+ */
+const bind_use = (st, name) => {
+  if (bind_defined(st, name)) {
+    return st;
+  } else if (arr_has(st.reported, name)) {
+    return st;
+  } else {
+    let line = st.line;
+    let next = bind_err(st, "Unbound name '" + name + "' — not defined in this scope", line);
+    return BindState(next.diagnostics, next.frames, next.line, next.reported.concat([name]));
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} params
+ * @returns {BindState}
+ */
+const bind_define_params = (st, params) => {
+  let s = st;
+  let i = 0;
+  while (i < params.length) {
+    let p = params[i];
+    if (p.name != null) {
+      if (p.destructure == true) {
+        s = bind_define_destructure_name(s, p.name);
+      } else {
+        s = bind_define(s, p.name);
+      }
+    } else {
+      s = bind_define(s, p);
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {string} raw
+ * @returns {string}
+ */
+const bind_binding_name = (raw) => {
+  let i = 0;
+  while (i < raw.length) {
+    if (raw.slice(i, i + 1) == ":") {
+      return $trim(raw.slice(i + 1, raw.length));
+    }
+    i = i + 1;
+  }
+  return $trim(raw);
+};
+
+/**
+ * @param {BindState} st
+ * @param {string} raw
+ * @returns {BindState}
+ */
+const bind_define_destructure_name = (st, raw) => {
+  let inner = raw;
+  if (inner.length >= 2 && inner.slice(0, 1) == "[") {
+    inner = inner.slice(1, inner.length - 1);
+  }
+  let s = st;
+  let part = "";
+  let i = 0;
+  while (i < inner.length) {
+    let ch = inner.slice(i, i + 1);
+    if (ch == ",") {
+      s = bind_define(s, bind_binding_name(part));
+      part = "";
+    } else {
+      part = part + ch;
+    }
+    i = i + 1;
+  }
+  if ($trim(part).length > 0) {
+    s = bind_define(s, bind_binding_name(part));
+  }
+  return s;
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} pat
+ * @returns {BindState}
+ */
+const bind_pat = (st, pat) => {
+  if (pat == null) {
+    return st;
+  } else if (pat.kind == "IdentPat" && !starts_with_upper(pat.name)) {
+    return bind_define(st, pat.name);
+  } else if (pat.kind == "TagPat") {
+    let s = st;
+    if (pat.fields != null) {
+      let i = 0;
+      while (i < pat.fields.length) {
+        s = bind_pat(s, pat.fields[i]);
+        i = i + 1;
+      }
+    }
+    return s;
+  } else {
+    return st;
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} expr
+ * @returns {BindState}
+ */
+const bind_expr = (st, expr) => {
+  if (expr == null) {
+    return st;
+  } else {
+    let k = expr.kind;
+    if (k == "Identifier") {
+      return bind_use(st, expr.name);
+    } else if (k == "BinaryExpr") {
+      let s = bind_expr(st, expr.left);
+      return bind_expr(s, expr.right);
+    } else if (k == "UnaryExpr") {
+      return bind_expr(st, expr.operand);
+    } else if (k == "TernaryExpr") {
+      let s = bind_expr(st, expr.test);
+      s = bind_expr(s, expr.consequent);
+      return bind_expr(s, expr.alternate);
+    } else if (k == "CallExpr") {
+      let s = bind_expr(st, expr.callee);
+      let i = 0;
+      while (i < expr.args.length) {
+        s = bind_expr(s, expr.args[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "NewExpr") {
+      let s = bind_expr(st, expr.callee);
+      let i = 0;
+      while (i < expr.args.length) {
+        s = bind_expr(s, expr.args[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "MemberExpr") {
+      return bind_expr(st, expr.object);
+    } else if (k == "IndexExpr") {
+      let s = bind_expr(st, expr.object);
+      return bind_expr(s, expr.index);
+    } else if (k == "SpreadExpr") {
+      return bind_expr(st, expr.argument);
+    } else if (k == "ObjectLit") {
+      let s = st;
+      let i = 0;
+      while (i < expr.properties.length) {
+        s = bind_expr(s, expr.properties[i].value);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "ArrayLit") {
+      let s = st;
+      let i = 0;
+      while (i < expr.elements.length) {
+        s = bind_expr(s, expr.elements[i]);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "LambdaExpr") {
+      let s = bind_enter(st);
+      s = bind_define_params(s, expr.params);
+      s = bind_expr(s, expr.body);
+      return bind_exit(s);
+    } else if (k == "PipelineExpr") {
+      let s = st;
+      let i = 0;
+      while (i < expr.steps.length) {
+        let step = expr.steps[i];
+        if (step.kind == "PipeAs") {
+          s = bind_define(s, step.name);
+        } else {
+          s = bind_expr(s, step);
+        }
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "MatchExpr") {
+      let s = bind_expr(st, expr.subject);
+      let i = 0;
+      while (i < expr.arms.length) {
+        let arm = expr.arms[i];
+        let arm_s = bind_enter(s);
+        arm_s = bind_pat(arm_s, arm.pattern);
+        if (arm.guard != null) {
+          arm_s = bind_expr(arm_s, arm.guard);
+        }
+        arm_s = bind_expr(arm_s, arm.body);
+        s = BindState(arm_s.diagnostics, s.frames, s.line, arm_s.reported);
+        i = i + 1;
+      }
+      return s;
+    } else if (k == "BlockExpr") {
+      return bind_block(st, expr);
+    } else if (k == "ResultPropagateExpr" || k == "AwaitExpr") {
+      return bind_expr(st, expr.value);
+    } else if (k == "TemplateLit") {
+      let s = st;
+      if (expr.parts != null) {
+        let i = 0;
+        while (i < expr.parts.length) {
+          let part = expr.parts[i];
+          if (part.kind != null) {
+            s = bind_expr(s, part);
+          } else if (part.expr != null) {
+            s = bind_expr(s, part.expr);
+          }
+          i = i + 1;
+        }
+      }
+      if (expr.exprs != null) {
+        let j = 0;
+        while (j < expr.exprs.length) {
+          s = bind_expr(s, expr.exprs[j]);
+          j = j + 1;
+        }
+      }
+      return s;
+    } else if (k == "DoExpr") {
+      return bind_expr(st, expr.body);
+    } else {
+      return st;
+    }
+  }
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} block
+ * @returns {BindState}
+ */
+const bind_block = (st, block) => {
+  let s = bind_enter(st);
+  let i = 0;
+  while (i < block.stmts.length) {
+    let stmt = block.stmts[i];
+    if (stmt.kind == "LetStmt") {
+      s = bind_define(s, stmt.name);
+    } else if (stmt.kind == "DestructureStmt" && stmt.names != null) {
+      let ni = 0;
+      while (ni < stmt.names.length) {
+        s = bind_define(s, bind_binding_name(stmt.names[ni]));
+        ni = ni + 1;
+      }
+    }
+    i = i + 1;
+  }
+  i = 0;
+  while (i < block.stmts.length) {
+    let stmt = block.stmts[i];
+    let sk = stmt.kind;
+    if (sk == "LetStmt") {
+      if (stmt.value != null) {
+        s = bind_expr(s, stmt.value);
+      }
+    } else if (sk == "DestructureStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "ReturnStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "ExprStmt") {
+      s = bind_expr(s, stmt.value);
+    } else if (sk == "IfStmt") {
+      s = bind_expr(s, stmt.test);
+      s = bind_block(s, stmt.then);
+      if (stmt.else_ != null) {
+        s = bind_block(s, stmt.else_);
+      }
+    } else if (sk == "WhileStmt") {
+      s = bind_expr(s, stmt.test);
+      s = bind_block(s, stmt.body);
+    } else if (sk == "ForRangeStmt") {
+      s = bind_expr(s, stmt.lo);
+      s = bind_expr(s, stmt.hi);
+      let fs = bind_enter(s);
+      let vname = (() => {
+        if (stmt.varName != null) {
+          return stmt.varName;
+        } else {
+          return stmt.name;
+        }
+})();
+      fs = bind_define(fs, vname);
+      fs = bind_block(fs, stmt.body);
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported);
+    } else if (sk == "ForInStmt") {
+      s = bind_expr(s, stmt.iter);
+      let fs = bind_enter(s);
+      let vname = (() => {
+        if (stmt.varName != null) {
+          return stmt.varName;
+        } else {
+          return stmt.name;
+        }
+})();
+      fs = bind_define(fs, vname);
+      fs = bind_block(fs, stmt.body);
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported);
+    }
+    i = i + 1;
+  }
+  return bind_exit(s);
+};
+
+/**
+ * @param {BindState} st
+ * @param {Program} program
+ * @returns {BindState}
+ */
+const bind_collect_globals = (st, program) => {
+  let s = st;
+  let i = 0;
+  while (i < program.body.length) {
+    let decl = program.body[i];
+    let k = decl.kind;
+    if (k == "TopLevelLet") {
+      s = bind_define(s, decl.name);
+    } else if (k == "FnDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "StoreDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "RecordDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "InterfaceDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "TypeAliasDecl" || k == "TypeDecl") {
+      s = bind_define(s, decl.name);
+    } else if (k == "TaggedUnionDecl") {
+      s = bind_define(s, decl.name);
+      let vi = 0;
+      while (vi < decl.variants.length) {
+        s = bind_define(s, decl.variants[vi].name);
+        vi = vi + 1;
+      }
+    } else if (k == "ImportDecl") {
+      let ni = 0;
+      while (ni < decl.names.length) {
+        s = bind_define(s, decl.names[ni]);
+        ni = ni + 1;
+      }
+    } else if (k == "ExportDecl") {
+      let nested = {kind: "Program", body: [decl.decl]};
+      s = bind_collect_globals(s, nested);
+    } else if (k == "ModuleDecl") {
+      let nested = {kind: "Program", body: decl.body};
+      s = bind_collect_globals(s, nested);
+    }
+    i = i + 1;
+  }
+  return s;
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} fndecl
+ * @returns {BindState}
+ */
+const bind_check_fn = (st, fndecl) => {
+  let s = bind_set_line(st, fndecl.line);
+  s = bind_enter(s);
+  s = bind_define_params(s, fndecl.params);
+  s = bind_expr(s, fndecl.body);
+  return bind_exit(s);
+};
+
+/**
+ * @param {BindState} st
+ * @param {*} decl
+ * @returns {BindState}
+ */
+const bind_check_top = (st, decl) => {
+  let k = decl.kind;
+  if (k == "FnDecl") {
+    return bind_check_fn(st, decl);
+  } else if (k == "TopLevelLet") {
+    let s = bind_set_line(st, decl.line);
+    return bind_expr(s, decl.value);
+  } else if (k == "TopLevelExpr") {
+    return bind_expr(st, decl.expr);
+  } else if (k == "TestDecl") {
+    let s = bind_set_line(st, decl.line);
+    return bind_expr(s, decl.body);
+  } else if (k == "StoreDecl") {
+    let s = st;
+    let i = 0;
+    while (i < decl.fields.length) {
+      if (decl.fields[i].defaultValue != null) {
+        s = bind_expr(s, decl.fields[i].defaultValue);
+      }
+      i = i + 1;
+    }
+    return s;
+  } else if (k == "ExportDecl") {
+    return bind_check_top(st, decl.decl);
+  } else if (k == "ModuleDecl") {
+    let s = st;
+    let i = 0;
+    while (i < decl.body.length) {
+      s = bind_check_top(s, decl.body[i]);
+      i = i + 1;
+    }
+    return s;
+  } else {
+    return st;
+  }
+};
+
+/**
+ * @param {Program} program
+ * @returns {*}
+ */
+const check_bindings = (program) => {
+  let st = BindState([], [[]], 0, []);
+  st = bind_collect_globals(st, program);
+  let i = 0;
+  while (i < program.body.length) {
+    st = bind_check_top(st, program.body[i]);
+    i = i + 1;
+  }
+  return st.diagnostics;
+};
+
 /**
  * @param {Program} program
  * @returns {*}
@@ -4266,7 +4893,7 @@ const check = (program) => {
     st = check_top_level(st, program.body[i]);
     i = i + 1;
   }
-  return st.diagnostics;
+  return st.diagnostics.concat(check_bindings(program));
 };
 
 
@@ -6400,9 +7027,9 @@ const CompileResult = (js, warnings) => ({ js, warnings });
  */
 const compile = (source) => {
   let tokens = tokenize(source);
-  let ast = parse(tokens);
-  let warnings = check(ast);
-  let js = generate(ast);
+  let parsed = parse_program(tokens);
+  let warnings = parsed.errors.concat(check(parsed.program));
+  let js = generate(parsed.program);
   return CompileResult(js, warnings);
 };
 
@@ -6410,7 +7037,10 @@ const compile = (source) => {
  * @param {string} source
  * @returns {*}
  */
-const check_source = (source) => check(parse(tokenize(source)));
+const check_source = (source) => {
+  let parsed = parse_program(tokenize(source));
+  return parsed.errors.concat(check(parsed.program));
+};
 
 /**
  * @param {string} source
@@ -6481,7 +7111,7 @@ const format = (source) => format_source(source);
   global.SynthCompiler = {
     compile,
     check,
-    version: '1.1.0',
+    version: '1.2.0',
     backend: 'bootstrap',
     stdlib: SYNTH_STDLIB,
   }

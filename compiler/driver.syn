@@ -2,7 +2,7 @@
 // Bootstrap entry: synth --bundle compiler/driver.syn dist/compiler.synth.js
 
 import { tokenize } from "./lexer"
-import { parse } from "./parser"
+import { parse, parse_program } from "./parser"
 import { check } from "./checker"
 import { generate } from "./codegen"
 import { format_source } from "./formatter"
@@ -13,15 +13,16 @@ export record CompileResult {
 }
 
 export fn compile(source: string) -> CompileResult {
-  let tokens   = tokenize(source)
-  let ast      = parse(tokens)
-  let warnings = check(ast)
-  let js       = generate(ast)
+  let tokens = tokenize(source)
+  let parsed = parse_program(tokens)
+  let warnings = parsed.errors.concat(check(parsed.program))
+  let js = generate(parsed.program)
   CompileResult(js, warnings)
 }
 
 export fn check_source(source: string) -> any[] {
-  check(parse(tokenize(source)))
+  let parsed = parse_program(tokenize(source))
+  parsed.errors.concat(check(parsed.program))
 }
 
 export fn format(source: string) -> FormatResult {

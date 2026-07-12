@@ -1,0 +1,5 @@
+// Expect ERROR: unbound LEVEL_BLURBS (would have been silent before binding analysis)
+fn level_description(level: int) -> string {
+  let hit = LEVEL_BLURBS.find(b => b.level == level)
+  hit ? hit.text : "missing"
+}

@@ -32,7 +32,7 @@ node tools/synth_bootstrap_cli.js --test <file.syn>    # when @test exists
 npm run rebuild-demos                                 # if live demos changed
 ```
 
-- `--check` can miss **unbound names**; after structural patches, confirm bindings exist in source **and** smoke the demo page / parse `demo/*.sources.js`.
+- `--check` reports **unbound names as errors** (exit 1). Annotation purity issues remain warnings. Still smoke demos after big structural edits.
 - Intentional `@pure` lies (`debug_*`) warn — expected.
 
 ## Ship

@@ -532,6 +532,479 @@ fn check_top_level(st: ChkState, decl: any) -> ChkState {
   s
 }
 
+// ── Binding analysis (unbound / undeclared names) ─────────────────────────────
+// Catches free identifiers like LEVEL_BLURBS that annotation checks miss.
+// Severity: error (fails --check). Host/stdlib/JS globals are allowlisted.
+
+record BindState {
+  diagnostics: any[]
+  frames:      any[]
+  line:        int
+  reported:    string[]
+}
+
+fn bind_err(st: BindState, message: string, line: int) -> BindState {
+  let d = { severity: "error", message: message, line: line }
+  BindState(st.diagnostics.concat([d]), st.frames, st.line, st.reported)
+}
+
+fn bind_is_stdlib(name: string) -> bool {
+  if name == "map" or name == "filter" or name == "fold" or name == "pipe" or name == "zip" { true }
+  else if name == "range" or name == "first" or name == "last" or name == "sum" or name == "count" { true }
+  else if name == "any" or name == "all" or name == "flat" or name == "flat_map" { true }
+  else if name == "sort_by" or name == "sort_by_desc" or name == "find" or name == "find_index" { true }
+  else if name == "trim" or name == "split" or name == "starts_with" or name == "ends_with" or name == "contains" { true }
+  else if name == "to_upper" or name == "to_lower" or name == "replace_all" or name == "pad_start" or name == "pad_end" { true }
+  else if name == "min" or name == "max" or name == "min_by" or name == "max_by" or name == "take" or name == "drop" { true }
+  else if name == "uniq" or name == "chunk" or name == "set_at" or name == "reverse" or name == "sum_by" { true }
+  else if name == "clamp" or name == "abs" or name == "round" or name == "floor" or name == "ceil" { true }
+  else if name == "pow" or name == "sqrt" or name == "random" or name == "random_int" { true }
+  else if name == "parse_int" or name == "parse_float" { true }
+  else if name == "ok" or name == "err" or name == "is_ok" or name == "is_err" or name == "unwrap" or name == "unwrap_or" { true }
+  else if name == "delay" or name == "println" or name == "print" or name == "likely_best" or name == "embed" { true }
+  else if name == "_" or name == "Math" { true }
+  else { false }
+}
+
+fn bind_is_host(name: string) -> bool {
+  if name == "document" or name == "window" or name == "console" or name == "globalThis" { true }
+  else if name == "Object" or name == "Array" or name == "String" or name == "Number" or name == "Boolean" { true }
+  else if name == "Error" or name == "Map" or name == "Set" or name == "JSON" or name == "Promise" or name == "Date" { true }
+  else if name == "Math" or name == "parseInt" or name == "parseFloat" or name == "isNaN" or name == "isFinite" { true }
+  else if name == "undefined" or name == "NaN" or name == "Infinity" or name == "null" { true }
+  else if name == "setTimeout" or name == "setInterval" or name == "clearTimeout" or name == "clearInterval" { true }
+  else if name == "fetch" or name == "localStorage" or name == "sessionStorage" { true }
+  else if name == "Float32Array" or name == "Int32Array" or name == "Uint8Array" { true }
+  else if name == "Node" or name == "Element" or name == "Event" { true }
+  else { false }
+}
+
+fn bind_is_builtin(name: string) -> bool {
+  if name.length > 2 and name.slice(0, 2) == "__" { true }
+  else if bind_is_stdlib(name) { true }
+  else if bind_is_host(name) { true }
+  else { false }
+}
+
+fn bind_frame_has(frame: string[], name: string) -> bool {
+  arr_has(frame, name)
+}
+
+fn bind_defined(st: BindState, name: string) -> bool {
+  if bind_is_builtin(name) { true }
+  else {
+    let mut i = 0
+    while i < st.frames.length {
+      if bind_frame_has(st.frames[i], name) { return true }
+      i = i + 1
+    }
+    false
+  }
+}
+
+fn bind_replace_top(st: BindState, frame: string[]) -> BindState {
+  let mut frames = []
+  let mut i = 0
+  while i < st.frames.length - 1 {
+    frames = frames.concat([st.frames[i]])
+    i = i + 1
+  }
+  frames = frames.concat([frame])
+  BindState(st.diagnostics, frames, st.line, st.reported)
+}
+
+fn bind_define(st: BindState, name: string) -> BindState {
+  if name == "" or name == "_" { st }
+  else if st.frames.length == 0 { st }
+  else {
+    let top = st.frames[st.frames.length - 1]
+    if bind_frame_has(top, name) { st }
+    else { bind_replace_top(st, top.concat([name])) }
+  }
+}
+
+fn bind_enter(st: BindState) -> BindState {
+  BindState(st.diagnostics, st.frames.concat([[]]), st.line, st.reported)
+}
+
+fn bind_exit(st: BindState) -> BindState {
+  if st.frames.length == 0 { st }
+  else {
+    let mut frames = []
+    let mut i = 0
+    while i < st.frames.length - 1 {
+      frames = frames.concat([st.frames[i]])
+      i = i + 1
+    }
+    BindState(st.diagnostics, frames, st.line, st.reported)
+  }
+}
+
+fn bind_set_line(st: BindState, line: int) -> BindState {
+  BindState(st.diagnostics, st.frames, line, st.reported)
+}
+
+fn bind_use(st: BindState, name: string) -> BindState {
+  if bind_defined(st, name) { st }
+  else if arr_has(st.reported, name) { st }
+  else {
+    let line = st.line
+    let next = bind_err(st, "Unbound name '" + name + "' — not defined in this scope", line)
+    BindState(next.diagnostics, next.frames, next.line, next.reported.concat([name]))
+  }
+}
+
+fn bind_define_params(st: BindState, params: any[]) -> BindState {
+  let mut s = st
+  let mut i = 0
+  while i < params.length {
+    let p = params[i]
+    // Fn params: { name, type }. Lambda: bare string, or { name: "[k, v]", destructure: true }.
+    if p.name != null {
+      if p.destructure == true {
+        s = bind_define_destructure_name(s, p.name)
+      } else {
+        s = bind_define(s, p.name)
+      }
+    } else {
+      s = bind_define(s, p)
+    }
+    i = i + 1
+  }
+  s
+}
+
+fn bind_binding_name(raw: string) -> string {
+  // Object destructure rename: "bonus: hitBonus" → hitBonus
+  let mut i = 0
+  while i < raw.length {
+    if raw.slice(i, i + 1) == ":" {
+      return raw.slice(i + 1, raw.length).trim()
+    }
+    i = i + 1
+  }
+  raw.trim()
+}
+
+fn bind_define_destructure_name(st: BindState, raw: string) -> BindState {
+  // Strip [ ] and split on commas: "[k, v]" → k, v
+  let mut inner = raw
+  if inner.length >= 2 and inner.slice(0, 1) == "[" {
+    inner = inner.slice(1, inner.length - 1)
+  }
+  let mut s = st
+  let mut part = ""
+  let mut i = 0
+  while i < inner.length {
+    let ch = inner.slice(i, i + 1)
+    if ch == "," {
+      s = bind_define(s, bind_binding_name(part))
+      part = ""
+    } else {
+      part = part + ch
+    }
+    i = i + 1
+  }
+  if part.trim().length > 0 {
+    s = bind_define(s, bind_binding_name(part))
+  }
+  s
+}
+
+fn bind_pat(st: BindState, pat: any) -> BindState {
+  if pat == null { st }
+  else if pat.kind == "IdentPat" and not starts_with_upper(pat.name) {
+    bind_define(st, pat.name)
+  } else if pat.kind == "TagPat" {
+    let mut s = st
+    if pat.fields != null {
+      let mut i = 0
+      while i < pat.fields.length {
+        s = bind_pat(s, pat.fields[i])
+        i = i + 1
+      }
+    }
+    s
+  } else {
+    st
+  }
+}
+
+fn bind_expr(st: BindState, expr: any) -> BindState {
+  if expr == null { st }
+  else {
+    let k = expr.kind
+    if k == "Identifier" {
+      bind_use(st, expr.name)
+    } else if k == "BinaryExpr" {
+      let mut s = bind_expr(st, expr.left)
+      bind_expr(s, expr.right)
+    } else if k == "UnaryExpr" {
+      bind_expr(st, expr.operand)
+    } else if k == "TernaryExpr" {
+      let mut s = bind_expr(st, expr.test)
+      s = bind_expr(s, expr.consequent)
+      bind_expr(s, expr.alternate)
+    } else if k == "CallExpr" {
+      let mut s = bind_expr(st, expr.callee)
+      let mut i = 0
+      while i < expr.args.length {
+        s = bind_expr(s, expr.args[i])
+        i = i + 1
+      }
+      s
+    } else if k == "NewExpr" {
+      let mut s = bind_expr(st, expr.callee)
+      let mut i = 0
+      while i < expr.args.length {
+        s = bind_expr(s, expr.args[i])
+        i = i + 1
+      }
+      s
+    } else if k == "MemberExpr" {
+      bind_expr(st, expr.object)
+    } else if k == "IndexExpr" {
+      let mut s = bind_expr(st, expr.object)
+      bind_expr(s, expr.index)
+    } else if k == "SpreadExpr" {
+      bind_expr(st, expr.argument)
+    } else if k == "ObjectLit" {
+      let mut s = st
+      let mut i = 0
+      while i < expr.properties.length {
+        s = bind_expr(s, expr.properties[i].value)
+        i = i + 1
+      }
+      s
+    } else if k == "ArrayLit" {
+      let mut s = st
+      let mut i = 0
+      while i < expr.elements.length {
+        s = bind_expr(s, expr.elements[i])
+        i = i + 1
+      }
+      s
+    } else if k == "LambdaExpr" {
+      let mut s = bind_enter(st)
+      s = bind_define_params(s, expr.params)
+      s = bind_expr(s, expr.body)
+      bind_exit(s)
+    } else if k == "PipelineExpr" {
+      let mut s = st
+      let mut i = 0
+      while i < expr.steps.length {
+        let step = expr.steps[i]
+        if step.kind == "PipeAs" {
+          s = bind_define(s, step.name)
+        } else {
+          s = bind_expr(s, step)
+        }
+        i = i + 1
+      }
+      s
+    } else if k == "MatchExpr" {
+      let mut s = bind_expr(st, expr.subject)
+      let mut i = 0
+      while i < expr.arms.length {
+        let arm = expr.arms[i]
+        let mut arm_s = bind_enter(s)
+        arm_s = bind_pat(arm_s, arm.pattern)
+        if arm.guard != null { arm_s = bind_expr(arm_s, arm.guard) }
+        arm_s = bind_expr(arm_s, arm.body)
+        s = BindState(arm_s.diagnostics, s.frames, s.line, arm_s.reported)
+        i = i + 1
+      }
+      s
+    } else if k == "BlockExpr" {
+      bind_block(st, expr)
+    } else if k == "ResultPropagateExpr" or k == "AwaitExpr" {
+      bind_expr(st, expr.value)
+    } else if k == "TemplateLit" {
+      let mut s = st
+      if expr.parts != null {
+        let mut i = 0
+        while i < expr.parts.length {
+          let part = expr.parts[i]
+          if part.kind != null { s = bind_expr(s, part) }
+          else if part.expr != null { s = bind_expr(s, part.expr) }
+          i = i + 1
+        }
+      }
+      if expr.exprs != null {
+        let mut j = 0
+        while j < expr.exprs.length {
+          s = bind_expr(s, expr.exprs[j])
+          j = j + 1
+        }
+      }
+      s
+    } else if k == "DoExpr" {
+      bind_expr(st, expr.body)
+    } else {
+      st
+    }
+  }
+}
+
+fn bind_block(st: BindState, block: any) -> BindState {
+  let mut s = bind_enter(st)
+  // Pass 1: hoist let / destructure names so closures can forward-reference siblings
+  // (same as JS: names exist in the block; values run later).
+  let mut i = 0
+  while i < block.stmts.length {
+    let stmt = block.stmts[i]
+    if stmt.kind == "LetStmt" {
+      s = bind_define(s, stmt.name)
+    } else if stmt.kind == "DestructureStmt" and stmt.names != null {
+      let mut ni = 0
+      while ni < stmt.names.length {
+        s = bind_define(s, bind_binding_name(stmt.names[ni]))
+        ni = ni + 1
+      }
+    }
+    i = i + 1
+  }
+  // Pass 2: check expressions / nested blocks
+  i = 0
+  while i < block.stmts.length {
+    let stmt = block.stmts[i]
+    let sk = stmt.kind
+    if sk == "LetStmt" {
+      if stmt.value != null { s = bind_expr(s, stmt.value) }
+    } else if sk == "DestructureStmt" {
+      s = bind_expr(s, stmt.value)
+    } else if sk == "ReturnStmt" {
+      s = bind_expr(s, stmt.value)
+    } else if sk == "ExprStmt" {
+      s = bind_expr(s, stmt.value)
+    } else if sk == "IfStmt" {
+      s = bind_expr(s, stmt.test)
+      s = bind_block(s, stmt.then)
+      if stmt.else_ != null { s = bind_block(s, stmt.else_) }
+    } else if sk == "WhileStmt" {
+      s = bind_expr(s, stmt.test)
+      s = bind_block(s, stmt.body)
+    } else if sk == "ForRangeStmt" {
+      s = bind_expr(s, stmt.lo)
+      s = bind_expr(s, stmt.hi)
+      let mut fs = bind_enter(s)
+      let vname = if stmt.varName != null { stmt.varName } else { stmt.name }
+      fs = bind_define(fs, vname)
+      fs = bind_block(fs, stmt.body)
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported)
+    } else if sk == "ForInStmt" {
+      s = bind_expr(s, stmt.iter)
+      let mut fs = bind_enter(s)
+      let vname = if stmt.varName != null { stmt.varName } else { stmt.name }
+      fs = bind_define(fs, vname)
+      fs = bind_block(fs, stmt.body)
+      s = BindState(fs.diagnostics, s.frames, s.line, fs.reported)
+    }
+    i = i + 1
+  }
+  bind_exit(s)
+}
+
+fn bind_collect_globals(st: BindState, program: Program) -> BindState {
+  let mut s = st
+  let mut i = 0
+  while i < program.body.length {
+    let decl = program.body[i]
+    let k = decl.kind
+    if k == "TopLevelLet" {
+      s = bind_define(s, decl.name)
+    } else if k == "FnDecl" {
+      s = bind_define(s, decl.name)
+    } else if k == "StoreDecl" {
+      s = bind_define(s, decl.name)
+    } else if k == "RecordDecl" {
+      s = bind_define(s, decl.name)
+    } else if k == "InterfaceDecl" {
+      s = bind_define(s, decl.name)
+    } else if k == "TypeAliasDecl" or k == "TypeDecl" {
+      s = bind_define(s, decl.name)
+    } else if k == "TaggedUnionDecl" {
+      s = bind_define(s, decl.name)
+      let mut vi = 0
+      while vi < decl.variants.length {
+        s = bind_define(s, decl.variants[vi].name)
+        vi = vi + 1
+      }
+    } else if k == "ImportDecl" {
+      let mut ni = 0
+      while ni < decl.names.length {
+        s = bind_define(s, decl.names[ni])
+        ni = ni + 1
+      }
+    } else if k == "ExportDecl" {
+      // Re-run collection on nested decl via a one-element program walk
+      let nested = { kind: "Program", body: [decl.decl] }
+      s = bind_collect_globals(s, nested)
+    } else if k == "ModuleDecl" {
+      let nested = { kind: "Program", body: decl.body }
+      s = bind_collect_globals(s, nested)
+    }
+    i = i + 1
+  }
+  s
+}
+
+fn bind_check_fn(st: BindState, fndecl: any) -> BindState {
+  let mut s = bind_set_line(st, fndecl.line)
+  s = bind_enter(s)
+  s = bind_define_params(s, fndecl.params)
+  s = bind_expr(s, fndecl.body)
+  bind_exit(s)
+}
+
+fn bind_check_top(st: BindState, decl: any) -> BindState {
+  let k = decl.kind
+  if k == "FnDecl" {
+    bind_check_fn(st, decl)
+  } else if k == "TopLevelLet" {
+    let mut s = bind_set_line(st, decl.line)
+    bind_expr(s, decl.value)
+  } else if k == "TopLevelExpr" {
+    bind_expr(st, decl.expr)
+  } else if k == "TestDecl" {
+    let mut s = bind_set_line(st, decl.line)
+    bind_expr(s, decl.body)
+  } else if k == "StoreDecl" {
+    let mut s = st
+    let mut i = 0
+    while i < decl.fields.length {
+      if decl.fields[i].defaultValue != null {
+        s = bind_expr(s, decl.fields[i].defaultValue)
+      }
+      i = i + 1
+    }
+    s
+  } else if k == "ExportDecl" {
+    bind_check_top(st, decl.decl)
+  } else if k == "ModuleDecl" {
+    let mut s = st
+    let mut i = 0
+    while i < decl.body.length {
+      s = bind_check_top(s, decl.body[i])
+      i = i + 1
+    }
+    s
+  } else {
+    st
+  }
+}
+
+fn check_bindings(program: Program) -> any[] {
+  let mut st = BindState([], [[]], 0, [])
+  st = bind_collect_globals(st, program)
+  let mut i = 0
+  while i < program.body.length {
+    st = bind_check_top(st, program.body[i])
+    i = i + 1
+  }
+  st.diagnostics
+}
+
 export fn check(program: Program) -> any[] {
   let mut st = ChkState([], [], "", 0, false, "", 0, false, "", 0, false, false, false)
   st = collect_unions(st, program)
@@ -540,5 +1013,5 @@ export fn check(program: Program) -> any[] {
     st = check_top_level(st, program.body[i])
     i = i + 1
   }
-  st.diagnostics
+  st.diagnostics.concat(check_bindings(program))
 }

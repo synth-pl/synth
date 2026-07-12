@@ -7,9 +7,9 @@ const CompileResult = (js, warnings) => ({ js, warnings });
  */
 const compile = (source) => {
   let tokens = tokenize(source);
-  let ast = parse(tokens);
-  let warnings = check(ast);
-  let js = generate(ast);
+  let parsed = parse_program(tokens);
+  let warnings = parsed.errors.concat(check(parsed.program));
+  let js = generate(parsed.program);
   return CompileResult(js, warnings);
 };
 
@@ -17,7 +17,10 @@ const compile = (source) => {
  * @param {string} source
  * @returns {*}
  */
-const check_source = (source) => check(parse(tokenize(source)));
+const check_source = (source) => {
+  let parsed = parse_program(tokenize(source));
+  return parsed.errors.concat(check(parsed.program));
+};
 
 /**
  * @param {string} source

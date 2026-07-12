@@ -2000,8 +2000,12 @@ fn ps_parse_lambda_body(st: ParserState) -> ParseVal {
 
 // ── Public entry ──────────────────────────────────────────────────────────────
 
+export fn parse_program(tokens: Token[]) -> any {
+  let got = ps_parse(ParserState(tokens, 0, false, []))
+  { program: got.value, errors: got.st.errors }
+}
+
 export fn parse(tokens: Token[]) -> Program {
-  let st = ParserState(tokens, 0, false, [])
-  ps_parse(st).value
+  parse_program(tokens).program
 }
 
