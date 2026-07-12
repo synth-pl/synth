@@ -336,11 +336,25 @@ function drawBattle(view, dt) {
 
   const menu = view.menu || []
   const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
+  const nowMs = performance.now()
   menu.forEach((row, i) => {
     const yy = 380 + i * 22
-    if (canPick && i === view.menu_index) {
-      ctx.fillStyle = 'rgba(0,229,255,0.18)'
+    const selected = canPick && i === view.menu_index
+    const flashed = canPick && i === flashIdx && nowMs < flashUntil
+    if (flashed) {
+      ctx.fillStyle = 'rgba(255,209,102,0.45)'
       ctx.fillRect(24, yy - 14, 260, 20)
+      ctx.strokeStyle = '#ffd166'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(24.5, yy - 13.5, 259, 19)
+      ctx.fillStyle = '#ffd166'
+      ctx.fillText('▸ ' + row.label, 32, yy)
+    } else if (selected) {
+      ctx.fillStyle = 'rgba(0,229,255,0.22)'
+      ctx.fillRect(24, yy - 14, 260, 20)
+      ctx.strokeStyle = 'rgba(0,229,255,0.7)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(24.5, yy - 13.5, 259, 19)
       ctx.fillStyle = '#00e5ff'
       ctx.fillText('▸ ' + row.label, 32, yy)
     } else {
@@ -400,15 +414,9 @@ function draw(dt) {
   else drawBattle(view, dt)
 }
 
-let prev = performance.now()
-function loop(now) {
-  const dt = Math.min((now - prev) / 1000, 0.05)
-  prev = now
-  tick(dt)
-  draw(dt)
-  requestAnimationFrame(loop)
-}
-requestAnimationFrame(loop)
+let flashIdx = -1
+let flashUntil = 0
+let confirmAt = 0
 
 function onConfirm() { menu_confirm() }
 function onCancel() { menu_cancel() }
@@ -416,6 +424,7 @@ function onUp() { menu_move(-1) }
 function onDown() { menu_move(1) }
 
 document.addEventListener('keydown', e => {
+  if (confirmAt) return
   if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); onUp() }
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); onDown() }
   else if (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'Space') { e.preventDefault(); onConfirm() }
@@ -423,6 +432,7 @@ document.addEventListener('keydown', e => {
 })
 
 canvas.addEventListener('click', e => {
+  if (confirmAt) return
   const view = get_view()
   if (view.scene !== 'battle') { onConfirm(); return }
   if (view.phase === 'battle_clear') { onConfirm(); return }
@@ -431,18 +441,32 @@ canvas.addEventListener('click', e => {
   const rect = canvas.getBoundingClientRect()
   const x = (e.clientX - rect.left) * W / rect.width
   const y = (e.clientY - rect.top) * H / rect.height
-  // Menu panel hit
-  if (x >= 16 && x <= 296 && y >= 370 && y <= 500) {
+  // Menu panel hit — rows drawn at y≈366.. with 22px stride
+  if (x >= 16 && x <= 296 && y >= 366 && y <= 500) {
     const idx = Math.floor((y - 366) / 22)
     const menu = view.menu || []
     if (idx >= 0 && idx < menu.length) {
-      // move selection then confirm
-      const delta = idx - view.menu_index
-      if (delta !== 0) menu_move(delta)
-      onConfirm()
+      menu_set_index(idx)
+      flashIdx = idx
+      flashUntil = performance.now() + 160
+      confirmAt = performance.now() + 160
     }
   }
 })
+
+let prev = performance.now()
+function loop(now) {
+  const dt = Math.min((now - prev) / 1000, 0.05)
+  prev = now
+  if (confirmAt && now >= confirmAt) {
+    confirmAt = 0
+    menu_confirm()
+  }
+  tick(dt)
+  draw(dt)
+  requestAnimationFrame(loop)
+}
+requestAnimationFrame(loop)
 </script>
 </body>
 </html>

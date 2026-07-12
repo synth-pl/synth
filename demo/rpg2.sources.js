@@ -326,6 +326,25 @@ const menu_move = (dir) => {
 };
 
 /**
+ * @param {number} i
+ * @returns {*}
+ */
+const menu_set_index = (i) => {
+  if (Game.scene != "battle") {
+    return undefined;
+  }
+  if (Game.phase != "hero_command" && Game.phase != "hero_pick") {
+    return undefined;
+  }
+  let m = current_menu();
+  if (m.length == 0) {
+    return undefined;
+  }
+  let idx = i < 0 ? 0 : i >= m.length ? m.length - 1 : i;
+  return Game.set({menu_index: idx});
+};
+
+/**
  * @param {string} mode
  * @returns {*}
  */

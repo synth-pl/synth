@@ -1,6 +1,6 @@
 // ── SYNTH FANTASY — classic FF turn battle (vertical slice) ───────────────────
 // Host contract:
-//   Game · start_game · menu_move · menu_confirm · menu_cancel · tick · get_view
+//   Game · start_game · menu_move · menu_set_index · menu_confirm · menu_cancel · tick · get_view
 // Party: Aria (mage), Theron (knight), Lyra (ranger)
 // Scenes: title → fight1 → fight2 → boss → victory | gameover
 
@@ -328,6 +328,15 @@ fn menu_move(dir: int) {
   let next = Game.menu_index + dir
   let wrapped = next < 0 ? m.length - 1 : (next >= m.length ? 0 : next)
   Game.set({ menu_index: wrapped })
+}
+
+fn menu_set_index(i: int) {
+  if Game.scene != "battle" { return }
+  if Game.phase != "hero_command" and Game.phase != "hero_pick" { return }
+  let m = current_menu()
+  if m.length == 0 { return }
+  let idx = i < 0 ? 0 : (i >= m.length ? m.length - 1 : i)
+  Game.set({ menu_index: idx })
 }
 
 fn open_mode(mode: string) {
