@@ -1444,6 +1444,7 @@ function drawBattle(view, dt) {
   menu.forEach((row, i) => {
     const yy = hud.menuRow0 + i * hud.menuRowH
     const selected = canPick && i === view.menu_index
+    const hovered = canPick && !hud.compact && i === menuHoverIdx && i !== view.menu_index
     const flashed = canPick && i === flashIdx && nowMs < flashUntil
     const boxY = yy - Math.round(boxH * (hud.compact ? 0.55 : 0.7))
     if (flashed) {
@@ -1464,6 +1465,15 @@ function drawBattle(view, dt) {
       ctx.fillStyle = '#00e5ff'
       ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
       ctx.fillText('▸ ' + row.label, textX, yy)
+    } else if (hovered) {
+      ctx.fillStyle = 'rgba(184,79,255,0.16)'
+      ctx.fillRect(boxX, boxY, boxW, boxH)
+      ctx.strokeStyle = 'rgba(184,79,255,0.45)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1)
+      ctx.fillStyle = '#e0d0ff'
+      ctx.font = 'bold ' + hud.menuFont + 'px Courier New'
+      ctx.fillText('  ' + row.label, textX, yy)
     } else {
       ctx.fillStyle = '#c8c0e8'
       ctx.font = hud.menuFont + 'px Courier New'
