@@ -275,8 +275,8 @@ fn magic_menu() -> any[] = [
 ]
 
 fn skill_menu() -> any[] = [
-  { id: "pierce", label: "Pierce  4 MP" },
-  { id: "rain",   label: "Rain    7 MP" },
+  { id: "pierce", label: "Pierce  5 MP" },
+  { id: "rain",   label: "Rain    8 MP" },
   { id: "back",   label: "← Back" }
 ]
 
@@ -445,15 +445,16 @@ fn do_cure(actor: int, ally_i: int) {
 
 fn do_pierce(actor: int, foe_i: int) {
   let h = party[actor]
-  if h.mp < 4 {
+  if h.mp < 5 {
     push_log("Not enough MP!")
     open_mode("skill")
   } else {
     let e = foes[foe_i]
-    let dmg = phys_damage(h.atk + 3, floor(e.def / 2), false)
+    // Light armor pierce — a bit above Fight, not a nuke
+    let dmg = phys_damage(h.atk + 1, floor((e.def * 3) / 4), false)
     let nhp = e.hp - dmg
     let dead = nhp <= 0
-    set_hero(actor, { ...h, mp: h.mp - 4 })
+    set_hero(actor, { ...h, mp: h.mp - 5 })
     set_foe(foe_i, { ...e, hp: dead ? 0 : nhp, alive: not dead })
     start_resolve("skill", actor, foe_i, dmg, "{h.name} pierces {e.name} for {dmg}!", "hero")
   }
@@ -461,17 +462,18 @@ fn do_pierce(actor: int, foe_i: int) {
 
 fn do_rain(actor: int) {
   let h = party[actor]
-  if h.mp < 7 {
+  if h.mp < 8 {
     push_log("Not enough MP!")
     open_mode("skill")
   } else {
-    set_hero(actor, { ...h, mp: h.mp - 7 })
+    set_hero(actor, { ...h, mp: h.mp - 8 })
     let mut total = 0
     let mut i = 0
     while i < foes.length {
       let e = foes[i]
       if e.alive {
-        let dmg = spell_damage(h.atk, e.def, e.weakness, "nature")
+        // AoE chip damage — weaker than a single Fire/Arcane hit
+        let dmg = spell_damage(h.atk - 4, e.def, e.weakness, "nature")
         let nhp = e.hp - dmg
         let dead = nhp <= 0
         set_foe(i, { ...e, hp: dead ? 0 : nhp, alive: not dead })

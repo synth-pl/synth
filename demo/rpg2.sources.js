@@ -255,7 +255,7 @@ const command_menu = (hero) => ((_m) => (_m === "knight") ? [{id: "fight", label
 
 const magic_menu = () => [{id: "fire", label: "Fire   8 MP"}, {id: "cure", label: "Cure   6 MP"}, {id: "bolt", label: "Arcane 10 MP"}, {id: "back", label: "← Back"}];
 
-const skill_menu = () => [{id: "pierce", label: "Pierce  4 MP"}, {id: "rain", label: "Rain    7 MP"}, {id: "back", label: "← Back"}];
+const skill_menu = () => [{id: "pierce", label: "Pierce  5 MP"}, {id: "rain", label: "Rain    8 MP"}, {id: "back", label: "← Back"}];
 
 /**
  * @returns {*}
@@ -489,15 +489,15 @@ const do_cure = (actor, ally_i) => {
  */
 const do_pierce = (actor, foe_i) => {
   let h = party[actor];
-  if (h.mp < 4) {
+  if (h.mp < 5) {
     push_log("Not enough MP!");
     return open_mode("skill");
   } else {
     let e = foes[foe_i];
-    let dmg = phys_damage(h.atk + 3, $floor(e.def / 2), false);
+    let dmg = phys_damage(h.atk + 1, $floor(e.def * 3 / 4), false);
     let nhp = e.hp - dmg;
     let dead = nhp <= 0;
-    set_hero(actor, {...h, mp: h.mp - 4});
+    set_hero(actor, {...h, mp: h.mp - 5});
     set_foe(foe_i, {...e, hp: dead ? 0 : nhp, alive: !dead});
     return start_resolve("skill", actor, foe_i, dmg, `${h.name} pierces ${e.name} for ${dmg}!`, "hero");
   }
@@ -509,17 +509,17 @@ const do_pierce = (actor, foe_i) => {
  */
 const do_rain = (actor) => {
   let h = party[actor];
-  if (h.mp < 7) {
+  if (h.mp < 8) {
     push_log("Not enough MP!");
     return open_mode("skill");
   } else {
-    set_hero(actor, {...h, mp: h.mp - 7});
+    set_hero(actor, {...h, mp: h.mp - 8});
     let total = 0;
     let i = 0;
     while (i < foes.length) {
       let e = foes[i];
       if (e.alive) {
-        let dmg = spell_damage(h.atk, e.def, e.weakness, "nature");
+        let dmg = spell_damage(h.atk - 4, e.def, e.weakness, "nature");
         let nhp = e.hp - dmg;
         let dead = nhp <= 0;
         set_foe(i, {...e, hp: dead ? 0 : nhp, alive: !dead});
