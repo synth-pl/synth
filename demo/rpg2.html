@@ -148,9 +148,9 @@ function hudLayout() {
       menuY: 404,
       menuW: 776,
       menuH: 420,
-      menuTitleY: 436,
-      menuRow0: 480,
-      menuRowH: 88,
+      menuTitleY: 440,
+      menuRow0: 520,
+      menuRowH: 78,
       menuHitPad: 4,
       menuFont: 26,
       menuTitleFont: 18,
@@ -1271,7 +1271,7 @@ function drawBattle(view, dt) {
   const menu = view.menu || []
   const canPick = view.phase === 'hero_command' || view.phase === 'hero_pick'
   const nowMs = performance.now()
-  const boxH = Math.max(20, Math.round(hud.menuRowH * (20 / 22)))
+  const boxH = Math.max(20, Math.round(hud.menuRowH * (hud.compact ? 0.7 : 20 / 22)))
   const boxX = hud.compact ? hud.menuX + 14 : 24
   const boxW = hud.compact ? hud.menuW - 28 : 260
   const textX = boxX + 8
@@ -1279,7 +1279,7 @@ function drawBattle(view, dt) {
     const yy = hud.menuRow0 + i * hud.menuRowH
     const selected = canPick && i === view.menu_index
     const flashed = canPick && i === flashIdx && nowMs < flashUntil
-    const boxY = yy - Math.round(boxH * 0.7)
+    const boxY = yy - Math.round(boxH * (hud.compact ? 0.55 : 0.7))
     if (flashed) {
       ctx.fillStyle = 'rgba(255,209,102,0.45)'
       ctx.fillRect(boxX, boxY, boxW, boxH)
