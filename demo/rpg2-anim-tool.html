@@ -195,7 +195,7 @@
           <button type="button" id="btnNewDetect" title="Add a blank detect box">New box</button>
           <button type="button" class="danger" id="btnDelDetect">Delete box</button>
         </div>
-        <p class="hint" style="margin:4px 0 0">Place a box near a sprite, then <b>Snap to nearest</b> (or press <b>S</b>) to hug its pixels. Shift-drag to draw a new box.</p>
+        <p class="hint" style="margin:4px 0 0">Timeline frames added from a box stay linked — resizing that box updates them. Press <b>S</b> to snap, <b>Enter</b> to add to timeline.</p>
       </div>
 
       <div class="card">
@@ -230,6 +230,7 @@
   let detectBoxes = []
   let selectedDetect = -1
   let selectedTl = -1
+  let nextDetectId = 1
   let sheetImg = null
   let sheetNatural = { w: 0, h: 0 }
   let playing = false
@@ -239,7 +240,7 @@
   let dragTlFrom = -1
   /** @type {null | {x0:number,y0:number,x1:number,y1:number}} */
   let drawMarquee = null
-  /** @type {null | { mode: string, index: number, startX: number, startY: number, orig: {x:number,y:number,w:number,h:number}, moved: boolean }} */
+  /** @type {null | { mode: string, index: number, startX: number, startY: number, orig: {id?:number,x:number,y:number,w:number,h:number}, moved: boolean }} */
   let boxDrag = null
   const MIN_BOX = 4
   const HANDLE_MODES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
@@ -250,8 +251,8 @@
    *   fps: number,
    *   loop: boolean,
    *   dataUrl: string|null,
-   *   timeline: {x:number,y:number,w:number,h:number}[],
-   *   detectBoxes: {x:number,y:number,w:number,h:number}[],
+   *   timeline: {x:number,y:number,w:number,h:number,srcId?:number}[],
+   *   detectBoxes: {id:number,x:number,y:number,w:number,h:number}[],
    * }} AnimSlot
    */
 
@@ -270,6 +271,51 @@
       timeline: [],
       detectBoxes: [],
     }
+  }
+
+  function makeDetectBox(rect, keepId) {
+    const id = keepId != null ? keepId : nextDetectId++
+    if (keepId != null && keepId >= nextDetectId) nextDetectId = keepId + 1
+    return {
+      id,
+      x: rect.x,
+      y: rect.y,
+      w: rect.w,
+      h: rect.h,
+    }
+  }
+
+  function adoptDetectBoxes(list) {
+    return (list || []).map((b) => makeDetectBox(b, b.id))
+  }
+
+  /** Push current detect rects into any timeline frames that came from them. */
+  function syncTimelineToDetect(box) {
+    if (!box || box.id == null) return
+    const s = active()
+    let touched = false
+    for (const f of s.timeline) {
+      if (f.srcId === box.id) {
+        f.x = box.x
+        f.y = box.y
+        f.w = box.w
+        f.h = box.h
+        touched = true
+      }
+    }
+    return touched
+  }
+
+  function syncAllTimelineLinks() {
+    for (const b of detectBoxes) syncTimelineToDetect(b)
+  }
+
+  function setDetectBoxAt(index, rect, opts = {}) {
+    const prev = detectBoxes[index]
+    const id = opts.keepId != null ? opts.keepId : (prev && prev.id)
+    detectBoxes[index] = makeDetectBox(rect, id)
+    syncTimelineToDetect(detectBoxes[index])
+    return detectBoxes[index]
   }
 
   function initSlots() {
@@ -452,7 +498,7 @@
       setFooter('No nearby object to snap to')
       return
     }
-    detectBoxes[selectedDetect] = { x: best.x, y: best.y, w: best.w, h: best.h }
+    setDetectBoxAt(selectedDetect, best)
     commitDetectBoxes()
     syncBoxNudge()
     setFooter(`Snapped box ${selectedDetect} to nearest object (${best.w}×${best.h})`)
@@ -542,16 +588,17 @@
     $('sheetName').value = s.sheetName
     $('animFps').value = String(s.fps)
     $('animLoop').checked = !!s.loop
-    detectBoxes = s.detectBoxes.map((b) => ({ ...b }))
+    detectBoxes = adoptDetectBoxes(s.detectBoxes)
     if (s.dataUrl) {
       const img = new Image()
       img.onload = () => {
         sheetImg = img
         sheetNatural = { w: img.naturalWidth, h: img.naturalHeight }
         if (!detectBoxes.length) {
-          detectBoxes = detectFrames(img)
+          detectBoxes = adoptDetectBoxes(detectFrames(img))
           s.detectBoxes = detectBoxes.map((b) => ({ ...b }))
         }
+        syncAllTimelineLinks()
         updateDetectStatus()
         redrawAll()
       }
@@ -713,19 +760,23 @@
   function reindexFrames(preferDetectBox) {
     if (preferDetectBox) {
       sortDetectBoxesRowMajor()
-      selectedDetect = detectBoxes.findIndex(
-        (b) =>
-          b.x === preferDetectBox.x &&
-          b.y === preferDetectBox.y &&
-          b.w === preferDetectBox.w &&
-          b.h === preferDetectBox.h
-      )
+      selectedDetect = preferDetectBox.id != null
+        ? detectBoxes.findIndex((b) => b.id === preferDetectBox.id)
+        : detectBoxes.findIndex(
+            (b) =>
+              b.x === preferDetectBox.x &&
+              b.y === preferDetectBox.y &&
+              b.w === preferDetectBox.w &&
+              b.h === preferDetectBox.h
+          )
     } else if (detectBoxes.length) {
       sortDetectBoxesRowMajor()
       if (selectedDetect >= detectBoxes.length) selectedDetect = detectBoxes.length - 1
     } else {
       selectedDetect = -1
     }
+
+    syncAllTimelineLinks()
 
     const tl = active().timeline
     if (!tl.length) {
@@ -749,7 +800,7 @@
 
   function insertDetectBox(box, afterIndex) {
     const at = afterIndex >= 0 ? afterIndex + 1 : detectBoxes.length
-    const added = { ...box }
+    const added = makeDetectBox(box, box.id)
     detectBoxes.splice(at, 0, added)
     selectedDetect = at
     reindexFrames(added)
@@ -869,16 +920,17 @@
     const w = +$('boxW').value
     const h = +$('boxH').value
     if (![x, y, w, h].every((n) => Number.isFinite(n))) return
-    detectBoxes[selectedDetect] = {
+    setDetectBoxAt(selectedDetect, {
       x,
       y,
       w: Math.max(1, w),
       h: Math.max(1, h),
-    }
+    })
     active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
     drawSheet()
-    // Timeline thumbs that came from this box aren't auto-linked; preview uses timeline.
-    // Keep nudge responsive without full timeline rebuild.
+    renderTimeline()
+    drawPreviewFrame(playing ? playFrame : Math.max(0, selectedTl))
+    refreshExport()
   }
 
   function hitTestBox(mx, my) {
@@ -900,7 +952,13 @@
   }
 
   function appendTimelineBox(box) {
-    active().timeline.push({ x: box.x, y: box.y, w: box.w, h: box.h })
+    active().timeline.push({
+      x: box.x,
+      y: box.y,
+      w: box.w,
+      h: box.h,
+      srcId: box.id,
+    })
     selectedTl = active().timeline.length - 1
     reindexFrames()
   }
@@ -918,7 +976,7 @@
         $('sheetName').value = s.sheetName
         sheetImg = img
         sheetNatural = { w: img.naturalWidth, h: img.naturalHeight }
-        detectBoxes = detectFrames(img)
+        detectBoxes = adoptDetectBoxes(detectFrames(img))
         s.detectBoxes = detectBoxes.map((b) => ({ ...b }))
         selectedDetect = detectBoxes.length ? 0 : -1
         updateDetectStatus()
@@ -1154,11 +1212,13 @@
       } else {
         next = resizeBox(boxDrag.orig, boxDrag.mode, x, y)
       }
-      detectBoxes[boxDrag.index] = next
+      setDetectBoxAt(boxDrag.index, next, { keepId: boxDrag.orig.id })
       selectedDetect = boxDrag.index
       syncBoxNudge()
       active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
       drawSheet()
+      renderTimeline()
+      drawPreviewFrame(playing ? playFrame : Math.max(0, selectedTl))
       return
     }
 
@@ -1170,14 +1230,15 @@
         // Promote to move once dragged
         boxDrag.mode = 'move'
         boxDrag.moved = true
-        detectBoxes[boxDrag.index] = clampBox({
+        setDetectBoxAt(boxDrag.index, clampBox({
           x: boxDrag.orig.x + dx,
           y: boxDrag.orig.y + dy,
           w: boxDrag.orig.w,
           h: boxDrag.orig.h,
-        })
+        }), { keepId: boxDrag.orig.id })
         syncBoxNudge()
         drawSheet()
+        renderTimeline()
       }
       return
     }
@@ -1258,9 +1319,10 @@
 
   $('btnDetect').addEventListener('click', () => {
     if (!sheetImg) return
-    detectBoxes = detectFrames(sheetImg)
+    detectBoxes = adoptDetectBoxes(detectFrames(sheetImg))
     active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
     selectedDetect = detectBoxes.length ? 0 : -1
+    // New detect pass breaks old src links; leave timeline rects baked in
     updateDetectStatus()
     redrawAll()
   })
@@ -1268,7 +1330,7 @@
   ;['chromaR', 'chromaG', 'chromaB', 'chromaTol', 'minW', 'minH', 'mergeGap', 'boxPad'].forEach((id) => {
     $(id).addEventListener('change', () => {
       if (!sheetImg) return
-      detectBoxes = detectFrames(sheetImg)
+      detectBoxes = adoptDetectBoxes(detectFrames(sheetImg))
       active().detectBoxes = detectBoxes.map((b) => ({ ...b }))
       updateDetectStatus()
       redrawAll()
@@ -1293,7 +1355,15 @@
   })
 
   $('btnAddAll').addEventListener('click', () => {
-    detectBoxes.forEach((b) => active().timeline.push({ ...b }))
+    detectBoxes.forEach((b) => {
+      active().timeline.push({
+        x: b.x,
+        y: b.y,
+        w: b.w,
+        h: b.h,
+        srcId: b.id,
+      })
+    })
     selectedTl = active().timeline.length - 1
     reindexFrames()
   })
@@ -1330,7 +1400,7 @@
   $('btnSnapDetect').addEventListener('click', snapSelectedToNearest)
   $('btnDupDetect').addEventListener('click', () => {
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) {
-      setFooter('Right-click a detect box first')
+      setFooter('Select a detect box first')
       return
     }
     const src = detectBoxes[selectedDetect]
@@ -1344,7 +1414,7 @@
   })
   $('btnSplitDetect').addEventListener('click', () => {
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) {
-      setFooter('Right-click a detect box first')
+      setFooter('Select a detect box first')
       return
     }
     const src = detectBoxes[selectedDetect]
@@ -1354,7 +1424,7 @@
     }
     const leftW = Math.floor(src.w / 2)
     const rightW = src.w - leftW
-    detectBoxes[selectedDetect] = { x: src.x, y: src.y, w: leftW, h: src.h }
+    setDetectBoxAt(selectedDetect, { x: src.x, y: src.y, w: leftW, h: src.h }, { keepId: src.id })
     insertDetectBox({ x: src.x + leftW, y: src.y, w: rightW, h: src.h }, selectedDetect)
   })
   $('btnNewDetect').addEventListener('click', () => {
@@ -1374,7 +1444,11 @@
   })
   $('btnDelDetect').addEventListener('click', () => {
     if (selectedDetect < 0 || !detectBoxes[selectedDetect]) return
+    const removedId = detectBoxes[selectedDetect].id
     detectBoxes.splice(selectedDetect, 1)
+    for (const f of active().timeline) {
+      if (f.srcId === removedId) delete f.srcId
+    }
     if (selectedDetect >= detectBoxes.length) selectedDetect = detectBoxes.length - 1
     reindexFrames(selectedDetect >= 0 ? detectBoxes[selectedDetect] : null)
   })
