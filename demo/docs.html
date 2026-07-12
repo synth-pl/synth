@@ -418,6 +418,17 @@
 
     .doc-table tr:hover td { background: rgba(176,96,255,0.03); }
 
+    .stdlib-group {
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      opacity: 0.9;
+      background: rgba(0, 212, 255, 0.05);
+    }
+
     /* Soft in-body links — purple wash, no browser-blue underline */
     .main a {
       color: var(--purple);
@@ -758,7 +769,7 @@
       <span class="top-header-glyph">⬡</span>
       <span class="top-header-title">Synth</span>
     </a>
-    <span class="top-header-sub">Language Reference</span>
+    <span class="top-header-sub">Language &amp; Library Reference</span>
     <div class="header-badges">
       <span class="hbadge hbadge-ver">v1.2.0</span>
       <span class="hbadge hbadge-ai">AI-native</span>
@@ -812,8 +823,19 @@
         <a class="nav-link" href="#ann-throws" style="color:var(--cyan)"><code>@throws</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.6</span></a>
       </div>
       <div class="nav-group">
-        <div class="nav-group-label">Runtime</div>
+        <div class="nav-group-label">Library</div>
         <a class="nav-link" href="#stdlib">Standard Library</a>
+        <a class="nav-link" href="#stdlib-lists">Lists</a>
+        <a class="nav-link" href="#stdlib-strings">Strings</a>
+        <a class="nav-link" href="#stdlib-math">Math &amp; Conversion</a>
+        <a class="nav-link" href="#stdlib-objects">Objects</a>
+        <a class="nav-link" href="#stdlib-result">Result</a>
+        <a class="nav-link" href="#stdlib-async">Async &amp; IO</a>
+        <a class="nav-link" href="#stdlib-embed" style="color:var(--cyan)">Embed / <code>likely</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v1.1</span></a>
+        <a class="nav-link" href="#stdlib-presets">Validation presets</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Runtime</div>
         <a class="nav-link" href="#cli">CLI</a>
         <a class="nav-link" href="#spec" style="color:var(--cyan)"><code>--spec</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v1.2.0</span></a>
         <a class="nav-link" href="#enums" style="color:var(--accent)"><code>enum</code> <span style="font-size:0.65rem;vertical-align:top;opacity:0.8">v0.9.5</span></a>
@@ -1429,74 +1451,109 @@
 
       <!-- ── Standard Library ──────────────────────────────────────────────── -->
       <section class="doc-section" id="stdlib">
-        <div class="section-eyebrow">Runtime</div>
+        <div class="section-eyebrow">Library Reference</div>
         <h2 class="section-title">Standard Library</h2>
         <div class="section-rule"></div>
+        <p class="section-lead">
+          The callable surface of Synth — every helper in <code>synth.stdlib.js</code>.
+          Generated JS uses a <code>$</code> prefix (e.g. <code>map</code> → <code>$map</code>).
+          Most list and string functions also support <strong>method syntax</strong>:
+          <code>xs.map(f)</code> compiles to <code>$map(xs, f)</code>.
+        </p>
 
-        <p>The Synth stdlib ships as <code>synth.stdlib.js</code> — 61 pure functions emitted with a <code>$</code> prefix in generated JS (e.g. <code>map</code> → <code>$map</code>) to avoid name collisions. Most list and string functions can also be called with <strong>method syntax</strong>: <code>xs.map(f)</code> compiles to <code>$map(xs, f)</code>.</p>
+        <div class="callout callout-tip">
+          <div class="callout-head">How to read this</div>
+          This is Synth’s library reference (the “what can I call?” roster).
+          Syntax and keywords live in the Language sections above.
+        </div>
 
         <div class="doc-table-wrap"><table class="doc-table">
           <thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Lists</td></tr>
-            <tr><td>map(xs, f)</td><td>list → fn → list</td><td>Transform each element</td></tr>
-            <tr><td>filter(xs, f)</td><td>list → fn → list</td><td>Keep elements where f returns true</td></tr>
-            <tr><td>fold(xs, init, f)</td><td>list → any → fn → any</td><td>Fold left with initial accumulator</td></tr>
-            <tr><td>find(xs, f)</td><td>list → fn → any</td><td>First matching element or undefined</td></tr>
-            <tr><td>find_index(xs, f)</td><td>list → fn → int</td><td>Index of first match, or −1</td></tr>
-            <tr><td>any(xs, f)</td><td>list → fn → bool</td><td>True if any element matches</td></tr>
-            <tr><td>all(xs, f)</td><td>list → fn → bool</td><td>True if all elements match</td></tr>
-            <tr><td>count(xs, f?)</td><td>list → fn? → int</td><td>Length, or count of matching elements</td></tr>
-            <tr><td>sum(xs)</td><td>list&lt;number&gt; → number</td><td>Sum of all elements</td></tr>
-            <tr><td>sum_by(xs, f)</td><td>list → fn → number</td><td>Sum of f(x) over all elements</td></tr>
-            <tr><td>min(xs) / max(xs)</td><td>list&lt;number&gt; → number</td><td>Minimum / maximum value</td></tr>
-            <tr><td>min_by(xs, f) / max_by(xs, f)</td><td>list → fn → any</td><td>Element with the smallest / largest key</td></tr>
-            <tr><td>sort_by(xs, f)</td><td>list → fn → list</td><td>Copy sorted ascending by key (original untouched)</td></tr>
-            <tr><td>sort_by_desc(xs, f)</td><td>list → fn → list</td><td>Copy sorted descending by key</td></tr>
-            <tr><td>first(xs) / last(xs)</td><td>list → any</td><td>First / last element</td></tr>
-            <tr><td>take(xs, n) / drop(xs, n)</td><td>list → int → list</td><td>First n elements / all but first n</td></tr>
-            <tr><td>flat(xs)</td><td>list → list</td><td>Flatten one level</td></tr>
-            <tr><td>flat_map(xs, f)</td><td>list → fn → list</td><td>Map then flatten one level</td></tr>
-            <tr><td>uniq(xs)</td><td>list → list</td><td>Remove duplicates (Set semantics)</td></tr>
-            <tr><td>chunk(xs, n)</td><td>list → int → list&lt;list&gt;</td><td>Split into groups of n</td></tr>
-            <tr><td>set_at(xs, i, v)</td><td>list → int → any → list</td><td>Copy with element i replaced</td></tr>
-            <tr><td>reverse(xs)</td><td>list → list</td><td>Copy reversed</td></tr>
-            <tr><td>zip(xs, ys)</td><td>list → list → list&lt;[a,b]&gt;</td><td>Pair up two lists</td></tr>
-            <tr><td>range(lo, hi)</td><td>int → int → list&lt;int&gt;</td><td>[lo, lo+1, …, hi−1]</td></tr>
-            <tr><td>groupBy(xs, f)</td><td>list → fn → Map</td><td>Group elements by key</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Strings</td></tr>
-            <tr><td>trim(s)</td><td>string → string</td><td>Strip surrounding whitespace</td></tr>
-            <tr><td>split(s, sep)</td><td>string → string → list</td><td>Split on separator</td></tr>
-            <tr><td>starts_with(s, p) / ends_with(s, p)</td><td>string → string → bool</td><td>Prefix / suffix test</td></tr>
-            <tr><td>contains(s, sub)</td><td>string → string → bool</td><td>Substring test</td></tr>
-            <tr><td>to_upper(s) / to_lower(s)</td><td>string → string</td><td>Case conversion</td></tr>
-            <tr><td>replace_all(s, from, to)</td><td>string×3 → string</td><td>Replace every occurrence</td></tr>
-            <tr><td>pad_start(s, len, ch?) / pad_end(s, len, ch?)</td><td>string → int → string</td><td>Pad to length</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Math &amp; Conversion</td></tr>
-            <tr><td>clamp(v, lo, hi)</td><td>number×3 → number</td><td>Constrain to [lo, hi]</td></tr>
-            <tr><td>abs / round / floor / ceil / sqrt</td><td>number → number</td><td>Standard math functions</td></tr>
-            <tr><td>pow(base, exp)</td><td>number → number → number</td><td>Exponentiation</td></tr>
-            <tr><td>random()</td><td>() → float</td><td>Uniform random in [0, 1)</td></tr>
-            <tr><td>random_int(lo, hi)</td><td>int → int → int</td><td>Random integer in [lo, hi]</td></tr>
-            <tr><td>parse_int(s, radix?)</td><td>string → int?</td><td><strong>v1.0</strong> Parse integer; null on invalid input</td></tr>
-            <tr><td>parse_float(s)</td><td>string → float?</td><td><strong>v1.0</strong> Parse float; null on invalid input</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Objects</td></tr>
-            <tr><td>pick(obj, keys)</td><td>object → list → object</td><td>New object with only the given keys</td></tr>
-            <tr><td>omit(obj, keys)</td><td>object → list → object</td><td>New object without the given keys</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Composition</td></tr>
-            <tr><td>pipe(...fns)</td><td>fn* → fn</td><td>Left-to-right function composition</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Result helpers — v0.6</td></tr>
-            <tr><td>ok(v)</td><td>T → Result&lt;T&gt;</td><td>Wrap a success value in <code>Ok</code></td></tr>
-            <tr><td>err(msg)</td><td>string → Result</td><td>Wrap an error message in <code>Err</code></td></tr>
-            <tr><td>is_ok(r) / is_err(r)</td><td>Result → bool</td><td>Test result variant</td></tr>
-            <tr><td>unwrap(r)</td><td>Result&lt;T&gt; → T</td><td>Extract value; throws if <code>Err</code></td></tr>
-            <tr><td>unwrap_or(r, fallback)</td><td>Result&lt;T&gt;, T → T</td><td>Extract value or return fallback</td></tr>
-            <tr><td colspan="3" style="padding:6px 12px;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--cyan);opacity:0.8;background:rgba(0,255,255,0.04)">Async &amp; IO</td></tr>
-            <tr><td>delay(ms)</td><td>int → Promise</td><td>Promise-based sleep for <code>await</code></td></tr>
-            <tr><td>println(...args)</td><td>any* → void</td><td>console.log with trailing blank line</td></tr>
-            <tr><td>__synth_tests / __runSynthTests()</td><td>—</td><td>Registered <code>@test</code> declarations and browser test runner</td></tr>
+            <tr id="stdlib-lists"><td colspan="3" class="stdlib-group">Lists</td></tr>
+            <tr><td><code>map(xs, f)</code></td><td>list → fn → list</td><td>Transform each element</td></tr>
+            <tr><td><code>filter(xs, f)</code></td><td>list → fn → list</td><td>Keep elements where <code>f</code> is true</td></tr>
+            <tr><td><code>fold(xs, init, f)</code></td><td>list → any → fn → any</td><td>Fold left with initial accumulator</td></tr>
+            <tr><td><code>find(xs, f)</code></td><td>list → fn → any</td><td>First matching element, or <code>undefined</code></td></tr>
+            <tr><td><code>find_index(xs, f)</code></td><td>list → fn → int</td><td>Index of first match, or <code>-1</code></td></tr>
+            <tr><td><code>any(xs, f)</code> / <code>all(xs, f)</code></td><td>list → fn → bool</td><td>Any / every element matches</td></tr>
+            <tr><td><code>count(xs, f?)</code></td><td>list → fn? → int</td><td>Length, or count of matches</td></tr>
+            <tr><td><code>sum(xs)</code> / <code>sum_by(xs, f)</code></td><td>list → number</td><td>Sum values / sum of keys</td></tr>
+            <tr><td><code>min(xs)</code> / <code>max(xs)</code></td><td>list&lt;number&gt; → number</td><td>Minimum / maximum value</td></tr>
+            <tr><td><code>min_by(xs, f)</code> / <code>max_by(xs, f)</code></td><td>list → fn → any</td><td>Element with smallest / largest key</td></tr>
+            <tr><td><code>sort_by(xs, f)</code> / <code>sort_by_desc(xs, f)</code></td><td>list → fn → list</td><td>Copy sorted by key (original untouched)</td></tr>
+            <tr><td><code>first(xs)</code> / <code>last(xs)</code></td><td>list → any</td><td>First / last element</td></tr>
+            <tr><td><code>take(xs, n)</code> / <code>drop(xs, n)</code></td><td>list → int → list</td><td>First <code>n</code> / drop first <code>n</code></td></tr>
+            <tr><td><code>flat(xs)</code> / <code>flat_map(xs, f)</code></td><td>list → list</td><td>Flatten one level / map then flatten</td></tr>
+            <tr><td><code>uniq(xs)</code></td><td>list → list</td><td>Remove duplicates (Set semantics)</td></tr>
+            <tr><td><code>chunk(xs, n)</code></td><td>list → int → list&lt;list&gt;</td><td>Split into groups of <code>n</code></td></tr>
+            <tr><td><code>set_at(xs, i, v)</code></td><td>list → int → any → list</td><td>Copy with index <code>i</code> replaced</td></tr>
+            <tr><td><code>reverse(xs)</code></td><td>list → list</td><td>Copy reversed</td></tr>
+            <tr><td><code>zip(xs, ys)</code></td><td>list → list → list&lt;[a,b]&gt;</td><td>Pair elements by index</td></tr>
+            <tr><td><code>range(lo, hi)</code></td><td>int → int → list&lt;int&gt;</td><td><code>[lo, lo+1, …, hi−1]</code></td></tr>
+            <tr><td><code>groupBy(xs, f)</code></td><td>list → fn → Map</td><td>Group elements by key</td></tr>
+
+            <tr id="stdlib-strings"><td colspan="3" class="stdlib-group">Strings</td></tr>
+            <tr><td><code>trim(s)</code></td><td>string → string</td><td>Strip surrounding whitespace</td></tr>
+            <tr><td><code>split(s, sep)</code></td><td>string → string → list</td><td>Split on separator</td></tr>
+            <tr><td><code>starts_with(s, p)</code> / <code>ends_with(s, p)</code></td><td>string → string → bool</td><td>Prefix / suffix test</td></tr>
+            <tr><td><code>contains(s, sub)</code></td><td>string → string → bool</td><td>Substring test</td></tr>
+            <tr><td><code>to_upper(s)</code> / <code>to_lower(s)</code></td><td>string → string</td><td>Case conversion</td></tr>
+            <tr><td><code>replace_all(s, from, to)</code></td><td>string → string → string → string</td><td>Replace every occurrence</td></tr>
+            <tr><td><code>pad_start(s, len, ch?)</code> / <code>pad_end(s, len, ch?)</code></td><td>string → int → string?</td><td>Pad to length (default pad <code>" "</code>)</td></tr>
+
+            <tr id="stdlib-math"><td colspan="3" class="stdlib-group">Math &amp; Conversion</td></tr>
+            <tr><td><code>clamp(v, lo, hi)</code></td><td>number → number → number → number</td><td>Constrain to <code>[lo, hi]</code></td></tr>
+            <tr><td><code>abs</code> / <code>round</code> / <code>floor</code> / <code>ceil</code> / <code>sqrt</code></td><td>number → number</td><td>Standard math</td></tr>
+            <tr><td><code>pow(base, exp)</code></td><td>number → number → number</td><td>Exponentiation</td></tr>
+            <tr><td><code>random()</code></td><td>() → float</td><td>Uniform random in <code>[0, 1)</code></td></tr>
+            <tr><td><code>random_int(lo, hi)</code></td><td>int → int → int</td><td>Random integer in <code>[lo, hi]</code> inclusive</td></tr>
+            <tr><td><code>parse_int(s, radix?)</code></td><td>string → int?</td><td>Parse integer; <code>null</code> if invalid</td></tr>
+            <tr><td><code>parse_float(s)</code></td><td>string → float?</td><td>Parse float; <code>null</code> if invalid</td></tr>
+
+            <tr id="stdlib-objects"><td colspan="3" class="stdlib-group">Objects &amp; Composition</td></tr>
+            <tr><td><code>pick(obj, keys)</code></td><td>object → list → object</td><td>New object with only the given keys</td></tr>
+            <tr><td><code>omit(obj, keys)</code></td><td>object → list → object</td><td>New object without the given keys</td></tr>
+            <tr><td><code>pipe(...fns)</code></td><td>fn* → fn</td><td>Left-to-right function composition</td></tr>
+
+            <tr id="stdlib-result"><td colspan="3" class="stdlib-group">Result helpers · v0.6</td></tr>
+            <tr><td><code>ok(v)</code></td><td>T → Result&lt;T&gt;</td><td>Wrap a success value</td></tr>
+            <tr><td><code>err(msg)</code></td><td>string → Result</td><td>Wrap an error message</td></tr>
+            <tr><td><code>is_ok(r)</code> / <code>is_err(r)</code></td><td>Result → bool</td><td>Test variant</td></tr>
+            <tr><td><code>unwrap(r)</code></td><td>Result&lt;T&gt; → T</td><td>Extract value; throws on <code>Err</code></td></tr>
+            <tr><td><code>unwrap_or(r, fallback)</code></td><td>Result&lt;T&gt; → T → T</td><td>Extract value or return fallback</td></tr>
+
+            <tr id="stdlib-async"><td colspan="3" class="stdlib-group">Async &amp; IO</td></tr>
+            <tr><td><code>delay(ms)</code></td><td>int → Promise</td><td>Promise sleep for <code>await</code></td></tr>
+            <tr><td><code>println(...args)</code></td><td>any* → void</td><td><code>console.log</code> with trailing blank line</td></tr>
+            <tr><td><code>__synth_tests</code> / <code>__runSynthTests()</code></td><td>—</td><td>Registered <code>@test</code> declarations and browser runner</td></tr>
+
+            <tr id="stdlib-embed"><td colspan="3" class="stdlib-group">Embed / likely · v1.1</td></tr>
+            <tr><td><code>embed(text)</code></td><td>string → vector</td><td>Embed text (host <code>__synth_embed</code> or offline bag-of-words)</td></tr>
+            <tr><td><code>cosine(a, b)</code></td><td>vector → vector → float</td><td>Cosine similarity</td></tr>
+            <tr><td><code>likely_best(subject, claims, threshold?)</code></td><td>string → list&lt;string&gt; → float? → int</td><td>Best claim index above threshold, or <code>-1</code></td></tr>
+            <tr><td><code>score_claims(subject, claims, threshold?)</code></td><td>string → list&lt;string&gt; → float? → object</td><td><code>{ scores, best, bestScore }</code> for every claim</td></tr>
+            <tr><td><code>SynthRuntime.setEmbed(fn)</code></td><td>fn → void</td><td>Install a host embedder</td></tr>
+            <tr><td><code>SynthRuntime.embed</code> / <code>likelyBest</code> / <code>scoreClaims</code></td><td>—</td><td>Host mirrors of the stdlib helpers</td></tr>
           </tbody>
         </table></div>
+
+        <h3 class="subsection-title" id="stdlib-presets">Validation presets</h3>
+        <p>
+          Built-in regex presets used with constrained string types
+          (e.g. <code>type Email = string where value matches email</code>).
+          Defined as <code>__synth_presets</code> in the stdlib.
+        </p>
+        <div class="pill-row">
+          <span class="pill pill-cyan">email</span>
+          <span class="pill pill-cyan">url</span>
+          <span class="pill pill-cyan">uuid</span>
+          <span class="pill pill-cyan">alpha</span>
+          <span class="pill pill-cyan">alnum</span>
+          <span class="pill pill-cyan">numeric</span>
+          <span class="pill pill-cyan">slug</span>
+          <span class="pill pill-cyan">hex</span>
+        </div>
       </section>
 
       <!-- ── CLI ───────────────────────────────────────────────────────────── -->
