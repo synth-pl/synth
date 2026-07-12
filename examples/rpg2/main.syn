@@ -107,83 +107,83 @@ fn make_party() {
   ]
 }
 
+// if/else (not match) — match literal arms >5 used to compile as strings
 fn encounter_foes(n: int) {
-  match n {
-    // Forest — Mistwood
-    | 0 => [
+  if n == 0 {
+    [
       { id: "goblin", name: "Goblin Scout", hp: 38, maxHp: 38, atk: 9,  def: 3, weakness: "fire",   alive: true, color: "#ff6e3a" },
       { id: "slime",  name: "Neon Slime",   hp: 28, maxHp: 28, atk: 7,  def: 2, weakness: "light",  alive: true, color: "#ff2d78" }
     ]
-    | 1 => [
+  } else if n == 1 {
+    [
       { id: "slime",  name: "Mist Slime",    hp: 32, maxHp: 32, atk: 8,  def: 2, weakness: "light",  alive: true, color: "#ff2d78" },
       { id: "slime",  name: "Glow Jelly",    hp: 30, maxHp: 30, atk: 8,  def: 3, weakness: "fire",   alive: true, color: "#06d6a0" },
       { id: "goblin", name: "Goblin Runner", hp: 34, maxHp: 34, atk: 10, def: 3, weakness: "fire",   alive: true, color: "#ff6e3a" }
     ]
-    | 2 => [
+  } else if n == 2 {
+    [
       { id: "goblin", name: "Goblin Brute",  hp: 48, maxHp: 48, atk: 11, def: 5, weakness: "fire",   alive: true, color: "#ff6e3a" },
       { id: "goblin", name: "Goblin Sneak",  hp: 40, maxHp: 40, atk: 12, def: 3, weakness: "light",  alive: true, color: "#ffd166" }
     ]
-    // Desert — Ashlands
-    | 3 => [
+  } else if n == 3 {
+    [
       { id: "bandit", name: "Ash Bandit",  hp: 52, maxHp: 52, atk: 12, def: 5, weakness: "nature", alive: true, color: "#ffd166" },
       { id: "archer", name: "Ash Archer",  hp: 44, maxHp: 44, atk: 14, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" }
     ]
-    | 4 => [
+  } else if n == 4 {
+    [
       { id: "archer", name: "Dune Sniper",   hp: 46, maxHp: 46, atk: 15, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" },
       { id: "archer", name: "Cinder Bowman", hp: 42, maxHp: 42, atk: 14, def: 3, weakness: "nature", alive: true, color: "#ffd166" }
     ]
-    | 5 => [
+  } else if n == 5 {
+    [
       { id: "bandit", name: "Ruins Raider",  hp: 56, maxHp: 56, atk: 13, def: 6, weakness: "nature", alive: true, color: "#ffd166" },
       { id: "bandit", name: "Dust Cutthroat", hp: 50, maxHp: 50, atk: 14, def: 4, weakness: "fire",  alive: true, color: "#ff6e3a" },
       { id: "archer", name: "Ruin Watcher",  hp: 40, maxHp: 40, atk: 15, def: 3, weakness: "light",  alive: true, color: "#b84fff" }
     ]
-    // Plains — mixed foes on the road to the Wyrm (no boss yet)
-    | 6 => [
+  } else if n == 6 {
+    [
       { id: "slime",  name: "Pale Ooze",     hp: 34, maxHp: 34, atk: 9,  def: 3, weakness: "light",  alive: true, color: "#e8e0ff" },
       { id: "goblin", name: "Field Stalker", hp: 46, maxHp: 46, atk: 12, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" },
       { id: "archer", name: "Hedge Bowman",  hp: 42, maxHp: 42, atk: 14, def: 3, weakness: "fire",   alive: true, color: "#ff6e3a" }
     ]
-    | 7 => [
+  } else if n == 7 {
+    [
       { id: "bandit", name: "Goldfield Outlaw", hp: 58, maxHp: 58, atk: 14, def: 6, weakness: "nature", alive: true, color: "#ffd166" },
       { id: "archer", name: "Mist Marksman",    hp: 48, maxHp: 48, atk: 16, def: 4, weakness: "fire",   alive: true, color: "#ff6e3a" },
       { id: "goblin", name: "Road Ambusher",    hp: 44, maxHp: 44, atk: 13, def: 4, weakness: "light",  alive: true, color: "#ffd166" },
       { id: "slime",  name: "Mire Jelly",       hp: 36, maxHp: 36, atk: 10, def: 4, weakness: "light",  alive: true, color: "#ff2d78" }
     ]
-    // Sole boss fight
-    | 8 => [
-      { id: "wyrm", name: "Shadow Wyrm", hp: 160, maxHp: 160, atk: 16, def: 9, weakness: "arcane", alive: true, color: "#b84fff" }
-    ]
-    | _ => [
+  } else {
+    [
       { id: "wyrm", name: "Shadow Wyrm", hp: 160, maxHp: 160, atk: 16, def: 9, weakness: "arcane", alive: true, color: "#b84fff" }
     ]
   }
 }
 
-fn encounter_title(n: int) -> string =
-  match n {
-    | 0 => "Forest 1 — Mistwood Path"
-    | 1 => "Forest 2 — Foghollow Thicket"
-    | 2 => "Forest 3 — Whispering Roots"
-    | 3 => "Desert 1 — Ashen Gate"
-    | 4 => "Desert 2 — Sunscar Road"
-    | 5 => "Desert 3 — Cinder Ruins"
-    | 6 => "Plains 1 — Lowland Mist"
-    | 7 => "Plains 2 — Goldfield Watch"
-    | _ => "Boss — Shadow Wyrm"
-  }
+fn encounter_title(n: int) -> string {
+  if n == 0 { "Forest 1 — Mistwood Path" }
+  else if n == 1 { "Forest 2 — Foghollow Thicket" }
+  else if n == 2 { "Forest 3 — Whispering Roots" }
+  else if n == 3 { "Desert 1 — Ashen Gate" }
+  else if n == 4 { "Desert 2 — Sunscar Road" }
+  else if n == 5 { "Desert 3 — Cinder Ruins" }
+  else if n == 6 { "Plains 1 — Lowland Mist" }
+  else if n == 7 { "Plains 2 — Goldfield Watch" }
+  else { "Boss — Shadow Wyrm" }
+}
 
-fn encounter_hint(n: int) -> string =
-  match n {
-    | 0 => "Teach them steel."
-    | 1 => "Slimes hate light and fire."
-    | 2 => "Two blades in the brush."
-    | 3 => "Magic and medicine."
-    | 4 => "Keep your heads down."
-    | 5 => "A hard push through ash."
-    | 6 => "The fog thins ahead."
-    | 7 => "Last road before the Wyrm."
-    | _ => "Aim for the arcane wound."
-  }
+fn encounter_hint(n: int) -> string {
+  if n == 0 { "Teach them steel." }
+  else if n == 1 { "Slimes hate light and fire." }
+  else if n == 2 { "Two blades in the brush." }
+  else if n == 3 { "Magic and medicine." }
+  else if n == 4 { "Keep your heads down." }
+  else if n == 5 { "A hard push through ash." }
+  else if n == 6 { "The fog thins ahead." }
+  else if n == 7 { "Last road before the Wyrm." }
+  else { "Aim for the arcane wound." }
+}
 
 fn is_final_encounter(n: int) -> bool = n >= 8
 
