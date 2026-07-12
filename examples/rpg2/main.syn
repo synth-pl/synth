@@ -352,6 +352,7 @@ fn start_resolve(kind: string, actor: int, target: int, amount: int, text: strin
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 fn do_fight(actor: int, foe_i: int) {
+  if foe_i < 0 or foe_i >= foes.length or not foes[foe_i].alive { return }
   let h = party[actor]
   let e = foes[foe_i]
   let dmg = phys_damage(h.atk, e.def, false)
@@ -363,6 +364,7 @@ fn do_fight(actor: int, foe_i: int) {
 
 fn do_defend(actor: int) {
   let h = party[actor]
+  pending = { cmd: "", skill: "" }
   set_hero(actor, { ...h, defending: true })
   start_resolve("defend", actor, actor, 0, "{h.name} raises a guard.", "hero")
 }
@@ -373,6 +375,7 @@ fn do_guard(actor: int) {
     push_log("Not enough MP!")
     Game.set({ phase: "hero_command", menu_mode: "command", menu_index: 0 })
   } else {
+    pending = { cmd: "", skill: "" }
     set_hero(actor, { ...h, mp: h.mp - 3, defending: true })
     start_resolve("guard", actor, actor, 0, "{h.name} steels the line!", "hero")
   }
@@ -525,16 +528,24 @@ fn confirm_item_row(row: any) {
 
 fn confirm_target_row(row: any) {
   let ti = row.index
-  if pending.cmd == "fight" {
-    do_fight(Game.active, ti)
-  } else if pending.cmd == "magic" {
-    if pending.skill == "fire" { do_fire(Game.active, ti) }
-    else if pending.skill == "bolt" { do_bolt(Game.active, ti) }
-    else if pending.skill == "cure" { do_cure(Game.active, ti) }
-  } else if pending.cmd == "skill" {
-    do_pierce(Game.active, ti)
-  } else if pending.cmd == "item" {
-    do_potion(Game.active, ti)
+  if ti == null { return }
+  if Game.menu_mode == "target_enemy" {
+    if ti < 0 or ti >= foes.length or not foes[ti].alive { return }
+    if pending.cmd == "fight" {
+      do_fight(Game.active, ti)
+    } else if pending.cmd == "magic" {
+      if pending.skill == "fire" { do_fire(Game.active, ti) }
+      else if pending.skill == "bolt" { do_bolt(Game.active, ti) }
+    } else if pending.cmd == "skill" {
+      do_pierce(Game.active, ti)
+    }
+  } else if Game.menu_mode == "target_ally" {
+    if ti < 0 or ti >= party.length or not party[ti].alive { return }
+    if pending.cmd == "magic" and pending.skill == "cure" {
+      do_cure(Game.active, ti)
+    } else if pending.cmd == "item" {
+      do_potion(Game.active, ti)
+    }
   }
 }
 
@@ -579,6 +590,7 @@ fn menu_cancel() {
     } else if pending.cmd == "skill" {
       open_mode("skill")
     } else {
+      pending = { cmd: "", skill: "" }
       Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
     }
   } else if Game.menu_mode == "target_ally" {
@@ -587,9 +599,11 @@ fn menu_cancel() {
     } else if pending.cmd == "item" {
       open_mode("item")
     } else {
+      pending = { cmd: "", skill: "" }
       Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
     }
   } else {
+    pending = { cmd: "", skill: "" }
     Game.set({ menu_mode: "command", menu_index: 0, phase: "hero_command" })
   }
 }

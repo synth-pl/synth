@@ -264,13 +264,14 @@ function drawBattle(view, dt) {
 
   // Enemies — mid-left, smaller
   const foes = view.foes || []
+  const foeHitKinds = { attack: 1, magic: 1, skill: 1 }
   foes.forEach((e, i) => {
-    if (!e.alive && !(anim.side === 'hero' && anim.target === i && anim.timer > 0)) return
+    if (!e.alive && !(anim.side === 'hero' && foeHitKinds[anim.kind] && anim.target === i && anim.timer > 0)) return
     const x = 90 + (i % 2) * 90 + shake
     const y = 150 + Math.floor(i / 2) * 78
     const alpha = e.alive ? 0.9 : 0.28
     ctx.globalAlpha = alpha
-    const flash = anim.kind !== 'none' && anim.side === 'hero' && anim.target === i && anim.timer > 0.2
+    const flash = anim.kind && foeHitKinds[anim.kind] && anim.side === 'hero' && anim.target === i && anim.timer > 0.2
     drawSilhouette(x, y, 52, 64, flash ? '#d8d0e8' : e.color, foeKind(e.id))
     ctx.globalAlpha = 1
     ctx.fillStyle = 'rgba(210,200,235,0.7)'
@@ -278,7 +279,7 @@ function drawBattle(view, dt) {
     ctx.textAlign = 'center'
     ctx.fillText(e.name, x + 26, y + 76)
     drawBar(x + 2, y + 80, 48, 4, e.maxHp ? e.hp / e.maxHp : 0, 'rgba(255,80,100,0.75)')
-    if (anim.kind !== 'none' && anim.side === 'hero' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
+    if (foeHitKinds[anim.kind] && anim.side === 'hero' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
       ctx.fillStyle = 'rgba(255,220,140,0.9)'
       ctx.font = '12px Courier New'
       ctx.fillText('-' + anim.amount, x + 26, y - 4 + (0.55 - anim.timer) * 22)
@@ -287,12 +288,14 @@ function drawBattle(view, dt) {
 
   // Party — mid-right, smaller, no loud active frame
   const party = view.party || []
+  const allyFxKinds = { heal: 1, item: 1, defend: 1, guard: 1 }
   party.forEach((h, i) => {
     const x = 640 + shake * -0.4
     const y = 130 + i * 72
     const active = view.phase !== 'enemy_act' && view.phase !== 'resolve' && view.phase !== 'battle_clear' && view.active === i
     ctx.globalAlpha = h.alive ? (active ? 0.95 : 0.7) : 0.25
-    const flash = anim.kind !== 'none' && anim.side === 'enemy' && anim.target === i && anim.timer > 0.2
+    const flash = (anim.side === 'enemy' && anim.target === i && anim.timer > 0.2) ||
+      (allyFxKinds[anim.kind] && anim.side === 'hero' && anim.target === i && anim.timer > 0.2)
     drawSilhouette(x, y, 48, 52, flash ? '#d8d0e8' : h.color, heroKind(h.heroClass))
     ctx.globalAlpha = 1
     if (active) {
@@ -307,7 +310,7 @@ function drawBattle(view, dt) {
       ctx.textAlign = 'center'
       ctx.fillText('guard', x + 24, y + 60)
     }
-    if (anim.kind !== 'none' && anim.side === 'enemy' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
+    if (anim.side === 'enemy' && anim.target === i && anim.amount > 0 && anim.timer > 0.05) {
       ctx.fillStyle = 'rgba(255,120,130,0.9)'
       ctx.font = '12px Courier New'
       ctx.textAlign = 'center'

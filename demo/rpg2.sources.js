@@ -371,6 +371,9 @@ const start_resolve = (kind, actor, target, amount, text, side) => {
  * @returns {*}
  */
 const do_fight = (actor, foe_i) => {
+  if (foe_i < 0 || foe_i >= foes.length || !foes[foe_i].alive) {
+    return undefined;
+  }
   let h = party[actor];
   let e = foes[foe_i];
   let dmg = phys_damage(h.atk, e.def, false);
@@ -386,6 +389,7 @@ const do_fight = (actor, foe_i) => {
  */
 const do_defend = (actor) => {
   let h = party[actor];
+  pending = {cmd: "", skill: ""};
   set_hero(actor, {...h, defending: true});
   return start_resolve("defend", actor, actor, 0, `${h.name} raises a guard.`, "hero");
 };
@@ -400,6 +404,7 @@ const do_guard = (actor) => {
     push_log("Not enough MP!");
     return Game.set({phase: "hero_command", menu_mode: "command", menu_index: 0});
   } else {
+    pending = {cmd: "", skill: ""};
     set_hero(actor, {...h, mp: h.mp - 3, defending: true});
     return start_resolve("guard", actor, actor, 0, `${h.name} steels the line!`, "hero");
   }
@@ -601,20 +606,33 @@ const confirm_item_row = (row) => {
  */
 const confirm_target_row = (row) => {
   let ti = row.index;
-  if (pending.cmd == "fight") {
-    return do_fight(Game.active, ti);
-  } else if (pending.cmd == "magic") {
-    if (pending.skill == "fire") {
-      return do_fire(Game.active, ti);
-    } else if (pending.skill == "bolt") {
-      return do_bolt(Game.active, ti);
-    } else if (pending.skill == "cure") {
-      return do_cure(Game.active, ti);
+  if (ti == null) {
+    return undefined;
+  }
+  if (Game.menu_mode == "target_enemy") {
+    if (ti < 0 || ti >= foes.length || !foes[ti].alive) {
+      return undefined;
     }
-  } else if (pending.cmd == "skill") {
-    return do_pierce(Game.active, ti);
-  } else if (pending.cmd == "item") {
-    return do_potion(Game.active, ti);
+    if (pending.cmd == "fight") {
+      return do_fight(Game.active, ti);
+    } else if (pending.cmd == "magic") {
+      if (pending.skill == "fire") {
+        return do_fire(Game.active, ti);
+      } else if (pending.skill == "bolt") {
+        return do_bolt(Game.active, ti);
+      }
+    } else if (pending.cmd == "skill") {
+      return do_pierce(Game.active, ti);
+    }
+  } else if (Game.menu_mode == "target_ally") {
+    if (ti < 0 || ti >= party.length || !party[ti].alive) {
+      return undefined;
+    }
+    if (pending.cmd == "magic" && pending.skill == "cure") {
+      return do_cure(Game.active, ti);
+    } else if (pending.cmd == "item") {
+      return do_potion(Game.active, ti);
+    }
   }
 };
 
@@ -666,6 +684,7 @@ const menu_cancel = () => {
     } else if (pending.cmd == "skill") {
       return open_mode("skill");
     } else {
+      pending = {cmd: "", skill: ""};
       return Game.set({menu_mode: "command", menu_index: 0, phase: "hero_command"});
     }
   } else if (Game.menu_mode == "target_ally") {
@@ -674,9 +693,11 @@ const menu_cancel = () => {
     } else if (pending.cmd == "item") {
       return open_mode("item");
     } else {
+      pending = {cmd: "", skill: ""};
       return Game.set({menu_mode: "command", menu_index: 0, phase: "hero_command"});
     }
   } else {
+    pending = {cmd: "", skill: ""};
     return Game.set({menu_mode: "command", menu_index: 0, phase: "hero_command"});
   }
 };
