@@ -7,14 +7,14 @@
     "tolerance": 42
   },
   "backgrounds": {
-    "0": "forest.png",
-    "1": "desert.png",
-    "2": "plains.png"
+    "0": "forest.jpg",
+    "1": "desert.jpg",
+    "2": "plains.jpg"
   },
   "heroes": {
     "theron": {
       "sheet": "theron.png",
-      "portrait": "theron-portrait.png",
+      "portrait": "theron-portrait.jpg",
       "chroma": {
         "mode": "dark",
         "r": 0,
@@ -183,7 +183,7 @@
     },
     "aria": {
       "sheet": "aria.png",
-      "portrait": "aria-portrait.png",
+      "portrait": "aria-portrait.jpg",
       "chroma": {
         "mode": "dark",
         "r": 5,
@@ -370,7 +370,7 @@
     },
     "lyra": {
       "sheet": "lyra.png",
-      "portrait": "lyra-portrait.png",
+      "portrait": "lyra-portrait.jpg",
       "chroma": {
         "mode": "dark",
         "r": 0,
