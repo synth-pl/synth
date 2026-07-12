@@ -1,0 +1,58 @@
+{
+  "chroma": { "r": 240, "g": 4, "b": 218, "tolerance": 90 },
+  "backgrounds": {
+    "0": "forest.png",
+    "1": "desert.png",
+    "2": "plains.png"
+  },
+  "heroes": {
+    "theron": {
+      "sheet": "theron.png",
+      "portrait": "theron-portrait.png",
+      "cols": 8,
+      "rows": 8,
+      "frameW": 175,
+      "frameH": 140,
+      "anims": {
+        "idle":   { "row": 0, "frames": 4, "fps": 6, "loop": true },
+        "attack": { "row": 2, "frames": 7, "fps": 12, "loop": false },
+        "cast":   { "row": 4, "frames": 7, "fps": 12, "loop": false },
+        "hit":    { "row": 5, "frames": 2, "fps": 10, "loop": false },
+        "defend": { "row": 5, "start": 2, "frames": 3, "fps": 4, "loop": true },
+        "down":   { "row": 6, "frames": 6, "fps": 8, "loop": false }
+      }
+    },
+    "aria": {
+      "sheet": "aria.png",
+      "portrait": "aria-portrait.png",
+      "cols": 8,
+      "rows": 8,
+      "frameW": 192,
+      "frameH": 128,
+      "anims": {
+        "idle":   { "row": 1, "frames": 4, "fps": 6, "loop": true },
+        "attack": { "row": 2, "frames": 6, "fps": 12, "loop": false },
+        "cast":   { "row": 2, "frames": 6, "fps": 12, "loop": false },
+        "hit":    { "row": 6, "frames": 3, "fps": 10, "loop": false },
+        "defend": { "row": 4, "start": 1, "frames": 2, "fps": 4, "loop": true },
+        "down":   { "row": 7, "frames": 5, "fps": 8, "loop": false }
+      }
+    },
+    "lyra": {
+      "sheet": "lyra.png",
+      "portrait": "lyra-portrait.png",
+      "cols": 8,
+      "rows": 8,
+      "frameW": 192,
+      "frameH": 128,
+      "anims": {
+        "idle":   { "row": 0, "frames": 4, "fps": 6, "loop": true },
+        "attack": { "row": 2, "frames": 6, "fps": 12, "loop": false },
+        "cast":   { "row": 3, "frames": 6, "fps": 12, "loop": false },
+        "hit":    { "row": 4, "frames": 3, "fps": 10, "loop": false },
+        "defend": { "row": 4, "start": 3, "frames": 3, "fps": 4, "loop": true },
+        "down":   { "row": 6, "frames": 5, "fps": 8, "loop": false }
+      }
+    }
+  }
+}
