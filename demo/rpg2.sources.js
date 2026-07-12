@@ -251,24 +251,24 @@ const advance_after_clear = () => start_encounter(Game.encounter + 1);
  * @param {*} hero
  * @returns {*}
  */
-const command_menu = (hero) => ((_m) => (_m === "knight") ? [{id: "fight", label: "Fight"}, {id: "defend", label: "Defend"}, {id: "guard", label: "Guard"}, {id: "item", label: "Item"}] : (_m === "mage") ? [{id: "fight", label: "Fight"}, {id: "magic", label: "Magic"}, {id: "item", label: "Item"}] : [{id: "fight", label: "Fight"}, {id: "skill", label: "Skill"}, {id: "item", label: "Item"}])(hero.heroClass);
+const command_menu = (hero) => ((_m) => (_m === "knight") ? [{id: "fight", label: "Fight"}, {id: "defend", label: "Defend"}, {id: "guard", label: "Guard"}, {id: "item", label: "Item"}] : (_m === "mage") ? [{id: "fight", label: "Fight"}, {id: "magic", label: "Magic"}, {id: "defend", label: "Defend"}, {id: "item", label: "Item"}] : [{id: "fight", label: "Fight"}, {id: "skill", label: "Skill"}, {id: "defend", label: "Defend"}, {id: "item", label: "Item"}])(hero.heroClass);
 
-const magic_menu = () => [{id: "fire", label: "Fire   8 MP"}, {id: "cure", label: "Cure   6 MP"}, {id: "bolt", label: "Arcane 10 MP"}];
+const magic_menu = () => [{id: "fire", label: "Fire   8 MP"}, {id: "cure", label: "Cure   6 MP"}, {id: "bolt", label: "Arcane 10 MP"}, {id: "back", label: "← Back"}];
 
-const skill_menu = () => [{id: "pierce", label: "Pierce  4 MP"}, {id: "rain", label: "Rain    7 MP"}];
+const skill_menu = () => [{id: "pierce", label: "Pierce  4 MP"}, {id: "rain", label: "Rain    7 MP"}, {id: "back", label: "← Back"}];
 
 /**
  * @returns {*}
  */
 const item_menu = () => {
   let count = Game.potions;
-  let rows = [{id: "potion", label: "Potion x" + count}];
+  let rows = [{id: "potion", label: "Potion x" + count}, {id: "back", label: "← Back"}];
   return rows;
 };
 
-const target_enemy_menu = () => $map($filter($range(0, foes.length), (i) => foes[i].alive), (i) => ({id: "enemy", label: foes[i].name, index: i}));
+const target_enemy_menu = () => $map($filter($range(0, foes.length), (i) => foes[i].alive), (i) => ({id: "enemy", label: foes[i].name, index: i})).concat([{id: "back", label: "← Back"}]);
 
-const target_ally_menu = () => $map($filter($range(0, party.length), (i) => party[i].alive), (i) => ({id: "ally", label: party[i].name, index: i}));
+const target_ally_menu = () => $map($filter($range(0, party.length), (i) => party[i].alive), (i) => ({id: "ally", label: party[i].name, index: i})).concat([{id: "back", label: "← Back"}]);
 
 /**
  * @returns {*}
@@ -663,6 +663,10 @@ const menu_confirm = () => {
     return undefined;
   }
   let row = m[Game.menu_index];
+  if (row.id == "back") {
+    menu_cancel();
+    return undefined;
+  }
   return ((_m) => (_m === "command") ? confirm_command_row(row) : (_m === "magic") ? confirm_magic_row(row) : (_m === "skill") ? confirm_skill_row(row) : (_m === "item") ? confirm_item_row(row) : (_m === "target_enemy") ? confirm_target_row(row) : (_m === "target_ally") ? confirm_target_row(row) : {})(Game.menu_mode);
 };
 

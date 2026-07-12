@@ -252,14 +252,16 @@ fn command_menu(hero: any) -> any[] {
       { id: "item",   label: "Item" }
     ]
     | "mage" => [
-      { id: "fight", label: "Fight" },
-      { id: "magic", label: "Magic" },
-      { id: "item",  label: "Item" }
+      { id: "fight",  label: "Fight" },
+      { id: "magic",  label: "Magic" },
+      { id: "defend", label: "Defend" },
+      { id: "item",   label: "Item" }
     ]
     | _ => [
-      { id: "fight", label: "Fight" },
-      { id: "skill", label: "Skill" },
-      { id: "item",  label: "Item" }
+      { id: "fight",  label: "Fight" },
+      { id: "skill",  label: "Skill" },
+      { id: "defend", label: "Defend" },
+      { id: "item",   label: "Item" }
     ]
   }
 }
@@ -267,17 +269,22 @@ fn command_menu(hero: any) -> any[] {
 fn magic_menu() -> any[] = [
   { id: "fire", label: "Fire   8 MP" },
   { id: "cure", label: "Cure   6 MP" },
-  { id: "bolt", label: "Arcane 10 MP" }
+  { id: "bolt", label: "Arcane 10 MP" },
+  { id: "back", label: "← Back" }
 ]
 
 fn skill_menu() -> any[] = [
   { id: "pierce", label: "Pierce  4 MP" },
-  { id: "rain",   label: "Rain    7 MP" }
+  { id: "rain",   label: "Rain    7 MP" },
+  { id: "back",   label: "← Back" }
 ]
 
 fn item_menu() -> any[] {
   let count = Game.potions
-  let rows = [{ id: "potion", label: "Potion x" + count }]
+  let rows = [
+    { id: "potion", label: "Potion x" + count },
+    { id: "back", label: "← Back" }
+  ]
   rows
 }
 
@@ -285,11 +292,13 @@ fn target_enemy_menu() -> any[] =
   range(0, foes.length)
     .filter(i => foes[i].alive)
     .map(i => { id: "enemy", label: foes[i].name, index: i })
+    .concat([{ id: "back", label: "← Back" }])
 
 fn target_ally_menu() -> any[] =
   range(0, party.length)
     .filter(i => party[i].alive)
     .map(i => { id: "ally", label: party[i].name, index: i })
+    .concat([{ id: "back", label: "← Back" }])
 
 fn current_menu() -> any[] {
   if Game.scene != "battle" or party.length == 0 {
@@ -568,6 +577,10 @@ fn menu_confirm() {
   let m = current_menu()
   if m.length == 0 { return }
   let row = m[Game.menu_index]
+  if row.id == "back" {
+    menu_cancel()
+    return
+  }
   match Game.menu_mode {
     | "command"      => confirm_command_row(row)
     | "magic"        => confirm_magic_row(row)
