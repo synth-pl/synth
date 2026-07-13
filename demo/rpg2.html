@@ -290,10 +290,11 @@ function layoutAnimFrame(box, scale, slotW, slotH) {
   const dw = box.w * scale
   const dh = box.h * scale
   const ax = box.ax != null ? box.ax : box.anchorX != null ? box.anchorX : 0.5
-  // Align feet-anchor (ax along bottom) to horizontal center of the draw slot
+  const ay = box.ay != null ? box.ay : box.anchorY != null ? box.anchorY : 1
+  // Align character anchor (ax, ay) to slot bottom-center
   return {
     ox: slotW / 2 - ax * dw,
-    oy: slotH - dh,
+    oy: slotH - ay * dh,
     dw,
     dh,
   }
