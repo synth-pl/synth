@@ -555,16 +555,37 @@ function drawOpeningScene(view) {
   }
 
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#e8d5a3'
-  ctx.font = 'bold ' + (compact ? 40 : 48) + 'px Courier New'
-  ctx.shadowColor = 'rgba(232,213,163,0.5)'
-  ctx.shadowBlur = 12 + Math.sin(t * 1.8) * 2
-  ctx.fillText('MISTWOOD', W / 2, compact ? 168 : 178)
-  ctx.shadowBlur = 0
+  const titleY = compact ? 168 : 178
+  const subY = compact ? 208 : 220
+  const titleBandY = titleY - (compact ? 52 : 58)
+  const titleBandH = compact ? 108 : 118
+  const titleBand = ctx.createLinearGradient(0, titleBandY, 0, titleBandY + titleBandH)
+  titleBand.addColorStop(0, 'rgba(10,8,16,0)')
+  titleBand.addColorStop(0.35, 'rgba(10,8,16,0.62)')
+  titleBand.addColorStop(0.65, 'rgba(10,8,16,0.62)')
+  titleBand.addColorStop(1, 'rgba(10,8,16,0)')
+  ctx.fillStyle = titleBand
+  ctx.fillRect(0, titleBandY, W, titleBandH)
 
-  ctx.fillStyle = 'rgba(230,224,210,0.92)'
+  ctx.font = 'bold ' + (compact ? 40 : 48) + 'px Courier New'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = compact ? 4 : 5
+  ctx.strokeStyle = 'rgba(8,6,14,0.92)'
+  ctx.strokeText('MISTWOOD', W / 2, titleY)
+  ctx.fillStyle = '#c9a86a'
+  ctx.shadowColor = 'rgba(8,6,14,0.55)'
+  ctx.shadowBlur = 8
+  ctx.shadowOffsetY = 2
+  ctx.fillText('MISTWOOD', W / 2, titleY)
+  ctx.shadowBlur = 0
+  ctx.shadowOffsetY = 0
+
   ctx.font = (compact ? 15 : 15) + 'px Courier New'
-  ctx.fillText('Theron · Aria · Lyra — into the mist', W / 2, compact ? 208 : 220)
+  ctx.lineWidth = 2.5
+  ctx.strokeStyle = 'rgba(8,6,14,0.75)'
+  ctx.strokeText('Theron · Aria · Lyra — into the mist', W / 2, subY)
+  ctx.fillStyle = 'rgba(244,236,220,0.96)'
+  ctx.fillText('Theron · Aria · Lyra — into the mist', W / 2, subY)
 
   // Only the lower strip changes: progress while loading, start prompt when ready
   const stripY = compact ? 300 : 310
@@ -611,7 +632,7 @@ function drawOpeningScene(view) {
       stripY
     )
     ctx.globalAlpha = 1
-    ctx.fillStyle = 'rgba(160,155,140,0.85)'
+    ctx.fillStyle = 'rgba(36,32,44,0.9)'
     ctx.font = (compact ? 13 : 12) + 'px Courier New'
     ctx.fillText('A quiet road through fog and fang', W / 2, compact ? 340 : 348)
   }
